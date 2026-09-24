@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RAG — Zero to Production</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F8F9FB;--sf:#FFF;--sa:#EEF1F6;--bd:#D4DAE3;--tx:#1A2030;--tm:#5C6778;--ac:#1D4ED8;--al:#DBEAFE;--gn:#047857;--gl:#D1FAE5;--or:#B45309;--ol:#FEF3C7;--rd:#B91C1C;--rl:#FEE2E2;--pr:#6D28D9;--pl:#EDE9FE;--tl:#0F766E;--tg:#CCFBF1;--pk:#BE185D;--pg:#FCE7F3;--cb:#1E293B;--ct:#E2E8F0;--r:10px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0);padding-bottom:env(safe-area-inset-bottom,0)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1322;--sf:#162032;--sa:#1E2D42;--bd:#2D3F56;--tx:#E2E8F0;--tm:#94A3B8;--ac:#60A5FA;--al:#1E3A5F;--gl:#064E3B;--ol:#78350F;--rl:#7F1D1D;--pl:#4C1D95;--tg:#134E4A;--pg:#831843;--cb:#0C1322}}
+:root[data-theme="dark"]{--bg:#0C1322;--sf:#162032;--sa:#1E2D42;--bd:#2D3F56;--tx:#E2E8F0;--tm:#94A3B8;--ac:#60A5FA;--al:#1E3A5F;--gl:#064E3B;--ol:#78350F;--rl:#7F1D1D;--pl:#4C1D95;--tg:#134E4A;--pg:#831843;--cb:#0C1322}
+html{scroll-padding-top:env(safe-area-inset-top,0)}*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--tx);line-height:1.7;max-width:920px;margin:0 auto;padding:2rem 1.5rem 4rem}
+h1{font-family:'Source Serif 4',Georgia,serif;font-size:1.7rem;font-weight:700;margin-bottom:.2rem;letter-spacing:-.02em}
+.sub{color:var(--tm);font-size:.88rem;margin-bottom:1.6rem}
+h2{font-family:'Source Serif 4',Georgia,serif;font-size:1.25rem;font-weight:700;margin:2.2rem 0 .7rem;padding-bottom:.35rem;border-bottom:2px solid var(--bd)}
+h3{font-size:1.02rem;font-weight:600;margin:1.4rem 0 .5rem}
+h4{font-size:.9rem;font-weight:600;margin:1rem 0 .35rem;color:var(--ac)}
+p,li{font-size:.88rem}p+p{margin-top:.5rem}
+.tb{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:1.4rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tt{padding:.5rem .75rem;border:none;background:none;font-family:inherit;font-size:.72rem;font-weight:600;color:var(--tm);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s}
+.tt:hover{color:var(--tx)}.tt.on{color:var(--ac);border-bottom-color:var(--ac)}
+.tc{display:none}.tc.on{display:block}
+/* Tree */
+.tree{padding-left:0}.tree ul{padding-left:1.3rem;border-left:2px solid var(--bd);margin:0}
+.nd{list-style:none;margin:.25rem 0}
+.nt{cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;font-size:.85rem;font-weight:500;padding:.25rem .45rem;border-radius:6px;border:none;background:none;color:var(--tx);transition:background .15s;width:100%;text-align:left}
+.nt:hover{background:var(--sa)}.nt .ar{font-size:.55rem;transition:transform .2s;display:inline-block;width:.7rem}
+.nd.op>.nt .ar{transform:rotate(90deg)}.nd>ul{display:none}.nd.op>ul{display:block}
+.lf{list-style:none;font-size:.8rem;color:var(--tm);padding:.18rem .45rem;margin:.08rem 0}
+.tg{display:inline-block;padding:.06rem .35rem;border-radius:4px;font-size:.65rem;font-weight:600;margin-right:.2rem}
+.tg-b{background:var(--al);color:var(--ac)}.tg-g{background:var(--gl);color:var(--gn)}.tg-o{background:var(--ol);color:var(--or)}
+.tg-r{background:var(--rl);color:var(--rd)}.tg-p{background:var(--pl);color:var(--pr)}.tg-t{background:var(--tg);color:var(--tl)}.tg-k{background:var(--pg);color:var(--pk)}
+/* Cards */
+.cd{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:1.1rem 1.25rem;margin:.8rem 0}.cd p{margin:.35rem 0}
+.an{background:var(--al);border-left:3px solid var(--ac);padding:.65rem .9rem;border-radius:0 8px 8px 0;margin:.6rem 0;font-size:.84rem}
+.an strong{display:block;margin-bottom:.1rem}
+.wn{background:var(--ol);border-left:3px solid var(--or);padding:.65rem .9rem;border-radius:0 8px 8px 0;margin:.6rem 0;font-size:.84rem}
+.wn strong{display:block;margin-bottom:.1rem}
+.cr{background:var(--rl);border-left:3px solid var(--rd);padding:.65rem .9rem;border-radius:0 8px 8px 0;margin:.6rem 0;font-size:.84rem}
+.cr strong{display:block;margin-bottom:.1rem}
+pre{background:var(--cb);color:var(--ct);padding:.9rem 1.1rem;border-radius:var(--r);overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:.76rem;line-height:1.55;margin:.6rem 0}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em}
+.ic{background:var(--sa);padding:.1rem .3rem;border-radius:4px;font-size:.82em}
+/* Pipeline */
+.pp{display:flex;align-items:center;gap:0;overflow-x:auto;padding:.7rem 0;margin:.6rem 0;flex-wrap:wrap}
+.ps{background:var(--sf);border:1.5px solid var(--bd);border-radius:8px;padding:.45rem .65rem;text-align:center;font-size:.72rem;font-weight:500;min-width:76px;flex-shrink:0}
+.pa{color:var(--tm);font-size:.95rem;padding:0 .15rem;flex-shrink:0}
+.ps.hl{border-color:var(--ac);background:var(--al)}.ps.gl{border-color:var(--gn);background:var(--gl)}.ps.ol{border-color:var(--or);background:var(--ol)}.ps.pl{border-color:var(--pr);background:var(--pl)}
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:.7rem 0;font-size:.82rem}
+th,td{padding:.5rem .65rem;text-align:left;border-bottom:1px solid var(--bd)}
+th{font-weight:600;background:var(--sa);font-size:.78rem}tr:hover td{background:var(--sa)}
+.sn{display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;border-radius:50%;background:var(--ac);color:white;font-size:.68rem;font-weight:700;margin-right:.3rem;flex-shrink:0}
+details{margin:.5rem 0}details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:.4rem 0;color:var(--ac);list-style:none}
+details summary::before{content:'▸ '}details[open] summary::before{content:'▾ '}
+details summary::-webkit-details-marker{display:none}
+.order-note{background:var(--pl);border:1px solid var(--pr);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;color:var(--pr)}
+</style>
+</head>
+<body>
+<h1>RAG — Zero to Production</h1>
+<p class="sub">Complete learning guide — 11 tabs, read in order. Each tab builds on the previous one.</p>
+
+<div class="tb" id="tabBar">
+  <button class="tt on" data-tab="prereq">⓪ Prerequisites</button>
+  <button class="tt" data-tab="map">① Mindmap</button>
+  <button class="tt" data-tab="taxonomy">② RAG Taxonomy</button>
+  <button class="tt" data-tab="indexing">③ Indexing</button>
+  <button class="tt" data-tab="search">④ Search</button>
+  <button class="tt" data-tab="retrieval">⑤ Retrieval</button>
+  <button class="tt" data-tab="context">⑥ Context</button>
+  <button class="tt" data-tab="advanced">⑦ Advanced</button>
+  <button class="tt" data-tab="infra">⑧ Infrastructure</button>
+  <button class="tt" data-tab="eval">⑨ Evaluation</button>
+  <button class="tt" data-tab="code">⑩ Code</button>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 0: PREREQUISITES                        -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc on" id="tab-prereq">
+<div class="order-note">📖 <strong>Start here.</strong> This tab covers 7 concepts that every other tab depends on. If you skip this, the rest will read as jargon.</div>
+
+<h2><span class="sn">1</span> What is an LLM?</h2>
+<div class="cd">
+<p>A <strong>Large Language Model (LLM)</strong> is a computer program that has read billions of pages of text — books, websites, code, conversations — and learned patterns of how words follow each other. When you ask it a question, it predicts what text should come next, word by word.</p>
+<p>Think of it as a very advanced autocomplete. Your phone suggests the next word when you type a message. An LLM does the same thing, but at a much higher level — it can predict entire paragraphs that are coherent, factual-sounding, and contextually appropriate.</p>
+<p><strong>Examples:</strong> GPT-4o (by OpenAI), Claude (by Anthropic), Gemini (by Google), Cohere Command.</p>
+<p><strong>Key limitation:</strong> An LLM only knows what was in its training data. It has a "knowledge cutoff" — a date after which it knows nothing. It has never seen your company's internal documents, Jira tickets, or Slack messages.</p>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+An LLM is like a brilliant new doctor who graduated top of their class and memorized every textbook — but has never seen YOUR medical file. They can talk impressively about any disease, but if you ask "what medication am I currently on?" they'll guess (sometimes dangerously wrong). RAG is like handing them your medical file before they diagnose you — now they're combining their expertise with YOUR specific data.
+</div>
+
+<h2><span class="sn">2</span> What are Tokens?</h2>
+<div class="cd">
+<p>A <strong>token</strong> is the unit an LLM reads and generates. Tokens are NOT words — they're pieces of words. The LLM breaks text into tokens before processing it.</p>
+<pre>
+# How tokenization works (approximately):
+"Employees receive 18 days of paid leave"
+→ ["Employ", "ees", " receive", " 18", " days", " of", " paid", " leave"]
+#   That's 8 tokens for 7 words
+
+# Short common words = 1 token each: "the", "is", "and"
+# Long/uncommon words = 2-3 tokens: "Employees" → "Employ" + "ees"
+# Numbers = 1-2 tokens: "18" → 1 token, "2847" → might be 2
+
+# ROUGH RULE: 1 token ≈ 4 characters ≈ 0.75 words
+# So 1000 tokens ≈ 750 words ≈ 1.5 pages of text
+</pre>
+<p><strong>Why tokens matter for RAG:</strong> Every LLM has a maximum number of tokens it can process at once (its "context window"). Your retrieved documents, system prompt, and the LLM's answer must all fit within this limit. Tokens also determine cost — API pricing is per-token.</p>
+</div>
+
+<h2><span class="sn">3</span> What is a Context Window?</h2>
+<div class="cd">
+<p>The <strong>context window</strong> is the total number of tokens an LLM can read + generate in one go. Think of it as the LLM's working memory — everything must fit inside it, or it literally cannot see it.</p>
+<table>
+<tr><th>Model</th><th>Context Window</th><th>Roughly Equivalent To</th></tr>
+<tr><td>GPT-4o-mini</td><td>128K tokens</td><td>~300 pages of text</td></tr>
+<tr><td>Claude 3.5</td><td>200K tokens</td><td>~500 pages of text</td></tr>
+<tr><td>Cohere Command</td><td>128K tokens</td><td>~300 pages</td></tr>
+</table>
+<p>"300 pages sounds like a lot — why do I need RAG?" Because your company might have 10,000 pages of documentation. And even with large context windows, LLMs perform worse with more context — they miss information in the middle (the "lost in the middle" problem, covered in Tab ⑤). RAG means: instead of feeding all 10,000 pages, find the 3-5 most relevant paragraphs and feed only those.</p>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+The context window is like a student's desk during an open-book exam. The desk can hold maybe 5-6 books open at once. If someone dumps 50 books on your desk, you'll spend the whole exam searching instead of answering. RAG is like a smart librarian who reads your question, walks to the shelves, and places exactly the 3 most relevant pages on your desk — instead of handing you the entire library catalog.
+</div>
+
+<h2><span class="sn">4</span> What is a Vector?</h2>
+<div class="cd">
+<p>A <strong>vector</strong> is just a list of numbers. That's it. No complex math — it's a list.</p>
+<pre>
+# A vector:
+[0.12, -0.45, 0.27, 0.88, -0.33]
+
+# That's a vector with 5 numbers (5 "dimensions").
+# Real embedding vectors have 384 to 3072 numbers.
+</pre>
+<p><strong>Why lists of numbers?</strong> Because computers can't directly compare the meaning of text. "Work from home" and "remote work policy" look completely different as strings — different characters, different lengths. But if we convert each to a list of numbers where similar meaning produces similar numbers, the computer can compare them mathematically.</p>
+<p><strong>Think of it in 2D first:</strong> Imagine a map where every document is a dot. X-axis = "how much is this about HR?" Y-axis = "how much is this about IT?" An HR leave policy might be at position [0.9, 0.1]. A VPN troubleshooting guide might be at [0.1, 0.8]. A document about employee laptop replacements might be at [0.3, 0.7]. Documents about similar topics cluster together on this map.</p>
+<p>Real embeddings do this same thing but with 384+ dimensions instead of 2. Each dimension captures some aspect of meaning (the model learns these aspects automatically during training — you don't choose them).</p>
+</div>
+
+<h2><span class="sn">5</span> What is Cosine Similarity?</h2>
+<div class="cd">
+<p>Once you have two vectors (two lists of numbers), you need a way to measure "how similar are they?" <strong>Cosine similarity</strong> measures the angle between two vectors.</p>
+<p><strong>Intuition:</strong> Imagine two arrows pointing from the same starting point. If they point in the same direction (angle ≈ 0°), they're very similar → cosine similarity ≈ 1.0. If they point in perpendicular directions (angle = 90°), they're unrelated → cosine similarity ≈ 0.0. If they point in opposite directions (angle = 180°), they're opposites → cosine similarity ≈ -1.0.</p>
+<table>
+<tr><th>Score Range</th><th>What It Means</th><th>Example</th></tr>
+<tr><td>0.85 – 1.0</td><td>Very similar / near-duplicate</td><td>"WFH policy" vs "work from home rules"</td></tr>
+<tr><td>0.65 – 0.85</td><td>Related / same topic</td><td>"WFH policy" vs "office attendance requirements"</td></tr>
+<tr><td>0.40 – 0.65</td><td>Loosely related</td><td>"WFH policy" vs "employee benefits overview"</td></tr>
+<tr><td>0.0 – 0.40</td><td>Unrelated</td><td>"WFH policy" vs "cafeteria lunch timings"</td></tr>
+</table>
+<p><strong>Important:</strong> These ranges are approximate and vary by embedding model. MiniLM-L6-v2 (your course model) tends to produce lower similarity scores than OpenAI embeddings. Always test with your specific model and data.</p>
+</div>
+
+<div class="wn">
+<strong>⚠️ Score ≠ Percentage:</strong>
+A cosine similarity of 0.72 does NOT mean "72% relevant." It's a relative measure — useful for ranking (doc A scored 0.72, doc B scored 0.45, so A is more relevant than B) but not for absolute "good/bad" judgment. The Cohere rerank score from your notebook is also a ranking signal, not an accuracy percentage.
+</div>
+
+<h2><span class="sn">6</span> What is an API Call?</h2>
+<div class="cd">
+<p>An <strong>API (Application Programming Interface)</strong> is how your code talks to an external service over the internet. When your Python notebook calls Cohere's reranking service or OpenAI's GPT model, it sends an HTTP request to their servers and gets a response back.</p>
+<pre>
+# What happens when you call co.rerank() in your notebook:
+
+# 1. Your code packages the data:
+#    "Here's a query and 5 documents, please rerank them"
+
+# 2. Sends it over the internet to Cohere's server
+#    (this is why you need an API key — it identifies you)
+
+# 3. Cohere's server processes the request using their
+#    reranking model (which runs on their GPUs, not yours)
+
+# 4. Server sends back the result:
+#    "Document 3 is most relevant (score 0.95),
+#     Document 1 is second (score 0.71), ..."
+
+# 5. Your code receives the response and uses it
+
+# API key = your ID badge to access the service
+# No key = the server rejects your request
+</pre>
+<p><strong>Local vs. API models:</strong> HuggingFace's all-MiniLM-L6-v2 (your embedding model) runs locally — no API call, no internet needed, no cost. Cohere rerank and OpenAI GPT run remotely — API call required, internet needed, costs per use.</p>
+</div>
+
+<h2><span class="sn">7</span> LangChain's Document Object</h2>
+<div class="cd">
+<p>In LangChain (the framework your course uses), every piece of text is wrapped in a <strong>Document</strong> object. This is the atomic unit that flows through every RAG pipeline stage.</p>
+<pre>
+from langchain_core.documents import Document
+
+# A Document has exactly two parts:
+doc = Document(
+    page_content="Employees receive 18 days of paid leave per year.",
+    metadata={"id": "D1", "source": "HR Handbook", "page": 12}
+)
+
+# page_content → the actual text (string)
+# metadata     → extra info about the text (dictionary)
+#                used for filtering, citing, tracking
+
+# When a PDF loader reads a file:
+# It creates one Document per page, with metadata like:
+# {"source": "handbook.pdf", "page": 0}
+
+# When you retrieve documents:
+# You get back a list of Document objects:
+# [Document(...), Document(...), Document(...)]
+</pre>
+<p>Every component in the pipeline — loaders, splitters, retrievers, chains — takes Document objects as input and/or produces them as output. This is the universal connector.</p>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+A LangChain Document is like a library index card. The <code class="ic">page_content</code> is the actual text on the card — the book excerpt or summary. The <code class="ic">metadata</code> is the catalog information: <code class="ic">author: "Smith", subject: "HR", shelf: "3A"</code>. Just like you filter library books by subject or author, you filter retrieved documents by metadata. And just like every library system (cataloging → shelving → lookup) operates on these cards, every RAG pipeline stage operates on Document objects.
+</div>
+
+<p style="margin-top:1.5rem;font-size:.85rem;color:var(--tm);">✅ These 7 concepts are the foundation. Every term in the remaining tabs connects back to one of these. Proceed to Tab ① →</p>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 1: MINDMAP                              -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-map">
+<div class="order-note">📖 This mindmap shows the complete landscape. Expand nodes to explore, then read Tabs ②–⑩ in order for deep dives on each.</div>
+
+<p style="font-size:.82rem;color:var(--tm);margin-bottom:.8rem;">Tags: <span class="tg tg-b">concept</span> <span class="tg tg-g">tool</span> <span class="tg tg-o">technique</span> <span class="tg tg-p">variant</span> <span class="tg tg-r">failure</span> <span class="tg tg-t">production</span> <span class="tg tg-k">decision</span></p>
+
+<ul class="tree">
+<li class="nd op">
+<button class="nt"><span class="ar">▶</span> <strong>RAG (Retrieval-Augmented Generation)</strong></button>
+<ul>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-b">concept</span> Why RAG Exists (Tab ②)</button>
+<ul>
+  <li class="lf">LLMs have knowledge cutoff — don't know your company's data</li>
+  <li class="lf">Fine-tuning teaches style, NOT new facts</li>
+  <li class="lf">Context window too small for all docs</li>
+  <li class="lf">RAG = find relevant docs → inject into prompt → LLM reads & answers</li>
+  <li class="lf"><span class="tg tg-r">pitfall</span> Without RAG, LLMs hallucinate confidently</li>
+</ul></li>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-b">concept</span> RAG Taxonomy (Tab ②)</button>
+<ul>
+  <li class="lf">Naive RAG → retrieve + generate, no validation</li>
+  <li class="lf">Hybrid RAG → dense + keyword search combined</li>
+  <li class="lf">RAG + Reranking → add cross-encoder post-processing</li>
+  <li class="lf">Self-RAG → 3 validation checkpoints</li>
+  <li class="lf">Corrective RAG → grade + rewrite + fallback</li>
+  <li class="lf">Agentic RAG → agent routes to different knowledge bases</li>
+  <li class="lf"><span class="tg tg-k">decision</span> When NOT to use RAG</li>
+</ul></li>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-b">concept</span> Indexing Pipeline — Offline (Tab ③)</button>
+<ul>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Document Loading</button>
+  <ul><li class="lf"><span class="tg tg-g">tool</span> PyPDFLoader, UnstructuredLoader, Docx2txt, CSVLoader</li>
+  <li class="lf"><span class="tg tg-r">pitfall</span> Scanned PDFs need OCR</li></ul></li>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Chunking / Splitting</button>
+  <ul><li class="lf"><span class="tg tg-g">tool</span> RecursiveCharacterTextSplitter</li>
+  <li class="lf"><span class="tg tg-o">technique</span> Semantic chunking — split by meaning</li>
+  <li class="lf"><span class="tg tg-o">technique</span> Parent-child chunking — small embed, large retrieve</li>
+  <li class="lf"><span class="tg tg-r">pitfall</span> Too small = lost context; Too large = diluted meaning</li></ul></li>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Embedding</button>
+  <ul><li class="lf"><span class="tg tg-g">tool</span> all-MiniLM-L6-v2 (free, 384d, local)</li>
+  <li class="lf"><span class="tg tg-g">tool</span> OpenAI text-embedding-3-small (1536d, paid)</li>
+  <li class="lf"><span class="tg tg-g">tool</span> Cohere embed-v3 (1024d, multilingual)</li>
+  <li class="lf"><span class="tg tg-r">pitfall</span> Must use SAME model for docs AND queries</li></ul></li>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Vector Store</button>
+  <ul><li class="lf"><span class="tg tg-g">tool</span> FAISS, ChromaDB, Pinecone, Qdrant</li>
+  <li class="lf"><span class="tg tg-r">pitfall</span> Store once, retrieve many — never re-embed per query</li></ul></li>
+</ul></li>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-b">concept</span> Retrieval Pipeline — Online (Tabs ④⑤)</button>
+<ul>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Query Preprocessing</button>
+  <ul><li class="lf"><span class="tg tg-o">technique</span> Query Rewriting — LLM reformulates vague queries</li>
+  <li class="lf"><span class="tg tg-o">technique</span> Multi-Query Expansion — 3-5 query variations</li>
+  <li class="lf"><span class="tg tg-o">technique</span> HyDE — embed hypothetical answer instead of query</li>
+  <li class="lf"><span class="tg tg-o">technique</span> Query Decomposition — break complex into sub-queries</li></ul></li>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Search</button>
+  <ul><li class="lf"><span class="tg tg-b">type</span> Dense Search — embed query → cosine similarity</li>
+  <li class="lf"><span class="tg tg-b">type</span> Sparse Search — BM25 (TF × IDF + length norm)</li>
+  <li class="lf"><span class="tg tg-p">variant</span> Hybrid Search — RRF fusion of both</li></ul></li>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Pre-Retrieval Filtering</button>
+  <ul><li class="lf">Filter by metadata BEFORE search</li>
+  <li class="lf"><span class="tg tg-g">tool</span> Chroma where filter, Pinecone metadata filter</li></ul></li>
+  <li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-o">stage</span> Post-Retrieval Processing</button>
+  <ul><li class="lf"><span class="tg tg-o">technique</span> Reranking — cross-encoder re-scores candidates</li>
+  <li class="lf"><span class="tg tg-o">technique</span> Post-Filtering — score threshold, dedup, business rules</li>
+  <li class="lf"><span class="tg tg-o">technique</span> Reordering — rearrange docs for LLM attention</li></ul></li>
+</ul></li>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-b">concept</span> Context & Generation (Tab ⑥)</button>
+<ul>
+  <li class="lf">RAG Context — format docs with IDs, metadata, separators</li>
+  <li class="lf">Prompt Rendering — system instructions + context + question</li>
+  <li class="lf">Token Budget — fit everything within context window</li>
+  <li class="lf">Generation — LLM produces grounded answer with citations</li>
+</ul></li>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-p">variant</span> Advanced Patterns (Tab ⑦)</button>
+<ul>
+  <li class="lf"><span class="tg tg-p">variant</span> Self-RAG — 3 checkpoints: need retrieval? docs relevant? answer supported?</li>
+  <li class="lf"><span class="tg tg-p">variant</span> CRAG — grade docs: correct/ambiguous/incorrect → route</li>
+  <li class="lf"><span class="tg tg-o">technique</span> Query Routing — classify query → route to right knowledge base</li>
+  <li class="lf"><span class="tg tg-p">variant</span> Agentic RAG — agent decides which tools/retrievers to use</li>
+</ul></li>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-r">critical</span> Failure Modes</button>
+<ul>
+  <li class="lf"><span class="tg tg-r">fail</span> Wrong chunks retrieved → confident wrong answer</li>
+  <li class="lf"><span class="tg tg-r">fail</span> Chunks too large → relevant sentence buried in noise</li>
+  <li class="lf"><span class="tg tg-r">fail</span> Chunks too small → answer fragmented</li>
+  <li class="lf"><span class="tg tg-r">fail</span> Query-document vocabulary mismatch</li>
+  <li class="lf"><span class="tg tg-r">fail</span> LLM ignores context → uses training data</li>
+  <li class="lf"><span class="tg tg-r">fail</span> "Lost in the middle" → LLM misses mid-context</li>
+  <li class="lf"><span class="tg tg-r">fail</span> No relevant doc exists → LLM fabricates</li>
+</ul></li>
+
+<li class="nd"><button class="nt"><span class="ar">▶</span> <span class="tg tg-t">production</span> Production (Tabs ⑧⑨)</button>
+<ul>
+  <li class="lf">Vector DB & embedding model selection (Tab ⑧)</li>
+  <li class="lf">Evaluation: RAGAS — faithfulness, relevancy, precision, recall (Tab ⑨)</li>
+  <li class="lf">Observability: LangSmith traces</li>
+  <li class="lf">Cost: embedding (one-time) + LLM tokens (per query) + reranking API</li>
+  <li class="lf">Latency: vector search ~ms + reranking ~100ms + LLM ~1-3s</li>
+</ul></li>
+
+</ul></li></ul>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 2: RAG TAXONOMY                         -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-taxonomy">
+
+<h2><span class="sn">1</span> The RAG Progression — From Naive to Agentic</h2>
+
+<div class="cd">
+<p>RAG isn't one technique — it's a family of patterns, each adding one layer of sophistication. Learning them in order is critical because each solves a specific problem the previous one left open.</p>
+</div>
+
+<div class="pp">
+  <div class="ps hl">Naive RAG</div><div class="pa">→</div>
+  <div class="ps">+ Hybrid Search</div><div class="pa">→</div>
+  <div class="ps gl">+ Reranking</div><div class="pa">→</div>
+  <div class="ps ol">+ Self-RAG</div><div class="pa">→</div>
+  <div class="ps pl">+ CRAG</div><div class="pa">→</div>
+  <div class="ps" style="border-color:var(--pk);background:var(--pg)">Agentic RAG</div>
+</div>
+
+<table>
+<tr><th>Pattern</th><th>What It Adds</th><th>Problem It Solves</th><th>Trade-off</th></tr>
+<tr><td><strong>Naive RAG</strong></td><td>Retrieve (dense) + Generate</td><td>LLM can't access your data</td><td>Misses keyword queries, no validation</td></tr>
+<tr><td><strong>+ Hybrid Search</strong></td><td>Dense + BM25 keyword search</td><td>"VPN-403" type queries that dense search misses</td><td>Slightly slower, two retrievers to maintain</td></tr>
+<tr><td><strong>+ Reranking</strong></td><td>Cross-encoder re-scores results</td><td>Initial retrieval returns some irrelevant docs</td><td>API cost, +100ms latency</td></tr>
+<tr><td><strong>Self-RAG</strong></td><td>3 validation checkpoints</td><td>No way to know if retrieval or answer is good</td><td>3-4× more LLM calls per question</td></tr>
+<tr><td><strong>CRAG</strong></td><td>Grade + rewrite + fallback</td><td>System fails silently when knowledge base lacks answer</td><td>Complex state machine, needs LangGraph</td></tr>
+<tr><td><strong>Agentic RAG</strong></td><td>Agent routes queries to tools</td><td>Multiple knowledge bases, complex multi-hop queries</td><td>Most complex, hardest to debug</td></tr>
+</table>
+
+<div class="wn">
+<strong>⚠️ Don't start at the bottom.</strong> Most learners want to jump to Agentic RAG because it sounds impressive. But if your Naive RAG pipeline retrieves wrong documents, no amount of agentic orchestration will fix it. Build and validate each level before adding the next.
+</div>
+
+<h2><span class="sn">2</span> When NOT to Use RAG</h2>
+
+<div class="cd">
+<p>RAG adds complexity — retrieval, vector stores, chunking, embedding models, reranking. Sometimes simpler approaches are better:</p>
+
+<table>
+<tr><th>Situation</th><th>Better Approach</th><th>Why Not RAG</th></tr>
+<tr><td>Your entire knowledge base is < 50 pages</td><td><strong>Full-context stuffing</strong> — paste everything into the prompt</td><td>Modern LLMs handle 128K+ tokens. If it fits, searching is unnecessary overhead.</td></tr>
+<tr><td>You want the LLM to write in a specific tone/style</td><td><strong>Fine-tuning</strong></td><td>RAG injects knowledge, not behavior. Style/tone is a model weights change.</td></tr>
+<tr><td>The question is general knowledge</td><td><strong>Direct LLM call</strong></td><td>"What is Python?" — the LLM already knows this. Retrieval adds noise.</td></tr>
+<tr><td>Real-time data (stock prices, live scores)</td><td><strong>API tool calling</strong></td><td>RAG retrieves from static documents. Live data needs live API calls.</td></tr>
+<tr><td>Simple FAQ with < 50 question-answer pairs</td><td><strong>Rule-based lookup or embedding similarity only</strong></td><td>Full RAG pipeline is overkill for a small FAQ.</td></tr>
+</table>
+</div>
+
+<h2><span class="sn">3</span> RAG vs. Fine-Tuning vs. Prompt Engineering</h2>
+
+<div class="cd">
+<table>
+<tr><th>Approach</th><th>Changes What</th><th>Use For</th><th>Cost</th></tr>
+<tr><td><strong>Prompt Engineering</strong></td><td>Instructions in the prompt</td><td>Task guidance, format rules, persona</td><td>Free (just tokens)</td></tr>
+<tr><td><strong>RAG</strong></td><td>Knowledge available to the model</td><td>Company-specific facts, fresh data, domain docs</td><td>Embedding + Vector DB + retrieval infra</td></tr>
+<tr><td><strong>Fine-Tuning</strong></td><td>Model's internal weights</td><td>Change behavior, style, domain vocabulary</td><td>High (GPU, curated training data, validation)</td></tr>
+</table>
+<p>These are not mutually exclusive. A production system might use all three: fine-tune for tone, RAG for knowledge, prompt engineering for task instructions.</p>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 3: INDEXING                             -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-indexing">
+
+<h2><span class="sn">1</span> Indexing Pipeline Overview</h2>
+<p>The indexing pipeline runs <strong>once, offline</strong>. It prepares your documents for fast retrieval later. Every document goes through four stages:</p>
+
+<div class="pp">
+  <div class="ps">📄 Raw Documents</div><div class="pa">→</div>
+  <div class="ps hl">📋 Load</div><div class="pa">→</div>
+  <div class="ps hl">✂️ Chunk</div><div class="pa">→</div>
+  <div class="ps hl">🔢 Embed</div><div class="pa">→</div>
+  <div class="ps gl">💾 Store</div>
+</div>
+
+<h2><span class="sn">2</span> Document Loading</h2>
+<div class="cd">
+<pre>
+# Different loaders for different file types:
+from langchain_community.document_loaders import PyPDFLoader  # PDFs
+from langchain_community.document_loaders import Docx2txtLoader  # Word docs
+from langchain_community.document_loaders import CSVLoader  # CSV files
+from langchain_community.document_loaders import TextLoader  # Plain text
+
+# Loading a PDF:
+pages = PyPDFLoader("company_handbook.pdf").load()
+# Returns: [Document(page_content="...", metadata={"source":"company_handbook.pdf","page":0}),
+#           Document(page_content="...", metadata={"source":"company_handbook.pdf","page":1}),
+#           ...]
+# One Document object per page
+</pre>
+</div>
+
+<div class="cr">
+<strong>🚨 Scanned PDFs:</strong> PyPDFLoader extracts text layers. If your PDF is a scan (photograph of a page), there IS no text layer — you get empty strings. You need OCR (Optical Character Recognition) tools like Tesseract, Amazon Textract, or Google Document AI. Your notebook's comment flags this: "may require Optical Character Recognition."
+</div>
+
+<h2><span class="sn">3</span> Chunking / Splitting — Deep Dive</h2>
+<div class="cd">
+<h4>Why chunk?</h4>
+<p>1. <strong>Embedding quality:</strong> Embedding a 50-page doc compresses all meaning into one vector. Embedding a focused paragraph captures specific meaning precisely — so similarity search actually works.</p>
+<p>2. <strong>Context window:</strong> You can't send 50 pages to the LLM. You send only the 3-5 most relevant chunks.</p>
+</div>
+
+<h3>Strategy 1: RecursiveCharacterTextSplitter (Most Common)</h3>
+<div class="cd">
+<p>Splits by a hierarchy of separators: first tries to split on double-newlines (paragraph breaks), then single newlines, then sentences, then characters. This preserves natural text boundaries.</p>
+<pre>
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,      # max characters per chunk
+    chunk_overlap=100,   # overlap prevents cutting mid-thought
+    separators=["\n\n", "\n", ". ", " ", ""]  # try these in order
+)
+chunks = splitter.split_documents(pages)
+
+# chunk_overlap=100 means:
+# Chunk 1: "...the employee must submit the form within 15 days."
+# Chunk 2: "submit the form within 15 days. The manager reviews..."
+#          ↑ last 100 chars of chunk 1 repeat at start of chunk 2
+# This prevents losing context at chunk boundaries
+</pre>
+<table>
+<tr><th>Document Type</th><th>chunk_size</th><th>chunk_overlap</th><th>Why</th></tr>
+<tr><td>Short policies (your notebook)</td><td>No splitting needed</td><td>—</td><td>Each doc is already one focused fact</td></tr>
+<tr><td>Long reports, manuals</td><td>500–800</td><td>100–150</td><td>Balance precision and context</td></tr>
+<tr><td>Legal documents</td><td>1000–1500</td><td>200–300</td><td>Legal clauses need surrounding context</td></tr>
+<tr><td>Code documentation</td><td>300–500</td><td>50–100</td><td>Functions and classes are small units</td></tr>
+</table>
+</div>
+
+<h3>Strategy 2: Parent-Child Chunking</h3>
+<div class="cd">
+<h4>The problem it solves</h4>
+<p>Small chunks = precise embeddings but incomplete context. Large chunks = complete context but diluted embeddings. Parent-child gets both: <strong>embed small, retrieve big.</strong></p>
+<pre>
+# Concept:
+# 1. Split doc into LARGE chunks (parents) — 2000 chars
+# 2. Split each parent into SMALL chunks (children) — 400 chars
+# 3. Embed and index only the CHILDREN
+# 4. When a child matches a query, return its PARENT
+
+# Why this works:
+# Small child: "Refund requests must be submitted within 30 days."
+#   → precise embedding, matches "refund deadline" queries
+#
+# But the LLM receives the parent (which contains):
+#   "Our refund policy covers all purchases made through the
+#    official store. Refund requests must be submitted within
+#    30 days. Processing takes 5-7 business days. The refund
+#    is credited to the original payment method."
+#   → full context for a complete answer
+
+from langchain.retrievers import ParentDocumentRetriever
+from langchain.storage import InMemoryStore
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+parent_splitter = RecursiveCharacterTextSplitter(chunk_size=2000)
+child_splitter = RecursiveCharacterTextSplitter(chunk_size=400)
+
+store = InMemoryStore()  # stores parent documents
+
+retriever = ParentDocumentRetriever(
+    vectorstore=vector_store,     # children go here (for search)
+    docstore=store,               # parents go here (for retrieval)
+    child_splitter=child_splitter,
+    parent_splitter=parent_splitter,
+)
+retriever.add_documents(pages)
+
+# Now: search matches children, but returns parents!
+results = retriever.invoke("refund deadline")
+# Returns the full parent chunk with complete context
+</pre>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+Parent-child chunking is like a textbook's index at the back. The index entry (child) is compact and searchable: "Refund policy — page 47." But when you flip to page 47, you read the full section with all the context (parent). The index is small for fast lookup; the actual page gives you the complete picture. Embed the index entries, retrieve the full pages.
+</div>
+
+<h3>Strategy 3: Semantic Chunking</h3>
+<div class="cd">
+<p>Instead of splitting by character count, split where the <strong>meaning changes</strong>. Adjacent sentences that are about the same topic stay together; a shift in topic triggers a split.</p>
+<pre>
+from langchain_experimental.text_splitter import SemanticChunker
+
+semantic_splitter = SemanticChunker(
+    embeddings=embeddings,  # uses your embedding model
+    breakpoint_threshold_type="percentile",
+    breakpoint_threshold_amount=90  # split at top 10% meaning shifts
+)
+# How it works:
+# 1. Embed each sentence individually
+# 2. Compare cosine similarity between adjacent sentences
+# 3. Where similarity drops sharply → that's a topic boundary → split
+
+# Example:
+# Sentence 1: "Employees get 18 days of leave."     } similar
+# Sentence 2: "Leave requires manager approval."     } → keep together
+# Sentence 3: "Password resets use the IT portal."   } ← big meaning shift → SPLIT HERE
+</pre>
+<p><strong>Trade-off:</strong> More intelligent splits but requires running the embedding model during chunking (slower than character splitting). Best for documents with varied topics in the same file.</p>
+</div>
+
+<h2><span class="sn">4</span> Metadata Design</h2>
+<div class="cd">
+<p>Metadata enables pre-filtering (Tab ⑤). Design it upfront — retrofitting metadata later means re-ingesting everything.</p>
+<pre>
+# Good metadata schema for an enterprise knowledge base:
+metadata = {
+    "id": "HR-LEAVE-001",           # unique ID for citation
+    "source": "HR Handbook",        # document name
+    "department": "HR",             # for pre-filtering
+    "category": "leave",            # topic classification
+    "page": 12,                     # page number for reference
+    "last_updated": "2024-11-15",   # for freshness filtering
+    "access_level": "all_employees",# for permission-based filtering
+    "version": "3.2",               # document version
+}
+
+# Design questions to ask:
+# 1. What will users filter by? → those become metadata fields
+# 2. What do you need for citations? → id, source, page
+# 3. Will you need to expire old content? → last_updated, version
+# 4. Multi-tenant system? → add tenant_id
+</pre>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 4: SEARCH                               -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-search">
+
+<h2><span class="sn">1</span> Two Worlds of Search</h2>
+<div class="cd">
+<p>Every search system matches either <strong>words</strong> (keyword search) or <strong>meaning</strong> (semantic search). Understanding both — and why you need both — is the core of RAG retrieval.</p>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+Keyword search = searching your email for the exact word "invoice." Only finds emails containing that exact word — misses one titled "payment receipt" even though it's the same thing. Semantic search = asking a smart assistant "find me anything about money I owe." It understands the meaning and finds emails about invoices, bills, payments, and due balances — even though none of them share the same words. You need both: exact search for known terms, semantic search for finding things described differently.
+</div>
+
+<h2><span class="sn">2</span> BM25 — Keyword Search Algorithm</h2>
+<div class="cd">
+<p>BM25 scores each document by asking three questions:</p>
+<p><strong>Q1 — Term Frequency (TF):</strong> "How often does the search word appear in THIS document?" More mentions = more likely relevant. But BM25 has a saturation curve — going from 1 to 3 matters a lot; 30 to 32 barely matters.</p>
+<p><strong>Q2 — Inverse Document Frequency (IDF):</strong> "How rare is this word across ALL documents?" "employee" appears in every doc → useless for distinguishing. "VPN-403" appears in one doc → very strong signal. Rare words carry more weight.</p>
+<p><strong>Q3 — Document Length:</strong> A 50-word policy mentioning "refund" once is more focused than a 5000-word handbook mentioning it once. BM25 normalizes by document length.</p>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy — Restaurant Reviews:</strong>
+TF = how many times a reviewer mentions "spicy" in their review (frequency — they really mean it). IDF = how rarely do ANY reviewers across ALL restaurants mention "truffle oil"? If only 2 out of 500 reviews mention it, that word is a strong signal for finding those specific restaurants. Length normalization = a 3-sentence review mentioning "spicy" once is more focused than a 3-page review mentioning it once. Rare, repeated words in short reviews carry the strongest signal — exactly like BM25.
+</div>
+
+<pre>
+# BM25 internals — what the formula is actually computing:
+def bm25_score(query, document, all_documents):
+    score = 0
+    k1 = 1.5   # controls TF saturation
+    b = 0.75   # controls length normalization (0=none, 1=full)
+    avg_len = average(len(d) for d in all_documents)
+    
+    for word in tokenize(query):
+        tf = count(word in document)
+        docs_with_word = count(d for d in all_documents if word in d)
+        
+        idf = log((len(all_documents) - docs_with_word + 0.5) /
+                  (docs_with_word + 0.5) + 1)
+        
+        length_norm = 1 - b + b * (len(document) / avg_len)
+        term_score = idf * (tf * (k1 + 1)) / (tf + k1 * length_norm)
+        score += term_score
+    return score
+</pre>
+
+<div class="wn">
+<strong>⚠️ Tokenization is critical:</strong>
+Your notebook's regex <code class="ic">r"[a-z0-9]+(?:-[a-z0-9]+)*"</code> preserves "VPN-403" as one token. Without it, "VPN-403" splits into ["vpn", "403"] and matching breaks. Always test your tokenizer with your data's edge cases: error codes, product IDs, hyphenated terms.
+</div>
+
+<h2><span class="sn">3</span> Dense / Semantic Search</h2>
+<div class="cd">
+<h4>How it works</h4>
+<p>1. Your embedding model converts the user's query into a vector (list of numbers). 2. The vector store compares this query vector against all stored document vectors using cosine similarity. 3. Returns the top-K most similar documents.</p>
+<h4>Bi-Encoder vs. Cross-Encoder</h4>
+<p><strong>Bi-Encoder (retrieval):</strong> Encodes query and document INDEPENDENTLY, then compares. Fast — document vectors are pre-computed. But misses subtle word interactions.</p>
+<p><strong>Cross-Encoder (reranking):</strong> Processes query AND document TOGETHER as one input. Much more accurate — sees how specific query words relate to specific document words. But slow — can't pre-compute, must run per pair.</p>
+<p>Strategy: Bi-encoder retrieves top 10-20 quickly. Cross-encoder reranks those candidates precisely.</p>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+Bi-encoder = a job portal matching resumes to job descriptions by comparing their tags independently (fast — tags are pre-computed, but misses subtle fits). Cross-encoder = a hiring manager reading one specific resume alongside one specific job description together, seeing that "managed a 4-person team" perfectly fits "seeking team lead experience" (slow — must do this for each resume-job pair, but catches nuances the tags miss).
+</div>
+
+<h2><span class="sn">4</span> Hybrid Search & RRF</h2>
+<div class="cd">
+<table>
+<tr><th>Query</th><th>Dense Wins</th><th>BM25 Wins</th></tr>
+<tr><td>"Can I work from home?"</td><td>✅ Matches "remote work"</td><td>❌ Different words</td></tr>
+<tr><td>"VPN-403"</td><td>❌ No semantic meaning</td><td>✅ Exact match</td></tr>
+<tr><td>"policy D3 details"</td><td>❌ "D3" meaningless to embeddings</td><td>✅ Finds doc ID</td></tr>
+</table>
+
+<h4>RRF (Reciprocal Rank Fusion)</h4>
+<pre>
+# For each document in ANY retriever's results:
+# fusion_score = Σ (weight / (c + rank))
+
+# c=60 (standard), weights=[0.5, 0.5] (equal)
+
+# Example: D4 found by BOTH retrievers
+# Dense: rank 1 → 0.5/(60+1) = 0.00820
+# BM25:  rank 3 → 0.5/(60+3) = 0.00794
+# Fusion: 0.01614 ← HIGH (found by both!)
+
+# D10 found by BM25 ONLY
+# Dense: absent → 0
+# BM25:  rank 2 → 0.5/(60+2) = 0.00806
+# Fusion: 0.00806 ← LOWER (one retriever only)
+
+# Key insight: docs found by BOTH retrievers get boosted
+</pre>
+</div>
+
+<h2><span class="sn">5</span> Similarity Score Interpretation</h2>
+<div class="cd">
+<p>Different models produce different score ranges. Always calibrate with YOUR data:</p>
+<table>
+<tr><th>Model</th><th>"Good" Score</th><th>"Threshold" for Filtering</th><th>Notes</th></tr>
+<tr><td>all-MiniLM-L6-v2</td><td>0.5+</td><td>0.25–0.35</td><td>Tends to produce lower scores overall</td></tr>
+<tr><td>OpenAI ada-002</td><td>0.8+</td><td>0.7</td><td>Higher baseline similarity</td></tr>
+<tr><td>Cohere embed-v3</td><td>0.6+</td><td>0.3–0.4</td><td>Multilingual adds noise for single-language</td></tr>
+<tr><td>Cohere Rerank</td><td>0.8+</td><td>0.3</td><td>Rerank scores ≠ embedding similarity scores</td></tr>
+</table>
+<p><strong>How to find YOUR threshold:</strong> Take 20 known question-answer pairs. Run retrieval. Check which score the last "correct" result has and which score the first "incorrect" result has. Your threshold lives between those two numbers. This is manual but irreplaceable — no universal threshold exists.</p>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 5: RETRIEVAL PIPELINE                   -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-retrieval">
+
+<h2><span class="sn">1</span> Full Retrieval Pipeline</h2>
+<div class="pp">
+  <div class="ps hl">Query</div><div class="pa">→</div>
+  <div class="ps ol">Rewrite</div><div class="pa">→</div>
+  <div class="ps ol">Multi-Query / HyDE</div><div class="pa">→</div>
+  <div class="ps">Pre-Filter</div><div class="pa">→</div>
+  <div class="ps hl">Search</div><div class="pa">→</div>
+  <div class="ps">Post-Filter</div><div class="pa">→</div>
+  <div class="ps gl">Rerank</div><div class="pa">→</div>
+  <div class="ps gl">Reorder</div>
+</div>
+<p style="font-size:.8rem;color:var(--tm);">Orange = optional query preprocessing. Blue = core. Green = optional post-processing. Start with just the blue steps; add others when you identify specific failures.</p>
+
+<h2><span class="sn">2</span> Query Rewriting</h2>
+<div class="cd">
+<p>Users ask differently from how documents are written. An LLM reformulates the query to better match document language.</p>
+<pre>
+def rewrite_query(original, llm):
+    prompt = f"""Rewrite this question to use formal business
+    language that would appear in company policy documents.
+    Return ONLY the rewritten query.
+    
+    Original: {original}"""
+    return llm.invoke(prompt).content
+
+# "how do I get my money back?" → "What is the refund and return policy?"
+# "my VPN is broken"            → "VPN access troubleshooting and error resolution"
+</pre>
+</div>
+
+<div class="an"><strong>🔗 Real-World Analogy:</strong> Like when you tell a pharmacist "I need something for my headache" and they translate it in their head to the medical term "analgesic — oral, non-prescription, adult dose" before searching their inventory system. Your casual language isn't how their database is organized — the rewrite bridges that gap.</div>
+
+<h2><span class="sn">3</span> Multi-Query Expansion</h2>
+<div class="cd">
+<p>One query phrasing might miss relevant docs. Generate 3-5 variations, retrieve for each, merge results.</p>
+<pre>
+from langchain.retrievers.multi_query import MultiQueryRetriever
+
+multi_retriever = MultiQueryRetriever.from_llm(
+    retriever=vector_store.as_retriever(search_kwargs={"k": 3}),
+    llm=llm
+)
+# User: "Can I work from home?"
+# LLM generates internally:
+#   1. "What is the remote work policy?"
+#   2. "Is telecommuting allowed?"  
+#   3. "Work from home eligibility"
+# Retrieves for ALL, deduplicates, returns union
+results = multi_retriever.invoke("Can I work from home?")
+</pre>
+<p>Trade-off: 3-5× more retrieval calls but dramatically better recall.</p>
+</div>
+
+<h2><span class="sn">4</span> HyDE (Hypothetical Document Embeddings)</h2>
+<div class="cd">
+<h4>The Problem</h4>
+<p>Questions and documents live in different "language spaces." The question "Can I work from home during my first week?" is phrased as a question. But the document says "Employees must work from the office during their first 30 days." The embedding of a question and the embedding of a declarative statement might not be as close as you'd want.</p>
+<h4>The Solution</h4>
+<p>Ask the LLM to generate a <strong>hypothetical answer</strong> — a fake document that WOULD answer the question. Then embed that fake document instead of the question. The fake answer is in "document language," so it's closer in embedding space to the real documents.</p>
+<pre>
+# HyDE step-by-step:
+def hyde_retrieve(query, llm, retriever):
+    # Step 1: Generate hypothetical answer
+    hyde_prompt = f"""Write a short paragraph that would answer 
+    this question, as if it were from a company policy document.
+    Don't worry about accuracy — this is for search purposes only.
+    
+    Question: {query}"""
+    
+    hypothetical_doc = llm.invoke(hyde_prompt).content
+    # "Employees are required to work from the office for the first
+    #  30 days of employment. Remote work privileges begin after the
+    #  initial onboarding period is completed."
+    
+    # Step 2: Embed the hypothetical answer (not the question!)
+    # Step 3: Search for real documents similar to the hypothetical
+    results = retriever.invoke(hypothetical_doc)
+    # The hypothetical sounds like a policy → matches real policies!
+    
+    return results
+</pre>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+HyDE is like when you can't remember the name of a song, so instead of humming it badly to Shazam, you describe what the song would sound like: "It's a 2010s pop ballad with piano intro, female vocalist singing about leaving a small town." Then you Google THAT description — it matches music reviews and blog posts much better than your humming would. You're searching with "answer language" instead of "question language."
+</div>
+
+<div class="wn"><strong>⚠️ HyDE trade-off:</strong> Requires an LLM call BEFORE retrieval (adds latency + cost). The hypothetical answer might be wrong — but that's okay because you're only using its embedding for search, not its content for the answer. The real documents provide the actual answer.</div>
+
+<h2><span class="sn">5</span> Pre-Retrieval Filtering</h2>
+<div class="cd">
+<p>Narrow the search space using metadata BEFORE the vector comparison runs. Fewer vectors to compare = faster + more relevant results.</p>
+<pre>
+# Chroma metadata filtering:
+retriever = vector_store.as_retriever(
+    search_kwargs={
+        "k": 3,
+        "filter": {"department": "HR"}  # only HR documents
+    }
+)
+
+# Pinecone filtering (more complex filters):
+results = index.query(
+    vector=query_embedding, top_k=3,
+    filter={"department": {"$eq": "HR"}, "year": {"$gte": 2024}}
+)
+</pre>
+</div>
+
+<div class="an"><strong>🔗 Real-World Analogy:</strong> Pre-filtering = walking to the "Science Fiction" section of a bookstore before searching for a book. Without pre-filtering, you're scanning every shelf in the entire store — cookbooks, children's books, romance — massive waste of time. Narrowing to the right section first makes the search dramatically faster and more relevant.</div>
+
+<h2><span class="sn">6</span> Post-Retrieval Filtering</h2>
+<div class="cd">
+<p>After retrieval, apply additional quality checks on the results:</p>
+<pre>
+# 1. Score threshold — remove low-relevance results
+def filter_by_score(docs, scores, threshold=0.3):
+    return [(d, s) for d, s in zip(docs, scores) if s >= threshold]
+
+# 2. Deduplication — remove near-identical chunks
+def deduplicate(docs, threshold=0.95):
+    unique = [docs[0]]
+    for doc in docs[1:]:
+        if not any(cosine_sim(doc, kept) > threshold for kept in unique):
+            unique.append(doc)
+    return unique
+
+# 3. Business rules — only active, non-archived docs
+def apply_rules(docs):
+    return [d for d in docs if d.metadata.get("status") != "archived"]
+</pre>
+<p><strong>Pre vs. Post:</strong> Pre-filtering is faster (reduces search space) but needs metadata in the vector store. Post-filtering is more flexible (complex logic) but wastes compute on docs you'll discard. Use both for different purposes.</p>
+</div>
+
+<h2><span class="sn">7</span> Reranking vs. Reordering — NOT the Same</h2>
+<div class="cd">
+<table>
+<tr><th></th><th>Reranking</th><th>Reordering</th></tr>
+<tr><td><strong>Changes</strong></td><td>WHICH docs make the cut</td><td>WHERE docs appear in prompt</td></tr>
+<tr><td><strong>Why</strong></td><td>Initial retrieval is imprecise</td><td>"Lost in the middle" — LLMs miss mid-context</td></tr>
+<tr><td><strong>How</strong></td><td>Cross-encoder scores query+doc pairs</td><td>Rearranges order: best at start AND end</td></tr>
+<tr><td><strong>Tool</strong></td><td>Cohere Rerank v3.5</td><td>LongContextReorder (LangChain)</td></tr>
+<tr><td><strong>Cost</strong></td><td>API call per candidate</td><td>Free — just array reordering</td></tr>
+</table>
+</div>
+
+<div class="cd">
+<h4>"Lost in the Middle" — Why Reordering Exists</h4>
+<p>Research shows LLMs pay most attention to the START and END of context, and often miss the MIDDLE. Reordering places the most relevant docs at positions where the LLM pays attention:</p>
+<pre>
+from langchain_community.document_transformers import LongContextReorder
+
+reorder = LongContextReorder()
+reordered = reorder.transform_documents(results)
+# Input  (by relevance): [best, good, okay, decent, meh]
+# Output (reordered):    [best, okay, meh, decent, good]
+#                         ^^^^                     ^^^^
+#                       start (high attention)   end (high attention)
+# Middle gets least relevant — where LLM attention is weakest
+</pre>
+</div>
+
+<div class="an"><strong>🔗 Real-World Analogy:</strong> Reranking = a teacher grading exam papers and keeping only the top 3 (decides WHICH papers make the cut). Reordering = arranging those 3 papers on the principal's desk — best paper on top, second-best at bottom, weakest in the middle — because the principal reads the first and last most carefully and skims the middle. Same papers, arranged for maximum reader attention.</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 6: CONTEXT & PROMPTS                    -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-context">
+
+<h2><span class="sn">1</span> RAG Context — What the LLM Sees</h2>
+<div class="cd">
+<h4>Bad: Raw dump</h4>
+<pre>
+# ❌ No structure, no IDs, no separation
+prompt = f"Answer: {query}\n{doc1.page_content} {doc2.page_content}"
+</pre>
+<h4>Good: Structured with IDs</h4>
+<pre>
+def make_context(docs):
+    parts = []
+    for doc in docs:
+        did = doc.metadata.get("id", "?")
+        src = doc.metadata.get("source", "")
+        parts.append(f"[{did}] (Source: {src})\n{doc.page_content}")
+    return "\n\n---\n\n".join(parts)
+</pre>
+</div>
+
+<h2><span class="sn">2</span> Prompt Rendering</h2>
+<div class="cd">
+<pre>
+system = """You are a company policy assistant.
+RULES:
+1. Answer ONLY using the passages below.
+2. If passages don't contain the answer, say:
+   "I don't have this information in my knowledge base."
+3. NEVER use your training knowledge to fill gaps.
+4. Cite passage IDs like [D1], [D2].
+5. If passages conflict, note the conflict and cite both.
+6. Keep answers concise — 2-3 sentences unless asked."""
+
+human = f"""PASSAGES:\n{context}\n\nQUESTION: {question}\n\nANSWER:"""
+</pre>
+<p><strong>Rule 1</strong> forces grounding. <strong>Rule 2</strong> prevents fabrication. <strong>Rule 3</strong> is redundant but necessary emphasis. <strong>Rule 4</strong> enables verification. Each rule prevents a specific failure mode.</p>
+</div>
+
+<div class="wn"><strong>⚠️ Important:</strong> Instructions belong in SystemMessage (the "rulebook"), NOT HumanMessage. Think of SystemMessage as the exam instructions printed at the top of every test — always visible, always followed. HumanMessage is the student's answer sheet — mixing rules into the answer sheet means they get overlooked.</div>
+
+<h2><span class="sn">3</span> Token Budget</h2>
+<div class="cd">
+<p>Even with 128K tokens available, more context ≠ better answers. Sweet spot: 3-5 well-chosen chunks (2000-5000 tokens). The "lost in the middle" problem gets worse with more context. Use <code class="ic">temperature=0</code> for factual Q&A.</p>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 7: ADVANCED                             -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-advanced">
+
+<h2><span class="sn">1</span> Self-RAG — The Self-Correcting Pipeline</h2>
+<div class="pp">
+  <div class="ps">❓ Query</div><div class="pa">→</div>
+  <div class="ps ol">🤔 Need retrieval?</div><div class="pa">→</div>
+  <div class="ps">🔍 Retrieve</div><div class="pa">→</div>
+  <div class="ps ol">📋 Docs relevant?</div><div class="pa">→</div>
+  <div class="ps">🤖 Generate</div><div class="pa">→</div>
+  <div class="ps ol">✅ Supported?</div>
+</div>
+
+<div class="cd">
+<h4>Checkpoint 1 — Retrieve Token: "Do I need external knowledge?"</h4>
+<p>"What is 2+2?" → No retrieval needed (general knowledge). "What's our refund policy?" → Yes, retrieve (company-specific).</p>
+<h4>Checkpoint 2 — IsRelevant: "Are these documents useful?"</h4>
+<p>Evaluate each retrieved document against the query. Discard irrelevant ones before generation.</p>
+<h4>Checkpoint 3 — IsSupported: "Is my answer grounded?"</h4>
+<p>After generation, verify: "Would someone reading these same documents reach the same conclusion?" If not, regenerate or flag uncertainty.</p>
+</div>
+
+<div class="an"><strong>🔗 Real-World Analogy:</strong> Self-RAG is like a careful doctor. Checkpoint 1 = "Does this patient even need a blood test, or is this clearly a common cold?" (Don't order unnecessary tests.) Checkpoint 2 = "The lab results came back — are these results actually for THIS patient and relevant to THIS symptom?" (Don't read someone else's report.) Checkpoint 3 = "My diagnosis matches what the test results show, right?" (Don't prescribe treatment that contradicts the evidence.) At each stage, stop and verify instead of blindly continuing.</div>
+
+<h2><span class="sn">2</span> Corrective RAG (CRAG)</h2>
+<div class="cd">
+<p>Grades retrieval quality and takes corrective action for each outcome:</p>
+<p><strong>CORRECT</strong> — docs clearly relevant → generate normally.</p>
+<p><strong>AMBIGUOUS</strong> — docs partially related → rewrite query → re-retrieve.</p>
+<p><strong>INCORRECT</strong> — docs completely irrelevant → fall back to web search or acknowledge gap.</p>
+</div>
+
+<div class="an"><strong>🔗 Real-World Analogy:</strong> CRAG works like a customer support center. Correct = the FAQ has the exact answer, support agent reads it out (Level 1). Ambiguous = the FAQ is close but doesn't quite match — agent rephrases the customer's question and searches again with better terms (Level 2). Incorrect = the FAQ has nothing relevant — agent escalates to a specialist or checks an external resource (Level 3). Each grade triggers a different action instead of blindly giving a wrong answer.</div>
+
+<h2><span class="sn">3</span> Query Routing</h2>
+<div class="cd">
+<p>When you have multiple knowledge bases, route each query to the right one instead of searching all of them.</p>
+<pre>
+def route_query(query, llm):
+    """Classify query → route to correct vectorstore."""
+    routing_prompt = f"""Classify this question into ONE category:
+    - HR (leave, WFH, benefits, onboarding)
+    - IT (VPN, password, laptop, software)
+    - FINANCE (travel expenses, reimbursement, budget)
+    Reply with ONLY the category name.
+    
+    Question: {query}"""
+    
+    category = llm.invoke(routing_prompt).content.strip().upper()
+    
+    # Each category has its own vector store
+    stores = {
+        "HR": hr_vectorstore.as_retriever(search_kwargs={"k": 3}),
+        "IT": it_vectorstore.as_retriever(search_kwargs={"k": 3}),
+        "FINANCE": finance_vectorstore.as_retriever(search_kwargs={"k": 3}),
+    }
+    
+    retriever = stores.get(category, stores["HR"])  # default to HR
+    return retriever.invoke(query)
+
+# "How many leave days?" → HR → searches only HR docs
+# "VPN-403 error"        → IT → searches only IT docs
+# "meal reimbursement"   → FINANCE → searches only finance docs
+</pre>
+<p><strong>Why not search everything?</strong> Searching all stores returns noise from irrelevant domains. An IT doc mentioning "leave the VPN connected" might match a leave policy query via the word "leave." Routing prevents this cross-domain pollution.</p>
+</div>
+
+<div class="an"><strong>🔗 Real-World Analogy:</strong> Query routing is like a hospital reception desk. A patient with a broken arm goes to Orthopedics, not Cardiology. A patient with chest pain goes to Cardiology, not Dermatology. Without routing, every department gets every patient → doctors are overwhelmed with irrelevant cases → real emergencies get delayed. The receptionist (router) classifies the problem and sends it to the right specialist (knowledge base).</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 8: INFRASTRUCTURE                       -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-infra">
+
+<h2><span class="sn">1</span> Vector Databases — How They Work</h2>
+<div class="cd">
+<p>Normal databases index for exact lookups ("find row where id=42"). Vector databases index for similarity lookups ("find the 5 vectors closest to this query vector"). With 1 million vectors, brute-force comparison is too slow — vector DBs use <strong>Approximate Nearest Neighbor (ANN)</strong> algorithms.</p>
+<h4>ANN Index Types</h4>
+<p><strong>HNSW (Hierarchical Navigable Small World):</strong> Builds a graph of connected neighbors. Search navigates the graph toward the query. Used by Qdrant, Pinecone, Chroma. Fast and accurate.</p>
+<p><strong>IVF (Inverted File Index):</strong> Clusters vectors into groups (k-means). Searches only nearest clusters. Used by FAISS. Very fast but needs periodic re-clustering.</p>
+<p><strong>Flat (Brute Force):</strong> Compares every vector. 100% accurate but O(n). Fine for <10K vectors (your learning projects).</p>
+</div>
+
+<div class="an"><strong>🔗 Real-World Analogy:</strong> Finding a specific book in a library. Brute force = walking through every shelf in the entire library checking every book (accurate but takes hours). IVF = going to the right floor and right section first, then scanning only that area (fast, might miss a book filed in a related section). HNSW = asking a librarian who points you to a shelf, and a sign on that shelf points to a nearby related shelf — you hop between connected shelves until you find the exact book (fast and accurate).</div>
+
+<h3>Which Vector DB?</h3>
+<div class="cd">
+<table>
+<tr><th>DB</th><th>Type</th><th>Best For</th><th>Not For</th></tr>
+<tr><td><strong>FAISS</strong></td><td>In-memory</td><td>Prototyping, speed-critical</td><td>Multi-user production, persistence</td></tr>
+<tr><td><strong>ChromaDB</strong></td><td>Embedded</td><td>Learning, single-user apps</td><td>Horizontal scaling</td></tr>
+<tr><td><strong>Pinecone</strong></td><td>Cloud managed</td><td>Production SaaS, zero ops</td><td>Cost-sensitive, data sovereignty</td></tr>
+<tr><td><strong>Qdrant</strong></td><td>Self-hosted/Cloud</td><td>Production with complex filtering</td><td>Quick prototyping</td></tr>
+</table>
+</div>
+
+<h2><span class="sn">2</span> Choosing the Right Embedding Model</h2>
+<div class="cd">
+<table>
+<tr><th>Factor</th><th>What to Check</th><th>Why It Matters</th></tr>
+<tr><td>Dimensions</td><td>384 vs 1536 vs 3072</td><td>Higher = more nuance but more storage</td></tr>
+<tr><td>Max input length</td><td>MiniLM: 256 tokens. OpenAI: 8191</td><td>Limits your chunk size</td></tr>
+<tr><td>Language</td><td>English-only vs multilingual</td><td>MiniLM = English. Cohere = 100+ languages</td></tr>
+<tr><td>Cost</td><td>Free local vs paid API</td><td>MiniLM: free. OpenAI: $0.02/1M tokens</td></tr>
+<tr><td>Privacy</td><td>Local vs API</td><td>MiniLM: data stays local. OpenAI: data sent to their servers</td></tr>
+</table>
+
+<pre>
+# Decision tree:
+# Learning / prototyping? → all-MiniLM-L6-v2 (your course default)
+# Multilingual data?      → Cohere embed-v3
+# Chunks > 256 tokens?    → OpenAI text-embedding-3-small (8K limit)
+# Data privacy critical?  → BGE-large-en-v1.5 (local, open source)
+# Best quality, any cost? → OpenAI text-embedding-3-large (3072d)
+</pre>
+</div>
+
+<div class="cr"><strong>🚨 Never mix embedding models.</strong> If you embed documents with MiniLM and query with OpenAI, results will be garbage. The models create vectors in completely different spaces. Switching models = re-embed ALL documents.</div>
+
+<h2><span class="sn">3</span> Normalization</h2>
+<div class="cd">
+<p>Your notebook uses <code class="ic">normalize_embeddings=True</code>. Normalization scales every vector to unit length (magnitude=1). Without it, longer texts might produce "bigger" vectors, skewing similarity. After normalization, cosine similarity and dot product (which is faster) give the same result.</p>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 9: EVALUATION                           -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-eval">
+
+<h2><span class="sn">1</span> Why Evaluation Matters</h2>
+<div class="cd">
+<p>Without evaluation, your RAG pipeline is a black box. You build it, ask a few questions, the answers look reasonable — and you ship it. Then in production, it confidently gives wrong answers and nobody notices because the answers SOUND right.</p>
+<p>Evaluation answers: "Is my pipeline actually finding the right documents? Is the LLM actually using them correctly?"</p>
+</div>
+
+<div class="wn"><strong>⚠️ The biggest mistake in production RAG:</strong> Not measuring retrieval quality. You can trace LLM outputs in LangSmith all day, but if the retrieved chunks are wrong, the LLM will generate confident, well-formatted WRONG answers. Measure retrieval first.</div>
+
+<h2><span class="sn">2</span> RAGAS — The Standard Evaluation Framework</h2>
+<div class="cd">
+<p>RAGAS (Retrieval-Augmented Generation Assessment) defines four core metrics. Each catches a different type of failure:</p>
+</div>
+
+<div class="cd">
+<h4>Metric 1: Faithfulness</h4>
+<p><strong>Question:</strong> "Is the generated answer actually supported by the retrieved context?"</p>
+<p><strong>Catches:</strong> Hallucination — the LLM adds facts not present in the retrieved documents.</p>
+<p><em>Example:</em> Context says "Refund within 30 days." Answer says "Refund within 30 days, and you'll receive store credit for items over 90 days." The store credit part is fabricated → low faithfulness.</p>
+<pre>
+# Faithfulness = (claims supported by context) / (total claims in answer)
+# Score range: 0.0 (fully hallucinated) to 1.0 (fully grounded)
+</pre>
+</div>
+
+<div class="cd">
+<h4>Metric 2: Answer Relevancy</h4>
+<p><strong>Question:</strong> "Does the answer actually address what the user asked?"</p>
+<p><strong>Catches:</strong> Off-topic answers — the LLM found context and answered, but about the wrong thing.</p>
+<p><em>Example:</em> User asks "How many sick days?" Answer talks about annual leave policies. The answer is factual and grounded but doesn't answer the actual question → low answer relevancy.</p>
+</div>
+
+<div class="cd">
+<h4>Metric 3: Context Precision</h4>
+<p><strong>Question:</strong> "Of the documents I retrieved, how many were actually relevant?"</p>
+<p><strong>Catches:</strong> Noisy retrieval — you retrieved 5 docs but only 1 was useful.</p>
+<p><em>Example:</em> For "How many sick days?", you retrieve: D2 (sick leave — relevant), D1 (annual leave — wrong type), D11 (cafeteria hours — irrelevant). Only 1 of 3 is actually relevant → low context precision.</p>
+<pre>
+# Context Precision = (relevant retrieved docs) / (total retrieved docs)
+# High precision → your retrieval is selective, not noisy
+</pre>
+</div>
+
+<div class="cd">
+<h4>Metric 4: Context Recall</h4>
+<p><strong>Question:</strong> "Did I find ALL the relevant documents, or did I miss some?"</p>
+<p><strong>Catches:</strong> Incomplete retrieval — the answer is correct as far as it goes, but misses important information in documents the retriever didn't return.</p>
+<p><em>Example:</em> You have docs about sick leave (D2) AND a doc about extended sick leave for hospitalization (D15). Your retriever found D2 but missed D15. The answer is incomplete → low context recall.</p>
+<pre>
+# Context Recall = (relevant docs retrieved) / (total relevant docs that exist)
+# High recall → you're not missing critical information
+</pre>
+</div>
+
+<div class="an">
+<strong>🔗 Real-World Analogy:</strong>
+Imagine a fishing net. Context precision = "of all the fish I caught, how many are the species I actually wanted?" If I caught 10 fish but only 2 are tuna and 8 are random bycatch, my precision is 0.2 — too much junk. Context recall = "of all the tuna in the ocean (that I know about), how many did I actually catch?" If there were 5 tuna in the area and I caught 3, my recall is 0.6 — I missed 2. You need both: high precision (mostly the right fish) AND high recall (don't miss the ones that matter).
+</div>
+
+<h2><span class="sn">3</span> How to Run RAGAS Evaluation</h2>
+<div class="cd">
+<pre>
+# Step 1: Create an evaluation dataset
+# You need: questions, ground-truth answers, and (ideally) which docs
+# should be retrieved for each question
+
+eval_data = [
+    {
+        "question": "How many sick days do I get?",
+        "ground_truth": "10 days per year, medical cert after 2 consecutive days",
+        "relevant_doc_ids": ["D2"]
+    },
+    {
+        "question": "Can I work from home in my first week?",
+        "ground_truth": "No, first 30 days must be in office",
+        "relevant_doc_ids": ["D4", "D3"]
+    },
+    # ... at least 20-50 examples for meaningful evaluation
+]
+
+# Step 2: Run your pipeline on each question
+for item in eval_data:
+    retrieved_docs = retriever.invoke(item["question"])
+    answer = generate(item["question"], retrieved_docs)
+    item["retrieved_docs"] = retrieved_docs
+    item["generated_answer"] = answer
+
+# Step 3: Use RAGAS to compute metrics
+# pip install ragas
+from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy
+from ragas.metrics import context_precision, context_recall
+
+results = evaluate(
+    dataset=eval_data,  # your run results
+    metrics=[faithfulness, answer_relevancy, 
+             context_precision, context_recall]
+)
+print(results)
+# {'faithfulness': 0.85, 'answer_relevancy': 0.78,
+#  'context_precision': 0.60, 'context_recall': 0.72}
+</pre>
+<p><strong>Interpreting results:</strong></p>
+<table>
+<tr><th>Metric</th><th>Low Score Means</th><th>Fix</th></tr>
+<tr><td>Faithfulness < 0.8</td><td>LLM is hallucinating</td><td>Strengthen system prompt, lower temperature</td></tr>
+<tr><td>Answer Relevancy < 0.7</td><td>Answers are off-topic</td><td>Improve query rewriting, add reranking</td></tr>
+<tr><td>Context Precision < 0.6</td><td>Retrieval returns too much noise</td><td>Add reranking, improve chunking, add post-filtering</td></tr>
+<tr><td>Context Recall < 0.7</td><td>Missing relevant documents</td><td>Add multi-query expansion, try hybrid search, increase top-K</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 10: CODE                                -->
+<!-- ════════════════════════════════════════════ -->
+<div class="tc" id="tab-code">
+
+<h2><span class="sn">1</span> Complete Programs — Build in Order</h2>
+<p style="font-size:.84rem;color:var(--tm);">Each program adds one concept. Run in your Google Colab with OpenRouter. Click to expand.</p>
+
+<details>
+<summary>Program 1: Basic RAG (Dense Search Only)</summary>
+<pre>
+# ═══ BASIC RAG — Simplest working pipeline ═══
+# %pip install -q langchain-huggingface langchain-chroma langchain-openai
+
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.documents import Document
+from langchain_chroma import Chroma
+from langchain_openai import ChatOpenAI
+from uuid import uuid4
+
+# Embedding model (local, free)
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_kwargs={"device": "cpu"},
+    encode_kwargs={"normalize_embeddings": True}
+)
+
+# Sample documents
+documents = [
+    Document(page_content="Employees receive 18 days of paid annual leave per year. Annual leave needs manager approval.", metadata={"id": "D1", "source": "HR"}),
+    Document(page_content="Employees receive 10 days of sick leave per year. A medical certificate is needed after 2 consecutive sick days.", metadata={"id": "D2", "source": "HR"}),
+    Document(page_content="Employees may work from home up to 2 days per week with manager approval.", metadata={"id": "D3", "source": "HR"}),
+    Document(page_content="Employees must work from the office during their first 30 days.", metadata={"id": "D4", "source": "HR"}),
+    Document(page_content="Error VPN-403 means VPN access is not approved. Raise a ticket with IT.", metadata={"id": "D6", "source": "IT"}),
+]
+
+# Create vector store (ONCE at startup, not per query!)
+vector_store = Chroma.from_documents(documents=documents, embedding=embeddings, collection_name="basic_" + uuid4().hex[:8])
+retriever = vector_store.as_retriever(search_kwargs={"k": 3})
+
+# LLM via OpenRouter
+llm = ChatOpenAI(model="openai/gpt-4o-mini", openai_api_base="https://openrouter.ai/api/v1", openai_api_key="YOUR_KEY", temperature=0)
+
+def make_context(docs):
+    return "\n\n".join(f"[{d.metadata['id']}] {d.page_content}" for d in docs)
+
+def generate(question, docs):
+    ctx = make_context(docs)
+    prompt = f"Answer using ONLY these passages. Cite [IDs]. If not found, say so.\n\nPassages:\n{ctx}\n\nQuestion: {question}"
+    return llm.invoke(prompt).content
+
+query = "How many leave days do I get?"
+results = retriever.invoke(query)
+print(generate(query, results))
+</pre>
+</details>
+
+<details>
+<summary>Program 2: Hybrid Search (Dense + BM25)</summary>
+<pre>
+# ═══ HYBRID — Add keyword search to catch exact terms ═══
+# %pip install -q rank-bm25 langchain-classic
+import re
+from langchain_community.retrievers import BM25Retriever
+from langchain_classic.retrievers import EnsembleRetriever
+
+def tokenize(text):
+    return re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", text.lower())
+
+bm25 = BM25Retriever.from_documents(documents, preprocess_func=tokenize)
+bm25.k = 4
+
+hybrid = EnsembleRetriever(retrievers=[retriever, bm25], weights=[0.5, 0.5], c=60, id_key="id")
+
+# Test: "VPN-403" — BM25 catches this, dense search misses it
+for doc in hybrid.invoke("VPN-403"):
+    print(f"  {doc.metadata['id']}: {doc.page_content[:60]}...")
+</pre>
+</details>
+
+<details>
+<summary>Program 3: + Cohere Reranking</summary>
+<pre>
+# ═══ RERANKING — Cross-encoder re-scores candidates ═══
+# %pip install -q cohere
+from cohere import ClientV2
+co = ClientV2(api_key="YOUR_COHERE_KEY")
+
+def rerank(question, candidates, top_n=3):
+    if not candidates: return [], []
+    resp = co.rerank(model="rerank-v3.5", query=question,
+                     documents=[d.page_content for d in candidates], top_n=top_n)
+    return [candidates[r.index] for r in resp.results], [r.relevance_score for r in resp.results]
+
+query = "How many leave days per year?"
+hybrid_results = hybrid.invoke(query)
+reranked, scores = rerank(query, hybrid_results)
+for doc, s in zip(reranked, scores):
+    print(f"  Score: {s:.3f} | {doc.metadata['id']}: {doc.page_content[:50]}...")
+</pre>
+</details>
+
+<details>
+<summary>Program 4: Pre/Post Filtering + Reordering</summary>
+<pre>
+# ═══ FILTERING + REORDERING ═══
+# Pre-filter: search only HR docs
+hr_only = vector_store.as_retriever(search_kwargs={"k": 3, "filter": {"source": "HR"}})
+
+# Post-filter: drop low scores
+def post_filter(docs, scores, threshold=0.3):
+    return [(d, s) for d, s in zip(docs, scores) if s >= threshold]
+
+# Reorder for LLM attention (lost in the middle fix)
+from langchain_community.document_transformers import LongContextReorder
+reorder = LongContextReorder()
+reordered = reorder.transform_documents(reranked)
+for i, doc in enumerate(reordered):
+    pos = "← HIGH attention" if i in (0, len(reordered)-1) else "  (lower attention)"
+    print(f"  Position {i}: {doc.metadata['id']} {pos}")
+</pre>
+</details>
+
+<details>
+<summary>Program 5: Multi-Query Expansion</summary>
+<pre>
+# ═══ MULTI-QUERY — Generate query variations ═══
+from langchain.retrievers.multi_query import MultiQueryRetriever
+import logging
+logging.basicConfig()
+logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
+
+multi = MultiQueryRetriever.from_llm(
+    retriever=vector_store.as_retriever(search_kwargs={"k": 3}), llm=llm)
+
+results = multi.invoke("Can I work from home during my first month?")
+# Check logs — you'll see 3 generated query variations
+print(f"Found {len(results)} unique documents across all variations")
+</pre>
+</details>
+
+<details>
+<summary>Program 6: Self-RAG (3 Checkpoints)</summary>
+<pre>
+# ═══ SELF-RAG — Validate retrieval and answer ═══
+def self_rag(query, retriever, llm, verbose=True):
+    # Checkpoint 1: Need retrieval?
+    c1 = llm.invoke(f"Does '{query}' need company docs? Reply 'retrieve' or 'general'.").content.strip().lower()
+    if verbose: print(f"CP1: {c1}")
+    if "general" in c1: return llm.invoke(query).content
+    
+    docs = retriever.invoke(query)
+    if verbose: print(f"  Retrieved {len(docs)} docs")
+    
+    # Checkpoint 2: Docs relevant?
+    relevant = []
+    for doc in docs:
+        c2 = llm.invoke(f"Is this relevant to '{query}'? Reply 'relevant'/'irrelevant'.\nDoc: {doc.page_content}").content.strip().lower()
+        if verbose: print(f"  CP2 {doc.metadata.get('id')}: {c2}")
+        if "relevant" in c2: relevant.append(doc)
+    
+    if not relevant: return "I couldn't find relevant information."
+    
+    answer = generate(query, relevant)
+    
+    # Checkpoint 3: Supported?
+    ctx = make_context(relevant)
+    c3 = llm.invoke(f"Is this answer supported by context? Reply 'supported'/'unsupported'.\nContext: {ctx}\nAnswer: {answer}").content.strip().lower()
+    if verbose: print(f"  CP3: {c3}")
+    if "unsupported" in c3: return f"Unverified. Raw docs:\n{ctx}"
+    return answer
+
+print(self_rag("How many sick days?", hybrid, llm))
+print(self_rag("What is 2+2?", hybrid, llm))
+</pre>
+</details>
+
+<details>
+<summary>Program 7: Real PDF End-to-End</summary>
+<pre>
+# ═══ REAL PDF — Full pipeline from file to answer ═══
+# %pip install -q pypdf
+
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# Step 1: Load PDF
+# Upload a PDF to Colab, or use the sample path
+PDF_PATH = "company_handbook.pdf"  # your file
+pages = PyPDFLoader(PDF_PATH).load()
+print(f"Loaded {len(pages)} pages")
+
+# Step 2: Check for empty pages (scanned PDF detection)
+empty = [p for p in pages if not p.page_content.strip()]
+if empty:
+    print(f"⚠️ {len(empty)} empty pages — might be scanned PDF, needs OCR")
+
+# Step 3: Chunk
+splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+chunks = splitter.split_documents(pages)
+chunks = [c for c in chunks if c.page_content.strip()]  # remove empties
+print(f"Created {len(chunks)} chunks")
+
+# Step 4: Assign IDs (PyPDFLoader doesn't add IDs by default)
+for i, chunk in enumerate(chunks):
+    chunk.metadata["id"] = f"C{i+1}"
+
+# Step 5: Embed + Store
+pdf_store = Chroma.from_documents(
+    documents=chunks, embedding=embeddings,
+    collection_name="pdf_rag_" + uuid4().hex[:8]
+)
+pdf_retriever = pdf_store.as_retriever(search_kwargs={"k": 4})
+
+# Step 6: Retrieve + Generate
+query = "What does the document say about employee responsibilities?"
+results = pdf_retriever.invoke(query)
+
+print(f"\n--- Retrieved {len(results)} chunks ---")
+for doc in results:
+    pg = doc.metadata.get("page", "?")
+    print(f"  {doc.metadata['id']} (page {pg}): {doc.page_content[:80]}...")
+
+answer = generate(query, results)
+print(f"\n--- Answer ---\n{answer}")
+</pre>
+</details>
+</div>
+
+<script>
+document.querySelectorAll('.tt').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.tt').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.tc').forEach(x=>x.classList.remove('on'));b.classList.add('on');document.getElementById('tab-'+b.dataset.tab).classList.add('on')})});
+document.querySelectorAll('.nt').forEach(t=>{t.addEventListener('click',()=>{t.parentElement.classList.toggle('op')})});
+</script>
+</body>
+</html>
