@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Self-RAG: Zero to Production Learning Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1F5;--surface:#FFFFFF;--surface-2:#F4F7FA;--ink:#16212E;--muted:#556478;--line:#CAD3DD;
+  --accent:#0B6E79;--accent-ink:#FFFFFF;--accent-soft:#DAEEF0;
+  --warn:#8A520A;--warn-soft:#FBF0DC;--fail:#9E2A2F;--fail-soft:#F9E4E4;--ok:#2E6B3A;--ok-soft:#E2F1E5;
+  --link-c:#2F5FA7;--link-soft:#E4ECF8;
+  --code-bg:#17212C;--code-ink:#DCE5EE;--code-cm:#8DB89E;
+  --t-concept:#2F5FA7;--t-tool:#0B6E79;--t-technique:#6B3FA0;--t-variant:#3E4FB5;--t-failure:#B0343A;--t-production:#96590B;--t-decision:#2E7D46;
+  --serif:"Source Serif 4","Source Serif Pro",Georgia,"Times New Roman",serif;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1822;--surface:#16212D;--surface-2:#1B2836;--ink:#E3E9F0;--muted:#9AA8B8;--line:#2B3A4A;
+  --accent:#5CC4CE;--accent-ink:#08181B;--accent-soft:#133740;
+  --warn:#E7B660;--warn-soft:#382A12;--fail:#F2959A;--fail-soft:#3A1A1D;--ok:#86CF94;--ok-soft:#163120;
+  --link-c:#8DB2EE;--link-soft:#1A2A42;
+  --code-bg:#0A1119;--code-ink:#D6E0EA;--code-cm:#7FB093;
+  --t-concept:#8DB2EE;--t-tool:#5CC4CE;--t-technique:#B99AE3;--t-variant:#9AA6F2;--t-failure:#F2959A;--t-production:#E7B660;--t-decision:#86CF94;
+}}
+:root[data-theme="dark"]{
+  --bg:#0F1822;--surface:#16212D;--surface-2:#1B2836;--ink:#E3E9F0;--muted:#9AA8B8;--line:#2B3A4A;
+  --accent:#5CC4CE;--accent-ink:#08181B;--accent-soft:#133740;
+  --warn:#E7B660;--warn-soft:#382A12;--fail:#F2959A;--fail-soft:#3A1A1D;--ok:#86CF94;--ok-soft:#163120;
+  --link-c:#8DB2EE;--link-soft:#1A2A42;
+  --code-bg:#0A1119;--code-ink:#D6E0EA;--code-cm:#7FB093;
+  --t-concept:#8DB2EE;--t-tool:#5CC4CE;--t-technique:#B99AE3;--t-variant:#9AA6F2;--t-failure:#F2959A;--t-production:#E7B660;--t-decision:#86CF94;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.62 var(--sans);}
+img,svg{max-width:100%}
+a{color:var(--link-c)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;line-height:1.2;margin:0}
+h1{font-size:clamp(2rem,5vw,3.1rem);letter-spacing:-.01em}
+h2{font-size:clamp(1.6rem,3.4vw,2.2rem);margin-bottom:.4rem}
+h3{font-size:1.35rem;margin:2.4rem 0 .6rem}
+h4{font-size:1.08rem;margin:1.5rem 0 .4rem}
+p,li{max-width:74ch}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);border:1px solid var(--line);padding:.05em .35em;border-radius:4px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 clamp(1rem,3vw,2rem)}
+header.top{padding:2.6rem 0 1.4rem}
+header.top .sub{color:var(--muted);font-size:1.08rem;margin:.7rem 0 0;max-width:62ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;align-items:center;margin-top:1.1rem;font-size:.9rem;color:var(--muted)}
+.theme-btn{font:500 .85rem var(--sans);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:.3rem .8rem;cursor:pointer}
+/* confidence badges */
+.cf{display:inline-block;font:500 .72rem/1.5 var(--sans);padding:0 .45em;border-radius:4px;vertical-align:.1em;margin-right:.25em;white-space:nowrap}
+.cf.c{background:var(--ok-soft);color:var(--ok)}
+.cf.l{background:var(--link-soft);color:var(--link-c)}
+.cf.g{background:var(--warn-soft);color:var(--warn)}
+/* route rail: the one bold element */
+nav.rail{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.rail-inner{display:flex;gap:0;overflow-x:auto;padding:.9rem clamp(1rem,3vw,2rem) .7rem;max-width:1100px;margin:0 auto;scrollbar-width:thin}
+.phase{display:flex;flex-direction:column;flex:0 0 auto;padding-right:.4rem}
+.phase-name{font:500 .76rem var(--sans);color:var(--muted);padding-left:.2rem;margin-bottom:.35rem;white-space:nowrap}
+.stops{display:flex;position:relative}
+.stops::before{content:"";position:absolute;left:18px;right:18px;top:17px;height:3px;background:var(--phase-c,var(--line));border-radius:2px;opacity:.55}
+.phase[data-p="A"]{--phase-c:var(--t-concept)}
+.phase[data-p="B"]{--phase-c:var(--t-tool)}
+.phase[data-p="C"]{--phase-c:var(--t-production)}
+.phase[data-p="P"]{--phase-c:var(--t-decision)}
+.stop{position:relative;display:flex;flex-direction:column;align-items:center;gap:.3rem;width:78px;background:none;border:0;padding:0 .1rem;cursor:pointer;color:var(--muted);font:500 .72rem/1.2 var(--sans);text-align:center}
+.stop .dot{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:3px solid var(--phase-c);color:var(--ink);font:600 1.05rem var(--sans);transition:transform .15s}
+.stop.seen .dot{background:color-mix(in srgb,var(--phase-c) 22%,var(--surface))}
+.stop[aria-current="true"] .dot{background:var(--phase-c);color:var(--surface);transform:scale(1.12)}
+.stop[aria-current="true"]{color:var(--ink)}
+.stop:hover .dot{transform:scale(1.08)}
+main{padding:2rem 0 4rem}
+section.tab{animation:none}
+.tab-head{display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:1rem;margin-bottom:1.4rem}
+.tab-num{font:600 2.6rem/1 var(--serif);color:var(--accent)}
+.phase-tag{font-size:.82rem;color:var(--muted)}
+.lead{font-size:1.14rem;color:var(--ink);max-width:68ch;margin-top:.2rem}
+/* callouts */
+.co{border-left:4px solid var(--c);background:var(--cs);padding:.8rem 1rem;border-radius:0 8px 8px 0;margin:1.1rem 0;max-width:80ch}
+.co p{margin:.3rem 0}
+.co .ct{font-weight:600;margin-right:.3rem}
+.co.mistake{--c:var(--fail);--cs:var(--fail-soft)}
+.co.analogy{--c:var(--accent);--cs:var(--accent-soft)}
+.co.tip{--c:var(--ok);--cs:var(--ok-soft)}
+.co.course{--c:var(--link-c);--cs:var(--link-soft)}
+.co.warnc{--c:var(--warn);--cs:var(--warn-soft)}
+/* tables */
+.tw{overflow-x:auto;margin:1rem 0 1.4rem;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:.55rem .75rem;border-bottom:1px solid var(--line)}
+th{font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td code{white-space:nowrap}
+/* pipelines */
+.pipe{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem .35rem;margin:1rem 0 1.3rem;padding:.9rem;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.pipe .s{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.35rem .6rem;font-size:.88rem;line-height:1.3}
+.pipe .s.hl{border-color:var(--accent);background:var(--accent-soft)}
+.pipe .s.bad{border-color:var(--fail);background:var(--fail-soft)}
+.pipe .s.gate{border-color:var(--t-technique);background:color-mix(in srgb,var(--t-technique) 12%,var(--surface))}
+.pipe .a{color:var(--muted);font-weight:600}
+.pipe .cap{flex-basis:100%;font-size:.8rem;color:var(--muted);margin-bottom:.1rem}
+/* grid of small blocks */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin:1rem 0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.9rem 1rem}
+.panel h4{margin-top:0}
+/* code */
+.code{position:relative;margin:.8rem 0 1.2rem}
+.code pre{margin:0;background:var(--code-bg);color:var(--code-ink);padding:1rem 1.1rem;border-radius:8px;overflow-x:auto;font:400 .84rem/1.55 var(--mono);tab-size:4}
+.code pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+.code .cm{color:var(--code-cm);font-style:italic}
+.copy{position:absolute;top:.5rem;right:.5rem;font:500 .75rem var(--sans);background:rgba(255,255,255,.1);color:var(--code-ink);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:.2rem .55rem;cursor:pointer;z-index:2}
+details.prog,details.hint{background:var(--surface);border:1px solid var(--line);border-radius:8px;margin:.8rem 0}
+details.prog>summary,details.hint>summary{cursor:pointer;padding:.75rem 1rem;font-weight:600;list-style-position:outside}
+details.prog>summary .adds{font-weight:400;color:var(--muted);font-size:.9rem}
+details.prog[open]>summary,details.hint[open]>summary{border-bottom:1px solid var(--line)}
+details.prog>.body,details.hint>.body{padding:.4rem 1rem .6rem}
+details.hint{background:var(--surface-2)}
+/* mindmap */
+.mm-controls{display:flex;gap:.5rem;flex-wrap:wrap;margin:.6rem 0 1rem}
+.btn{font:500 .88rem var(--sans);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:.4rem .8rem;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0 1rem}
+.tag{--c:var(--muted);display:inline-block;font:500 .72rem/1.6 var(--sans);padding:0 .5em;border-radius:4px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);white-space:nowrap}
+.tag.concept{--c:var(--t-concept)}.tag.tool{--c:var(--t-tool)}.tag.technique{--c:var(--t-technique)}.tag.variant{--c:var(--t-variant)}.tag.failure{--c:var(--t-failure)}.tag.production{--c:var(--t-production)}.tag.decision{--c:var(--t-decision)}
+.mm{list-style:none;padding-left:0;margin:0}
+.mm ul{list-style:none;margin:.2rem 0 .2rem 1.05rem;padding-left:1rem;border-left:2px solid var(--line);display:none}
+.mm li.open>ul{display:block}
+.mm li{margin:.28rem 0}
+.mm .node{display:inline-flex;align-items:center;gap:.45rem;font:500 .95rem var(--sans);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:.28rem .6rem;cursor:pointer;text-align:left}
+.mm .node::before{content:"+";font:600 .9rem var(--mono);color:var(--muted);width:.8em}
+.mm li.open>.node::before{content:"−"}
+.mm .leaf{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.4rem;font-size:.92rem;padding:.1rem 0}
+.mm .ref{font-size:.8rem;color:var(--muted)}
+.mm>li>.node{font-family:var(--serif);font-size:1.15rem;font-weight:600}
+/* tab footer */
+.tab-foot{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);flex-wrap:wrap}
+.tab-foot .btn{max-width:48%}
+.check{list-style:none;padding-left:0}
+.check li{padding-left:1.7rem;position:relative;margin:.35rem 0}
+.check li::before{content:"☐";position:absolute;left:0;color:var(--accent);font-size:1.1rem;line-height:1.4}
+.assign{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:1.2rem clamp(1rem,2.5vw,1.6rem);margin:1.6rem 0}
+.assign h3{margin-top:0}
+.diff{font-size:.85rem;color:var(--muted)}
+pre.ascii{font:400 .82rem/1.45 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:1rem;overflow-x:auto;color:var(--ink)}
+.formula{font-family:var(--mono);font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:.5rem .8rem;display:inline-block;margin:.3rem 0}
+@media (max-width:640px){
+  body{font-size:15.5px}
+  .stop{width:64px;font-size:.66rem}
+  .stop .dot{width:32px;height:32px;font-size:.95rem}
+  .stops::before{top:15px}
+  .tab-num{font-size:2rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top wrap">
+  <h1>Self-RAG, from zero to production</h1>
+  <p class="sub">A fourteen-stop route from "what is a vector?" to a retrieval system that checks its own sources before it answers an on-call engineer. Read the stops in order; each one assumes the previous.</p>
+  <div class="meta-row">
+    <span>Depth: Level 4 (complete)</span>
+    <span>Stack: Python, LangChain, LangGraph, HuggingFace, Qdrant, Cohere, OpenRouter, Colab</span>
+    <span>Claim confidence: <span class="cf c">Certain</span><span class="cf l">Likely</span><span class="cf g">Guessing</span></span>
+    <button class="theme-btn" id="themeBtn" type="button">Theme: auto</button>
+  </div>
+</header>
+<nav class="rail" aria-label="Guide sections"><div class="rail-inner" id="rail"></div></nav>
+<main class="wrap" id="main">
+<!-- ============ TAB 0 ============ -->
+<section class="tab" data-num="⓪" data-short="Prerequisites" data-phase="A" data-title="Prerequisites">
+<div class="tab-head"><span class="tab-num">⓪</span><div><h2>The five ideas everything else stands on</h2><span class="phase-tag">Phase A, foundations: what and why</span></div></div>
+<p class="lead">If any idea on this page feels fuzzy, every later tab will feel like magic, and magic is impossible to debug at 3 a.m. Spend fifteen minutes here.</p>
+
+<h3>1. What an LLM knows, and what it doesn't</h3>
+<p>A large language model (LLM) is a next-word predictor trained on a huge snapshot of public text. It knows general engineering well. It has never seen your runbooks, your incident history, or last Tuesday's deploy.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: the brilliant new hire.</span>On day one they know HTTP status codes and caching theory cold, but have never opened your team wiki. Ask "how do we purge the CDN for brand B?" and you get a confident, generic, possibly wrong answer.</p></div>
+<p><strong>Example.</strong> Ask a bare LLM "What does AUTH-403 mean on our storefront?" It will guess "forbidden, check permissions", because AUTH-403 is your internal code and it has no way to know your code means "the client secret was rotated but not updated".</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>fine-tuning a model "so it learns our runbooks". <span class="cf l">Likely</span> Fine-tuning shifts style and behaviour far more reliably than it stores facts, and facts that change weekly would force retraining weekly. Facts belong in retrieval; behaviour belongs in prompts or fine-tuning.</p></div>
+
+<h3>2. Tokens and the context window</h3>
+<p>Models read <em>tokens</em>, chunks of text roughly three-quarters of an English word long. The <em>context window</em> is how many tokens fit in one request: your instructions, the retrieved text, and the answer, all together.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: the exam-room whiteboard.</span>Big, but finite. You can't tape the whole library to it, so you choose which pages to copy up. Retrieval is the act of choosing.</p></div>
+<p><strong>Example.</strong> <span class="cf l">Likely</span> A 300-page PDF is on the order of 150,000 tokens. Even if a model accepts that much, you pay for every token on every question, and answers get worse for facts buried in the middle (Tab ⑩ covers "lost in the middle").</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>"long-context models make RAG obsolete." They reduce chunking pain, but cost and latency still scale with tokens, and you still need to know <em>which</em> 5 pages matter out of 50,000.</p></div>
+
+<h3>3. Vectors and similarity</h3>
+<p>A vector is just a list of numbers. An <em>embedding model</em> turns a piece of text into one, trained so that texts with similar meaning land close together.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: GPS coordinates for meaning.</span>"Checkout is slow" and "payment page latency is high" get nearby coordinates even though they share no words, the way two cafés on the same street have nearby coordinates even with different names.</p></div>
+<p><strong>Worked example (2 dimensions instead of 384).</strong></p>
+<div class="tw"><table>
+<tr><th>Text</th><th>Toy vector</th><th>Cosine vs "checkout slow"</th></tr>
+<tr><td>checkout slow</td><td>(0.90, 0.10)</td><td>1.000</td></tr>
+<tr><td>payment latency high</td><td>(0.80, 0.30)</td><td>0.969 (very close)</td></tr>
+<tr><td>CDN cache purge</td><td>(0.10, 0.95)</td><td>0.214 (far)</td></tr>
+</table></div>
+<p><strong>Cosine similarity</strong> measures the angle between two arrows: <span class="formula">cos(A,B) = (A·B) / (|A| × |B|)</span>. 1 means same direction, 0 means unrelated. If vectors are normalized to length 1, cosine equals the plain dot product, which is why every code example in this guide normalizes.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>treating a similarity score as a probability, or reusing one threshold across models. <span class="cf c">Certain</span> Score scales differ per model: 0.62 can be a strong match in one model and noise in another. Thresholds must be calibrated per model on your data (Tab ⑪).</p></div>
+
+<h3>4. RAG in one picture</h3>
+<p>Retrieval-Augmented Generation (RAG) = find the relevant pages first, then let the LLM answer using only those pages.</p>
+<div class="pipe"><span class="cap">Offline: indexing (once, then on every doc change)</span>
+<span class="s">Documents</span><span class="a">→</span><span class="s">Split into chunks</span><span class="a">→</span><span class="s">Embed each chunk</span><span class="a">→</span><span class="s hl">Store vectors + metadata</span></div>
+<div class="pipe"><span class="cap">Online: answering (every question)</span>
+<span class="s">Question</span><span class="a">→</span><span class="s">Embed question</span><span class="a">→</span><span class="s hl">Search vector DB</span><span class="a">→</span><span class="s">Top-k chunks</span><span class="a">→</span><span class="s">Prompt = question + chunks</span><span class="a">→</span><span class="s">LLM</span><span class="a">→</span><span class="s">Answer with citations</span></div>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: the open-book exam.</span>The student (LLM) is smart; the textbook (your docs) holds the facts; the index at the back (vector DB) finds the right pages fast.</p></div>
+
+<h3>5. Why plain RAG breaks, and what Self-RAG adds</h3>
+<p>The pipeline above is called <em>naive RAG</em>. It trusts every step blindly. Self-RAG puts a checkpoint after each step that can go wrong.</p>
+<div class="tw"><table>
+<tr><th>Failure in naive RAG</th><th>Concrete example</th><th>Self-RAG's checkpoint</th><th>Where</th></tr>
+<tr><td>Retrieves when it shouldn't</td><td>"What's 17 × 3?" pulls three runbooks into the prompt</td><td>Retrieval decision (router)</td><td>Tab ⑧, ⑨</td></tr>
+<tr><td>Retrieves the wrong thing</td><td>"AUTH-403" returns a generic login doc; the exact code is ignored</td><td>Hybrid search + rerank, then relevance grading</td><td>Tab ⑥, ⑨</td></tr>
+<tr><td>Uses irrelevant chunks anyway</td><td>A CDN doc gets used to answer a checkout question</td><td>Document grader drops it</td><td>Tab ⑨</td></tr>
+<tr><td>Answer not backed by sources</td><td>Invents a Business Manager menu path that doesn't exist</td><td>Groundedness (hallucination) check, then regenerate</td><td>Tab ⑨</td></tr>
+<tr><td>Grounded but doesn't answer</td><td>Summarises the doc instead of giving the fix</td><td>Usefulness check, then rewrite query</td><td>Tab ⑨</td></tr>
+<tr><td>Answer isn't in the docs at all</td><td>A question about Kafka certificates you never documented</td><td>Bounded retries, then an honest "not found"</td><td>Tab ⑧, ⑩</td></tr>
+</table></div>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: the careful student vs the crammer.</span>The careful student asks "do I even need the book for this?", checks each page is actually relevant, checks every sentence of the answer is backed by the book, and rereads the question before handing in. That is Self-RAG.</p></div>
+
+<h3>Glossary you'll need</h3>
+<div class="tw"><table>
+<tr><th>Term</th><th>Plain meaning</th><th>Tiny example</th></tr>
+<tr><td>Chunk</td><td>A piece of a document small enough to embed and retrieve on its own</td><td>One runbook section, ~800 characters</td></tr>
+<tr><td>Embedding</td><td>The vector an embedding model produces for a text</td><td>384 numbers for one chunk</td></tr>
+<tr><td>Bi-encoder</td><td>Model that embeds query and document separately (fast, used for search)</td><td><code>bge-small-en-v1.5</code></td></tr>
+<tr><td>Cross-encoder / reranker</td><td>Model that reads query and document together to score relevance (slow, accurate)</td><td>Cohere Rerank</td></tr>
+<tr><td>Vector database</td><td>Stores vectors plus metadata and finds nearest neighbours fast</td><td>Qdrant</td></tr>
+<tr><td>Payload / metadata</td><td>Extra fields stored with a vector, used for filtering</td><td><code>{"service": "checkout", "year": 2025}</code></td></tr>
+<tr><td>Top-k</td><td>How many results you ask for</td><td>k = 5</td></tr>
+<tr><td>Hybrid search</td><td>Combining meaning-based (dense) and keyword-based (sparse/BM25) search</td><td>Finds both "login broken" and "AUTH-403"</td></tr>
+<tr><td>Grader</td><td>An LLM call that returns a verdict (relevant? grounded? useful?)</td><td><code>{"grounded": false}</code></td></tr>
+<tr><td>Grounded</td><td>Every claim in the answer is supported by the retrieved sources</td><td>—</td></tr>
+<tr><td>Hallucination</td><td>A fluent claim with no support in the sources</td><td>A made-up config flag</td></tr>
+<tr><td>Reflection token</td><td>Special token the original Self-RAG model emits to critique itself</td><td><code>[IsSup: fully supported]</code></td></tr>
+<tr><td>Golden set</td><td>Hand-labelled questions with known right answers, used to measure quality</td><td>20 questions + expected source</td></tr>
+</table></div>
+
+<h3>Setup checklist</h3>
+<ul class="check">
+<li>A Google account for <a href="https://colab.research.google.com" target="_blank" rel="noopener">Google Colab</a> (CPU runtime is enough for everything here).</li>
+<li>An <a href="https://openrouter.ai" target="_blank" rel="noopener">OpenRouter</a> API key. One key reaches many LLM providers through an OpenAI-compatible API.</li>
+<li>Optional: a <a href="https://dashboard.cohere.com" target="_blank" rel="noopener">Cohere</a> trial key for reranking. <span class="cf l">Likely</span> Trial keys are free but rate-limited; every program falls back to a free local reranker if the key is missing.</li>
+<li>Both keys saved in Colab's Secrets panel (the key icon in the left sidebar) as <code>OPENROUTER_API_KEY</code> and <code>COHERE_API_KEY</code>, never pasted into a cell.</li>
+<li>Python you should be comfortable with: functions, dicts, list comprehensions, and reading a small <code>pydantic</code> class.</li>
+</ul>
+<div class="co course"><p><span class="ct">🎓 Course link (IIT Jammu Agentic AI with AIOps).</span>Your course covered Chroma and Pinecone for vector storage and LangGraph plus LangSmith for agents. This guide uses the same indexing loop but swaps in Qdrant, because its filtering and hybrid search are first-class, and it reuses LangGraph (Tab ⑧) and LangSmith-style tracing (Tab ⑩). Prometheus and Grafana come back in Tab ⑩ as the way to watch a Self-RAG system in production.</p></div>
+</section>
+
+<!-- ============ TAB 1 ============ -->
+<section class="tab" data-num="①" data-short="Mindmap" data-phase="A" data-title="Mindmap">
+<div class="tab-head"><span class="tab-num">①</span><div><h2>The whole landscape on one page</h2><span class="phase-tag">Phase A, foundations: the map before the journey</span></div></div>
+<p class="lead">Click a branch to open it. Every leaf names the tab that teaches it. Come back here whenever you lose the thread; if you can't say where a concept sits on this map, reread its tab.</p>
+<div class="legend">
+<span class="tag concept">concept</span><span class="tag tool">tool</span><span class="tag technique">technique</span><span class="tag variant">variant</span><span class="tag failure">failure</span><span class="tag production">production</span><span class="tag decision">decision</span>
+</div>
+<div class="mm-controls"><button class="btn primary" type="button" id="mmOpen">Expand all</button><button class="btn" type="button" id="mmClose">Collapse all</button></div>
+<ul class="mm" id="mindmap">
+<li class="open"><button class="node" type="button">Self-RAG system</button>
+<ul>
+ <li><button class="node" type="button"><span class="tag concept">concept</span> Foundations</button>
+  <ul>
+   <li><span class="leaf">LLM limits and context window <span class="ref">Tab ⓪</span></span></li>
+   <li><span class="leaf">Vectors and cosine similarity <span class="ref">Tab ⓪</span></span></li>
+   <li><span class="leaf">Embeddings, bi-encoders, normalization <span class="ref">Tab ②</span></span></li>
+   <li><span class="leaf">Query vs passage prefixes (asymmetric retrieval) <span class="ref">Tab ②</span></span></li>
+   <li><span class="leaf">Chunking strategies, overlap, metadata at chunk time <span class="ref">Tab ②</span></span></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag decision">decision</span> Choosing an embedding model</button>
+  <ul>
+   <li><span class="leaf"><span class="tag tool">tool</span> bge-small / bge-base / bge-m3, e5, nomic, API models <span class="ref">Tab ③</span></span></li>
+   <li><span class="leaf">Criteria: retrieval score, dims, max tokens, language, license, latency <span class="ref">Tab ③</span></span></li>
+   <li><span class="leaf">MTEB retrieval column vs your own golden set <span class="ref">Tab ③, ⑪</span></span></li>
+   <li><span class="leaf">Storage math and quantization impact <span class="ref">Tab ③, ④</span></span></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag tool">tool</span> Qdrant</button>
+  <ul>
+   <li><span class="leaf">Collections, points, payloads, named vectors <span class="ref">Tab ④</span></span></li>
+   <li><span class="leaf">HNSW index: m, ef_construct, hnsw_ef <span class="ref">Tab ④</span></span></li>
+   <li><span class="leaf"><span class="tag production">production</span> Quantization, on-disk vectors, aliases <span class="ref">Tab ④, ⑩</span></span></li>
+   <li><button class="node" type="button"><span class="tag technique">technique</span> Filters</button>
+    <ul>
+     <li><span class="leaf">must / should / must_not / min_should <span class="ref">Tab ⑤</span></span></li>
+     <li><span class="leaf">MatchValue, MatchAny, Range, DatetimeRange, IsEmpty <span class="ref">Tab ⑤</span></span></li>
+     <li><span class="leaf">Payload indexes and the query planner <span class="ref">Tab ⑤</span></span></li>
+     <li><span class="leaf"><span class="tag decision">decision</span> Filter vs separate collection (multitenancy) <span class="ref">Tab ⑤</span></span></li>
+     <li><span class="leaf"><span class="tag failure">failure</span> Post-filtering in Python; over-filtering to zero <span class="ref">Tab ⑤</span></span></li>
+    </ul></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag technique">technique</span> Retrieval quality</button>
+  <ul>
+   <li><span class="leaf">Hybrid: dense + BM25 sparse, RRF fusion <span class="ref">Tab ⑥</span></span></li>
+   <li><span class="leaf"><span class="tag tool">tool</span> Cohere Rerank; local cross-encoder fallback <span class="ref">Tab ⑥</span></span></li>
+   <li><span class="leaf">Multi-query, HyDE, step-back, decomposition <span class="ref">Tab ⑨</span></span></li>
+   <li><span class="leaf">Dedup: id, content hash, near-duplicate, MMR <span class="ref">Tab ⑨</span></span></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag variant">variant</span> RAG family tree</button>
+  <ul>
+   <li><span class="leaf">Naive, Advanced, Corrective (CRAG), Self-RAG, Adaptive, Agentic, GraphRAG <span class="ref">Tab ⑦</span></span></li>
+   <li><span class="leaf">Self-RAG paper (trained reflection tokens) vs prompted graph <span class="ref">Tab ⑦, ⑧</span></span></li>
+   <li><span class="leaf"><span class="tag decision">decision</span> When Self-RAG is worth its cost <span class="ref">Tab ⑦</span></span></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag technique">technique</span> Self-RAG pipeline</button>
+  <ul>
+   <li><span class="leaf">State graph in LangGraph, loop bounds <span class="ref">Tab ⑧</span></span></li>
+   <li><span class="leaf">Route → transform → retrieve → dedup → rerank → grade → generate → check grounded → check useful → rewrite <span class="ref">Tab ⑨</span></span></li>
+   <li><span class="leaf">Grader design: structured output, reason-before-verdict, batching <span class="ref">Tab ⑨</span></span></li>
+   <li><span class="leaf">Self-query: LLM-extracted filters, validated <span class="ref">Tab ⑤, ⑨</span></span></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag failure">failure</span> Failure modes</button>
+  <ul>
+   <li><span class="leaf">Grader too strict (empty context) or too lenient (no value) <span class="ref">Tab ⑨, ⑩</span></span></li>
+   <li><span class="leaf">Unbounded loops, cost blow-ups <span class="ref">Tab ⑩</span></span></li>
+   <li><span class="leaf">Embedding mismatch, missing prefixes, truncation <span class="ref">Tab ②, ③</span></span></li>
+   <li><span class="leaf">Lost in the middle, chunk boundary splits <span class="ref">Tab ②, ⑩</span></span></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag production">production</span> Running it for real</button>
+  <ul>
+   <li><span class="leaf">Latency budget, parallel graders, confidence gates <span class="ref">Tab ⑩</span></span></li>
+   <li><span class="leaf">Caching layers, rate limits, fallbacks <span class="ref">Tab ⑩</span></span></li>
+   <li><span class="leaf">Tracing per node, Prometheus metrics <span class="ref">Tab ⑩</span></span></li>
+   <li><span class="leaf">Re-indexing with collection aliases <span class="ref">Tab ④, ⑩</span></span></li>
+  </ul></li>
+ <li><button class="node" type="button"><span class="tag decision">decision</span> Evaluation</button>
+  <ul>
+   <li><span class="leaf">Golden set design incl. unanswerable questions <span class="ref">Tab ⑪</span></span></li>
+   <li><span class="leaf">Hit@k, Recall@k, MRR, nDCG <span class="ref">Tab ⑪</span></span></li>
+   <li><span class="leaf">Faithfulness, answer relevance, RAGAS <span class="ref">Tab ⑪</span></span></li>
+   <li><span class="leaf">Grader calibration, ablations, regression gates <span class="ref">Tab ⑪</span></span></li>
+  </ul></li>
+</ul></li>
+</ul>
+<div class="co tip"><p><span class="ct">✅ How to use this map.</span>Before each practice assignment (Tab ⑬), open the map and tick off which branches your build touches. By the end of Assignment 3, every branch should be touched at least once.</p></div>
+</section>
+<!-- ============ TAB 2 ============ -->
+<section class="tab" data-num="②" data-short="Embeddings" data-phase="A" data-title="Embeddings and chunking">
+<div class="tab-head"><span class="tab-num">②</span><div><h2>Embeddings, embedding models, and chunking</h2><span class="phase-tag">Phase A, foundations: what and why</span></div></div>
+<p class="lead">Everything downstream, including Qdrant, the reranker and every grader, can only work with what the embedding step lets through. A bad embedding choice can't be fixed by a clever loop later.</p>
+
+<h3>What an embedding model actually does</h3>
+<p>An embedding model is a neural network that reads a text and outputs a fixed-length vector, say 384 numbers, no matter whether the text is three words or three paragraphs. Training pushed texts with similar meaning toward similar vectors.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: shelving a library by meaning.</span>A normal library shelves alphabetically, so "Cooking for Beginners" and "Kitchen Basics" end up far apart. An embedding library shelves by what the book is about, so they sit side by side, and your question walks straight to that shelf.</p></div>
+<p><strong>Example.</strong> With <code>bge-small-en-v1.5</code>, "checkout is very slow" and "payment page latency is high" score around 0.7–0.8 cosine, while "check out this new book" scores noticeably lower despite sharing the word "check out". <span class="cf l">Likely</span> Exact numbers vary; Program P1 in Tab ⑫ prints them for you.</p>
+
+<h3>Bi-encoders: why search can be fast</h3>
+<p>The models in this tab are <em>bi-encoders</em>: they embed the query and each document <em>separately</em>. That means documents can be embedded once, ahead of time, and a query costs one embedding plus a nearest-neighbour lookup.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: school ID photos.</span>Every student's photo is taken once at enrolment (documents embedded offline). At the gate, the guard only photographs the visitor and compares (query embedded online). Nobody retakes the whole school's photos per visitor.</p></div>
+<p>The price: the model never sees query and document together, so it can miss subtle relevance. Tab ⑥ fixes that with a cross-encoder reranker on a short list.</p>
+
+<h3>Dimensions and normalization</h3>
+<div class="tw"><table>
+<tr><th>Property</th><th>What it means</th><th>Why you care</th></tr>
+<tr><td>Dimensions</td><td>Length of each vector (384, 768, 1024, 1536...)</td><td>More dims can capture more nuance but cost more memory and search time. Memory ≈ chunks × dims × 4 bytes.</td></tr>
+<tr><td>Normalization</td><td>Scaling each vector to length 1</td><td>Then cosine = dot product, and scores are comparable within a model.</td></tr>
+<tr><td>Max sequence length</td><td>Tokens the model reads before it silently truncates</td><td>A 2,000-token chunk into a 512-token model: only the first quarter is represented.</td></tr>
+<tr><td>Distance metric</td><td>How closeness is measured (cosine, dot, Euclidean)</td><td>Use the one the model was trained for; cosine is the safe default for sentence-transformer models.</td></tr>
+</table></div>
+
+<h3>Asymmetric retrieval: queries and passages are different</h3>
+<p>A question ("why is checkout 429ing?") looks nothing like the answer passage ("SCAPI rate limit exceeded; check the quota..."). Many retrieval models were trained with a <em>prefix</em> that tells them which side they're embedding.</p>
+<div class="tw"><table>
+<tr><th>Model family</th><th>Query prefix</th><th>Passage prefix</th></tr>
+<tr><td>BGE v1.5 (en)</td><td><code>Represent this sentence for searching relevant passages: </code> (recommended for short queries)</td><td>none</td></tr>
+<tr><td>E5 (v2, multilingual)</td><td><code>query: </code></td><td><code>passage: </code></td></tr>
+<tr><td>Nomic embed v1.5</td><td><code>search_query: </code></td><td><code>search_document: </code></td></tr>
+<tr><td>all-MiniLM-L6-v2</td><td>none</td><td>none</td></tr>
+</table></div>
+<p><span class="cf l">Likely</span> These are taken from each model's card; always re-check the card for the exact version you load.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>forgetting the prefixes. Nothing errors; quality just drops quietly. Program P2 includes an "e5 without prefix" row so you can see the damage on your own screen.</p></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>embedding documents with model A and queries with model B, or with a different version of A. <span class="cf c">Certain</span> The vector spaces don't line up, scores become meaningless, and nothing raises an error. Store the model name and version in your collection metadata.</p></div>
+
+<h3>Chunking: cutting documents into retrievable pieces</h3>
+<p>You don't embed a whole 40-page runbook as one vector: its meaning would be an average of everything, which matches nothing well. You split it into chunks.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: index cards vs the whole textbook.</span>If you revise with one summary card per book, you can't find the formula you need. One card per paragraph and you lose which chapter it came from. Good chunking is sized so each card answers one kind of question and carries a note of where it came from.</p></div>
+<div class="tw"><table>
+<tr><th>Strategy</th><th>How it splits</th><th>Good for</th><th>Watch out for</th></tr>
+<tr><td>Fixed size</td><td>Every N characters or tokens</td><td>Quick baselines</td><td>Cuts mid-sentence, mid-table</td></tr>
+<tr><td>Recursive character</td><td>Tries paragraph, then line, then sentence, then word boundaries until chunks fit</td><td>Default for prose and PDFs</td><td>Still blind to document structure</td></tr>
+<tr><td>Structure-aware</td><td>Splits on headings, list items, HTML/Markdown sections</td><td>Runbooks, wikis, API docs</td><td>Needs clean source formatting</td></tr>
+<tr><td>Semantic</td><td>Splits where embedding similarity between sentences drops</td><td>Long unstructured text</td><td>Slower ingestion, unpredictable sizes</td></tr>
+<tr><td>Parent–child</td><td>Search small chunks, return their larger parent section to the LLM</td><td>Precise search plus enough context</td><td>More storage and bookkeeping</td></tr>
+</table></div>
+<p><strong>A sane starting point.</strong> <span class="cf l">Likely</span> 600–1,000 characters (roughly 150–250 tokens) with 10–15% overlap, recursive splitting. Tune with your golden set (Tab ⑪), not by feel.</p>
+<div class="grid2">
+<div class="panel"><h4>Chunks too small</h4><p>"Increase the pool only if saturation exceeds 80%" gets separated from "Payment authorization timeouts:". The chunk matches, but the LLM doesn't know what pool.</p></div>
+<div class="panel"><h4>Chunks too large</h4><p>A chunk covering payments, CDN and deploys has a vector that's a blurry average; it ranks medium for everything and first for nothing.</p></div>
+</div>
+
+<h3>Metadata is decided at chunk time</h3>
+<p>Every chunk should carry: source file, page or section, and the business fields you'll filter on later (service, doc type, severity, date). Tab ⑤'s filters can only use what you stored here.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>chunking without metadata "to add later". Adding a field later means re-reading every source and re-upserting every point. Decide your filter fields before the first ingestion.</p></div>
+<div class="co course"><p><span class="ct">🎓 AIOps link.</span>For incident runbooks, structure-aware chunking on headings ("Symptoms", "Diagnosis", "Mitigation") usually beats fixed size, because on-call questions map onto those sections. Store the section name in the payload so the generator can say "from the Mitigation section of the checkout runbook".</p></div>
+</section>
+
+<!-- ============ TAB 3 ============ -->
+<section class="tab" data-num="③" data-short="Pick a model" data-phase="A" data-title="Choosing an embedding model">
+<div class="tab-head"><span class="tab-num">③</span><div><h2>How to choose an embedding model</h2><span class="phase-tag">Phase A, foundations: what and why</span></div></div>
+<p class="lead">The leaderboard gets a model an interview. Your own 20-question test gets it the job. Changing the model later means re-embedding everything, so this is one of the few decisions worth an afternoon.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: hiring.</span>A CV (benchmark score) tells you who to shortlist. A paid work trial on your real tasks (your golden set) tells you who to hire. Nobody hires on CV alone for a role they can't easily undo.</p></div>
+
+<h3>The seven criteria</h3>
+<div class="tw"><table>
+<tr><th>Criterion</th><th>Question to ask</th><th>Example consequence</th></tr>
+<tr><td>Retrieval quality</td><td>Does it put the right chunk in the top 5 on <em>my</em> questions?</td><td>Measured as Hit@5 and MRR (Tab ⑪)</td></tr>
+<tr><td>Dimensions</td><td>How much memory and search time per chunk?</td><td>1M chunks: 384 dims ≈ 1.5 GB, 1024 dims ≈ 4.1 GB (float32)</td></tr>
+<tr><td>Max input length</td><td>Will my chunks be truncated?</td><td>512-token limit forces smaller chunks</td></tr>
+<tr><td>Languages</td><td>Are docs or questions in more than one language?</td><td>English-only models fail on Hindi or Malayalam queries</td></tr>
+<tr><td>Hosting and data policy</td><td>May document text leave my network?</td><td>If not, API models are out</td></tr>
+<tr><td>Latency and hardware</td><td>CPU only? How many chunks per minute to ingest?</td><td>A large model on Colab CPU can take hours for a big corpus</td></tr>
+<tr><td>License and cost</td><td>Commercial use allowed? Per-token fees?</td><td>MIT/Apache local models are free to run</td></tr>
+</table></div>
+
+<h3>Candidates worth knowing</h3>
+<p><span class="cf l">Likely</span> Specs below are from model cards as of mid-2026; newer versions appear often, so verify on the card before committing.</p>
+<div class="tw"><table>
+<tr><th>Model</th><th>Dims</th><th>Max tokens</th><th>Languages</th><th>Runs</th><th>Pick it when</th></tr>
+<tr><td><code>BAAI/bge-small-en-v1.5</code></td><td>384</td><td>512</td><td>English</td><td>Local, fast on CPU</td><td>Default for learning and CPU-bound prototypes</td></tr>
+<tr><td><code>BAAI/bge-base-en-v1.5</code></td><td>768</td><td>512</td><td>English</td><td>Local</td><td>Small model isn't good enough and you still want CPU-friendly</td></tr>
+<tr><td><code>BAAI/bge-m3</code></td><td>1024</td><td>8192</td><td>100+</td><td>Local, heavier</td><td>Multilingual or long chunks; also emits sparse vectors</td></tr>
+<tr><td><code>intfloat/e5-small-v2</code> / <code>multilingual-e5-base</code></td><td>384 / 768</td><td>512</td><td>English / multi</td><td>Local</td><td>Strong baseline; remember the prefixes</td></tr>
+<tr><td><code>nomic-ai/nomic-embed-text-v1.5</code></td><td>768 (shrinkable)</td><td>8192</td><td>English</td><td>Local, needs <code>trust_remote_code</code></td><td>Long docs; Matryoshka lets you cut dims to save memory</td></tr>
+<tr><td><code>all-MiniLM-L6-v2</code></td><td>384</td><td>256</td><td>English</td><td>Local, very fast</td><td>Only as a baseline to beat; it's an older general-purpose model</td></tr>
+<tr><td>OpenAI <code>text-embedding-3-small</code></td><td>1536</td><td>8191</td><td>Multi</td><td>API</td><td>No GPU, data may leave your network, want zero ops</td></tr>
+<tr><td>Cohere Embed</td><td>varies by version</td><td>varies</td><td>Multi</td><td>API</td><td>Already using Cohere Rerank and want one vendor</td></tr>
+</table></div>
+
+<h3>Reading MTEB without being fooled</h3>
+<ul>
+<li><strong>Look at the Retrieval task column</strong>, not the overall average. The average mixes clustering, classification and more; you only care about retrieval.</li>
+<li><span class="cf l">Likely</span> <strong>Top scores can be inflated</strong> by models trained on data overlapping the benchmark. A 1-point lead is noise for your purposes.</li>
+<li><strong>Size matters more than rank.</strong> A 7B-parameter embedding model at #1 may be 50× slower on CPU than a 33M model at #30.</li>
+</ul>
+
+<h3>Decision tree</h3>
+<div class="tw"><table>
+<tr><th>If...</th><th>Then...</th></tr>
+<tr><td>Document text must not leave your network</td><td>Local models only. Continue below.</td></tr>
+<tr><td>Questions or docs span multiple languages</td><td><code>bge-m3</code> or <code>multilingual-e5-base</code></td></tr>
+<tr><td>Chunks routinely exceed ~400 tokens and you can't shrink them</td><td><code>bge-m3</code> or <code>nomic-embed-text-v1.5</code></td></tr>
+<tr><td>CPU only, ingestion speed matters, English</td><td>Start with <code>bge-small-en-v1.5</code></td></tr>
+<tr><td>GPU available, English, quality first</td><td>Start with <code>bge-base-en-v1.5</code>, test <code>bge-large</code></td></tr>
+<tr><td>Docs full of exact identifiers (error codes, SKUs, ticket IDs)</td><td>Any of the above <em>plus</em> hybrid BM25 (Tab ⑥). No dense model fixes this alone.</td></tr>
+<tr><td>Two candidates within 2 points of Hit@5 on your golden set</td><td>Take the smaller, faster one</td></tr>
+</table></div>
+
+<h3>Storage math you should be able to do in your head</h3>
+<p class="formula">bytes ≈ chunks × dims × 4</p>
+<p>1,000,000 chunks × 768 dims × 4 bytes ≈ 3.07 GB of raw vectors, before the HNSW graph and payloads. Scalar int8 quantization (Tab ④) cuts the vectors to about a quarter.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>choosing the #1 leaderboard model for a Colab CPU demo. Ingestion takes an hour, 4096-dim vectors bloat memory, and on your runbook questions it may not beat bge-small by a measurable margin.</p></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>comparing models unfairly: one with prefixes, one without; one normalized, one not. Program P2 compares three models under identical conditions so the comparison means something.</p></div>
+<div class="co course"><p><span class="ct">🎓 AIOps link.</span>SRE text is full of identifiers: <code>HTTP 429</code>, <code>AUTH-403</code>, cartridge names, job IDs. Dense models blur these into "some error". That's why your runbook copilot needs hybrid search regardless of which embedding model wins.</p></div>
+</section>
+<!-- ============ TAB 4 ============ -->
+<section class="tab" data-num="④" data-short="Qdrant" data-phase="B" data-title="Qdrant core">
+<div class="tab-head"><span class="tab-num">④</span><div><h2>Qdrant: the vector database</h2><span class="phase-tag">Phase B, building: architecture and trade-offs</span></div></div>
+<p class="lead">Qdrant stores your vectors with their metadata, finds nearest neighbours in milliseconds, and filters by metadata during the search rather than after. That last property is why this guide uses it.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: a library with a smart card catalogue.</span>The vector is the shelf location (where the book sits by meaning). The payload is everything written on the catalogue card: author, year, section. A good librarian uses both at once: "books near this topic, but only from the 2025 shelf."</p></div>
+
+<h3>The data model</h3>
+<div class="tw"><table>
+<tr><th>Qdrant term</th><th>Relational analogy</th><th>Example</th></tr>
+<tr><td>Collection</td><td>Table</td><td><code>runbooks</code></td></tr>
+<tr><td>Point</td><td>Row</td><td>One chunk</td></tr>
+<tr><td>Point ID</td><td>Primary key (unsigned int or UUID only)</td><td><code>uuid5("checkout.md|3")</code></td></tr>
+<tr><td>Vector(s)</td><td>An indexed column you search by similarity</td><td>384 floats; or named: <code>{"dense": [...], "bm25": sparse}</code></td></tr>
+<tr><td>Payload</td><td>Other columns (JSON)</td><td><code>{"service": "checkout", "year": 2025, "text": "..."}</code></td></tr>
+<tr><td>Payload index</td><td>Secondary index</td><td>Keyword index on <code>service</code></td></tr>
+<tr><td>Alias</td><td>A view name you can repoint</td><td><code>runbooks_live</code> → <code>runbooks_v2</code></td></tr>
+</table></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>using string IDs like <code>"checkout-chunk-3"</code>. <span class="cf c">Certain</span> Qdrant accepts only unsigned integers or UUIDs. Use <code>uuid.uuid5(namespace, "source|chunk_index")</code>: the same chunk always gets the same ID, so re-ingesting overwrites instead of duplicating.</p></div>
+
+<h3>How search stays fast: HNSW</h3>
+<p>Comparing a query to a million vectors one by one is too slow. Qdrant builds an HNSW (Hierarchical Navigable Small World) graph: each vector links to a few near neighbours, with sparse "express" layers on top.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: motorway then local roads.</span>To reach a house in another city you take the motorway to the right region, then main roads, then side streets. HNSW's top layers are motorways; the bottom layer is the street where each vector lives.</p></div>
+<div class="tw"><table>
+<tr><th>Parameter</th><th>Set when</th><th>Raise it to</th><th>Cost</th></tr>
+<tr><td><code>m</code></td><td>Collection creation</td><td>Improve recall (more links per node)</td><td>More memory, slower build</td></tr>
+<tr><td><code>ef_construct</code></td><td>Collection creation</td><td>Build a better-connected graph</td><td>Slower indexing</td></tr>
+<tr><td><code>hnsw_ef</code></td><td>Per query</td><td>Explore more candidates, higher recall</td><td>Higher query latency</td></tr>
+</table></div>
+<p><span class="cf l">Likely</span> Defaults are <code>m=16</code>, <code>ef_construct=100</code>; they're fine until your evaluation shows recall loss. HNSW is <em>approximate</em>: it can occasionally miss a true nearest neighbour. For small collections Qdrant may just scan exactly.</p>
+
+<h3>Distance metrics</h3>
+<p>Choose <code>Distance.COSINE</code> for sentence-transformer models. Qdrant normalizes vectors on insert for cosine, so you don't have to. <code>DOT</code> only if your model expects unnormalized dot product; <code>EUCLID</code> rarely for text.</p>
+
+<h3>Deployment modes</h3>
+<div class="tw"><table>
+<tr><th>Mode</th><th>How</th><th>Use for</th></tr>
+<tr><td>In-memory</td><td><code>QdrantClient(":memory:")</code></td><td>Colab, tests. Gone when the runtime restarts.</td></tr>
+<tr><td>Local file</td><td><code>QdrantClient(path="./qdrant_data")</code></td><td>Single-process prototypes that survive restarts</td></tr>
+<tr><td>Server (Docker)</td><td><code>docker run -p 6333:6333 qdrant/qdrant</code></td><td>Real services, multiple clients, payload indexes that matter</td></tr>
+<tr><td>Qdrant Cloud</td><td>Managed; <span class="cf l">Likely</span> has a small free tier</td><td>Production without running it yourself</td></tr>
+</table></div>
+<p><span class="cf l">Likely</span> Local modes are for development: payload indexes and some performance features only fully apply on the server.</p>
+
+<h3>Memory at scale: quantization</h3>
+<div class="tw"><table>
+<tr><th>Type</th><th>Memory reduction</th><th>Quality impact</th><th>Use when</th></tr>
+<tr><td>Scalar (int8)</td><td>~4×</td><td>Small; recover with rescoring against originals</td><td>Default first step</td></tr>
+<tr><td>Binary</td><td>~32×</td><td>Larger; works best with high-dim models and oversampling</td><td>Very large collections, 1024+ dims</td></tr>
+<tr><td>Product</td><td>Up to ~64×</td><td>Largest loss, slower</td><td>Memory is the hard constraint</td></tr>
+</table></div>
+<p>Keep original vectors on disk (<code>on_disk=True</code>) and quantized ones in RAM; Qdrant rescores the top candidates with originals.</p>
+
+<h3>Aliases: re-index without downtime</h3>
+<p>Changing embedding model (Tab ③) means a full re-embed. Build <code>runbooks_v2</code> alongside <code>runbooks_v1</code>, evaluate it, then atomically switch alias <code>runbooks_live</code> to v2. Your app only ever queries the alias. Tab ⑩ lists this as the fix for "model upgrade breaks prod".</p>
+
+<h3>Minimal code shape</h3>
+<div class="code"><script type="text/plain">
+from qdrant_client import QdrantClient, models
+client = QdrantClient(":memory:")
+client.create_collection(
+    "runbooks",
+    vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
+)
+client.upsert("runbooks", points=[
+    models.PointStruct(id=point_id, vector=vec, payload={"service": "checkout", "text": chunk})
+    for point_id, vec, chunk in batch            # batch upserts: one call per ~64-256 points, not per point
+])
+hits = client.query_points("runbooks", query=query_vec, limit=5, with_payload=True).points
+</script></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>copying old tutorials that call <code>client.search(...)</code>. <span class="cf l">Likely</span> Current clients use the universal <code>query_points</code> API (it also does hybrid and fusion); <code>search</code> is deprecated.</p></div>
+
+<div class="co course"><p><span class="ct">🎓 Course link: Chroma, Pinecone, Qdrant side by side.</span> <span class="cf l">Likely</span></p>
+<div class="tw"><table>
+<tr><th></th><th>Chroma</th><th>Pinecone</th><th>Qdrant</th></tr>
+<tr><td>Hosting</td><td>Embedded or server; OSS</td><td>Managed SaaS only</td><td>OSS (in-memory to cluster) or managed cloud</td></tr>
+<tr><td>Filtering</td><td>Metadata <code>where</code> clauses</td><td>Metadata filters</td><td>Rich boolean filters with payload indexes, applied during HNSW search</td></tr>
+<tr><td>Hybrid (sparse + dense)</td><td>Limited / newer</td><td>Supported</td><td>Native sparse vectors, server-side RRF / DBSF fusion</td></tr>
+<tr><td>Quantization</td><td>Limited</td><td>Managed internally</td><td>Scalar, binary, product; user-controlled</td></tr>
+<tr><td>Best at</td><td>Fastest start</td><td>Zero-ops at scale</td><td>Control, filters, self-hosting</td></tr>
+</table></div></div>
+</section>
+
+<!-- ============ TAB 5 ============ -->
+<section class="tab" data-num="⑤" data-short="Filters" data-phase="B" data-title="Qdrant filters">
+<div class="tab-head"><span class="tab-num">⑤</span><div><h2>Qdrant filters: search only where the answer can be</h2><span class="phase-tag">Phase B, building: architecture and trade-offs</span></div></div>
+<p class="lead">A question about checkout has no business matching CDN postmortems. Filters shrink the search space before similarity ranking, which improves both precision and speed, if you set them up right.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: asking the librarian properly.</span>"Something about slow pages" gets you a cart of books. "Something about slow pages, only the e-commerce section, published after 2024, not the case-study shelf" gets you three books, all useful.</p></div>
+
+<h3>Boolean clauses</h3>
+<div class="tw"><table>
+<tr><th>Clause</th><th>Logic</th><th>Runbook example</th></tr>
+<tr><td><code>must</code></td><td>AND: every condition true</td><td>service = checkout AND year ≥ 2024</td></tr>
+<tr><td><code>should</code></td><td>OR: at least one true (when it's the only clause)</td><td>service = cdn OR service = search</td></tr>
+<tr><td><code>must_not</code></td><td>NOT: none true</td><td>exclude doc_type = postmortem</td></tr>
+<tr><td><code>min_should</code></td><td>At least N of a list</td><td>match ≥ 2 of 3 tags</td></tr>
+</table></div>
+<p>Clauses combine and nest: a <code>Filter</code> can appear inside another's <code>must</code> list, which is how you write "(A or B) and not C".</p>
+
+<h3>Condition types</h3>
+<div class="tw"><table>
+<tr><th>Condition</th><th>Example</th><th>Needs index type</th></tr>
+<tr><td><code>MatchValue</code></td><td><code>service == "checkout"</code></td><td>keyword / integer / bool</td></tr>
+<tr><td><code>MatchAny</code></td><td><code>service in ["cdn", "search"]</code></td><td>keyword / integer</td></tr>
+<tr><td><code>MatchExcept</code></td><td><code>severity not in ["sev3"]</code></td><td>keyword / integer</td></tr>
+<tr><td><code>MatchText</code></td><td>text field contains "rollback"</td><td>full-text index (required)</td></tr>
+<tr><td><code>Range</code></td><td><code>year &gt;= 2024</code></td><td>integer / float</td></tr>
+<tr><td><code>DatetimeRange</code></td><td><code>updated_at &gt;= "2026-01-01T00:00:00Z"</code></td><td>datetime</td></tr>
+<tr><td><code>IsEmpty</code> / <code>IsNull</code></td><td>chunks missing an owner field</td><td>—</td></tr>
+<tr><td><code>HasId</code></td><td>restrict to known point IDs</td><td>—</td></tr>
+<tr><td><code>Nested</code></td><td>conditions on the same element of an array of objects</td><td>index on nested key</td></tr>
+</table></div>
+
+<div class="code"><script type="text/plain">
+from qdrant_client import models
+# "Checkout or payments runbooks from 2024 onwards, never postmortems"
+flt = models.Filter(
+    must=[
+        models.FieldCondition(key="service", match=models.MatchAny(any=["checkout", "payments"])),
+        models.FieldCondition(key="year", range=models.Range(gte=2024)),
+    ],
+    must_not=[
+        models.FieldCondition(key="doc_type", match=models.MatchValue(value="postmortem")),
+    ],
+)
+hits = client.query_points("runbooks", query=query_vec, query_filter=flt, limit=5).points
+</script></div>
+
+<h3>Filter during search, never after</h3>
+<div class="pipe"><span class="cap">Wrong: post-filtering in Python</span>
+<span class="s">Search top 5</span><span class="a">→</span><span class="s">4 are CDN docs</span><span class="a">→</span><span class="s">Drop non-checkout in Python</span><span class="a">→</span><span class="s bad">1 result left</span></div>
+<div class="pipe"><span class="cap">Right: filter inside the query</span>
+<span class="s">query_points(filter=checkout)</span><span class="a">→</span><span class="s">HNSW only walks checkout points</span><span class="a">→</span><span class="s hl">5 checkout results</span></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>fetching top-k and filtering the list in Python. You silently get fewer than k results, and sometimes zero, even though matching documents exist. Program P4 demonstrates this side by side.</p></div>
+
+<h3>Payload indexes and the query planner</h3>
+<p>Qdrant decides per query how to combine filter and vector search. If a filter is very selective (say 40 matching points), it can just score those 40 exactly. If it's broad, it walks the HNSW graph while checking the filter. <span class="cf l">Likely</span> It estimates selectivity using payload indexes, and on the server it adds extra graph links for indexed fields so filtered walks don't get stranded.</p>
+<ul>
+<li>Create a payload index for every field you filter on: <code>keyword</code> for categories, <code>integer</code> for years, <code>datetime</code> for timestamps.</li>
+<li><span class="cf l">Likely</span> Create indexes <em>before</em> bulk upload, so the HNSW graph is built with them in mind.</li>
+<li>Don't index fields you never filter on; each index costs memory.</li>
+</ul>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>filtering on an unindexed field in production. It works in the demo with 12 points and crawls at 2 million. Some Qdrant configurations (strict mode) can reject unindexed filters outright. <span class="cf l">Likely</span></p></div>
+
+<h3>Decision: filter field or separate collection?</h3>
+<div class="tw"><table>
+<tr><th>Situation</th><th>Choose</th><th>Why</th></tr>
+<tr><td>Three brand sites sharing runbook content</td><td>One collection, <code>brand</code> payload field</td><td>Cross-brand search stays possible; one index to maintain</td></tr>
+<tr><td>Many tenants that must never see each other's data</td><td>One collection with a tenant field indexed with <code>is_tenant=True</code>, or collection per tenant if isolation is contractual</td><td><span class="cf l">Likely</span> Qdrant optimizes storage layout for tenant fields</td></tr>
+<tr><td>Different embedding models per corpus</td><td>Separate collections</td><td>Vectors from different models can't share a space</td></tr>
+<tr><td>Totally different schemas and owners</td><td>Separate collections</td><td>Independent lifecycle and re-indexing</td></tr>
+</table></div>
+
+<h3>Filters inside Self-RAG: the self-query step</h3>
+<p>In Tab ⑨ the router LLM extracts filters from the question: "checkout 429s since the last release" becomes <code>service=checkout</code>. Two rules make this safe:</p>
+<ol>
+<li><strong>Validate against an allow-list.</strong> If the LLM says <code>service="checkout-api"</code> and your payload only has <code>"checkout"</code>, you get zero results and the loop starts rewriting forever. Map or drop unknown values.</li>
+<li><strong>Relax on retry.</strong> If a filtered attempt yields nothing relevant, retry without the least important condition before rewriting the query. Over-filtering is one of the most common reasons Self-RAG "can't find" answers that exist.</li>
+</ol>
+</section>
+
+<!-- ============ TAB 6 ============ -->
+<section class="tab" data-num="⑥" data-short="Hybrid + rerank" data-phase="B" data-title="Hybrid search and Cohere rerank">
+<div class="tab-head"><span class="tab-num">⑥</span><div><h2>Hybrid search and Cohere Rerank</h2><span class="phase-tag">Phase B, building: architecture and trade-offs</span></div></div>
+<p class="lead">Dense search understands meaning but fumbles exact tokens. Keyword search nails exact tokens but misses paraphrases. Run both, fuse, then let a slower, smarter model reorder the short list.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: two ways to fish.</span>The net (dense search) sweeps everything in the right area, including fish you didn't name. The spear (BM25) hits exactly the fish you point at, "AUTH-403", and nothing else. Experienced fishers carry both.</p></div>
+
+<h3>Where each side fails</h3>
+<div class="tw"><table>
+<tr><th>Query</th><th>Dense only</th><th>BM25 only</th><th>Hybrid</th></tr>
+<tr><td>"users can't sign in, AUTH-403"</td><td>Returns general login docs; code ignored</td><td>Finds the AUTH-403 runbook</td><td>AUTH-403 runbook first</td></tr>
+<tr><td>"how do I undo a bad deployment"</td><td>Finds "code version rollback"</td><td>Misses: no shared words with "rollback"</td><td>Rollback runbook first</td></tr>
+</table></div>
+
+<h3>Sparse vectors and BM25 in Qdrant</h3>
+<p>BM25 represents text as a sparse vector: one dimension per vocabulary word, almost all zeros. Qdrant stores these next to dense vectors in the same point (named vectors) and applies IDF weighting server-side when you set <code>modifier=IDF</code>. The <code>fastembed</code> library's <code>Qdrant/bm25</code> model produces the sparse vectors locally.</p>
+
+<h3>Fusing two ranked lists: Reciprocal Rank Fusion</h3>
+<p>Dense and BM25 scores are on different scales, so you can't add them. RRF ignores scores and uses ranks:</p>
+<p class="formula">RRF(doc) = Σ over lists of 1 / (k + rank), with k = 60</p>
+<div class="tw"><table>
+<tr><th>Doc</th><th>Dense rank</th><th>BM25 rank</th><th>RRF score</th></tr>
+<tr><td>AUTH-403 runbook</td><td>4</td><td>1</td><td>1/64 + 1/61 = 0.0320</td></tr>
+<tr><td>General login doc</td><td>1</td><td>—</td><td>1/61 = 0.0164</td></tr>
+<tr><td>SLAS config doc</td><td>2</td><td>5</td><td>1/62 + 1/65 = 0.0315</td></tr>
+</table></div>
+<p>Documents that appear in both lists win, which is exactly the behaviour you want. Qdrant runs RRF server-side via <code>prefetch</code> + <code>FusionQuery</code>.</p>
+
+<h3>Bi-encoder vs cross-encoder</h3>
+<div class="tw"><table>
+<tr><th></th><th>Bi-encoder (embeddings)</th><th>Cross-encoder (reranker)</th></tr>
+<tr><td>Reads</td><td>Query and doc separately</td><td>Query and doc together, word by word</td></tr>
+<tr><td>Precompute docs?</td><td>Yes</td><td>No: must run per (query, doc) pair</td></tr>
+<tr><td>Speed</td><td>Millions of docs in ms</td><td>Tens of docs in ~100s of ms</td></tr>
+<tr><td>Accuracy</td><td>Good</td><td>Noticeably better at fine relevance</td></tr>
+<tr><td>Role</td><td>Recall: find 30–50 candidates</td><td>Precision: pick the best 5</td></tr>
+</table></div>
+
+<h3>Cohere Rerank</h3>
+<p>A hosted cross-encoder. You send the query and a list of document texts; it returns indexes with a <code>relevance_score</code> between 0 and 1, best first.</p>
+<div class="code"><script type="text/plain">
+import cohere
+co = cohere.ClientV2(api_key=COHERE_API_KEY)
+resp = co.rerank(model="rerank-v3.5", query=question, documents=texts, top_n=5)
+for r in resp.results:
+    print(r.index, round(r.relevance_score, 3), texts[r.index][:60])
+</script></div>
+<p><span class="cf l">Likely</span> <code>rerank-v3.5</code> is multilingual and has a per-document length limit (around 4k tokens); newer versions may exist, so check Cohere's model list. Pricing is per search; trial keys are rate-limited per minute.</p>
+<div class="pipe"><span class="cap">The standard retrieve-wide, rerank-narrow funnel</span>
+<span class="s">Query</span><span class="a">→</span><span class="s">Dense top 30</span><span class="a">+</span><span class="s">BM25 top 30</span><span class="a">→</span><span class="s">RRF</span><span class="a">→</span><span class="s">~40 unique</span><span class="a">→</span><span class="s hl">Cohere Rerank</span><span class="a">→</span><span class="s">Top 5 to LLM</span></div>
+
+<h3>Rerankers: hosted vs local</h3>
+<div class="tw"><table>
+<tr><th>Option</th><th>Cost</th><th>Latency (40 docs)</th><th>Pick when</th></tr>
+<tr><td>Cohere Rerank</td><td>Per-search fee</td><td><span class="cf g">Guessing</span> ~200–500 ms</td><td>Best quality with zero ops; data may leave network</td></tr>
+<tr><td><code>BAAI/bge-reranker-base</code> / <code>v2-m3</code></td><td>Free</td><td>CPU: seconds; GPU: fast</td><td>Data must stay local, or as fallback</td></tr>
+<tr><td><code>cross-encoder/ms-marco-MiniLM-L-6-v2</code></td><td>Free</td><td>Fast on CPU</td><td>Cheap baseline, English</td></tr>
+</table></div>
+
+<h3>The rerank score as a quality gate</h3>
+<p>If the best reranked document scores very low, retrieval probably failed. That signal feeds Self-RAG (Tab ⑨: skip or trigger grading) and CRAG (Tab ⑦: web fallback). The threshold must be calibrated on your golden set, and local cross-encoder scores are raw logits, not 0–1, so a Cohere threshold doesn't transfer.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>reranking only the top 5. There's nothing to reorder; the reranker can't rescue a document the first stage didn't return. Retrieve 20–50, rerank to 5.</p></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>treating <code>relevance_score</code> as "probability this answers the question" across queries. It ranks documents for one query well; comparing absolute values across very different queries is much less reliable.</p></div>
+</section>
+<!-- ============ TAB 7 ============ -->
+<section class="tab" data-num="⑦" data-short="RAG family" data-phase="B" data-title="Taxonomy of RAG variants">
+<div class="tab-head"><span class="tab-num">⑦</span><div><h2>The RAG family tree: where Self-RAG sits</h2><span class="phase-tag">Phase B, building: architecture and trade-offs</span></div></div>
+<p class="lead">"Self-RAG" is one branch of a family of designs that add judgment to retrieval. Knowing the siblings tells you when Self-RAG is the right tool and when it's an expensive way to do what a reranker already did.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: levels of care at a clinic.</span>Naive RAG is a pharmacist handing over whatever the prescription says. Advanced RAG double-checks the dosage. CRAG phones another hospital when the records look wrong. Self-RAG is a doctor who decides whether tests are needed, reads each result critically, and checks the diagnosis against the evidence. Agentic RAG is the whole care team with tools, scans and specialists.</p></div>
+
+<h3>How the variants relate</h3>
+<pre class="ascii">Naive RAG  (retrieve → stuff → generate)
+   │
+   └─► Advanced RAG  (+ better chunking, hybrid search, reranking, query rewriting)
+          │
+          ├─► Corrective RAG / CRAG   evaluate retrieval → correct / ambiguous / incorrect
+          │                           → refine docs, or fall back to web search
+          │
+          ├─► Self-RAG                decide to retrieve → judge relevance → judge support → judge usefulness
+          │     ├─ paper version:     one fine-tuned model emits reflection tokens
+          │     └─ prompted version:  LLM graders in a LangGraph loop  (what you build here)
+          │
+          ├─► Adaptive RAG            classify question complexity → no retrieval / one-shot / multi-step
+          │
+          └─► Agentic RAG             an agent treats retrieval as one tool among many (logs, metrics, APIs)
+
+GraphRAG sits sideways: it changes the INDEX (entity/relationship graph + community summaries),
+and can be combined with any of the control strategies above.</pre>
+
+<h3>Side-by-side comparison</h3>
+<div class="tw"><table>
+<tr><th>Variant</th><th>Core idea</th><th>Self-checks</th><th>Extra LLM calls / query</th><th>Training needed</th><th>Best for</th></tr>
+<tr><td>Naive RAG</td><td>Always retrieve top-k, always answer</td><td>None</td><td>0</td><td>No</td><td>Demos, low-stakes FAQ</td></tr>
+<tr><td>Advanced RAG</td><td>Better retrieval: hybrid, rerank, rewriting</td><td>Reranker only</td><td>0–1</td><td>No</td><td>Most production systems; the baseline to beat</td></tr>
+<tr><td>CRAG</td><td>Grade retrieval; correct it or search the web</td><td>Retrieval quality</td><td>1–3</td><td>Paper: small evaluator; prompted: no</td><td>Incomplete knowledge base, web allowed</td></tr>
+<tr><td>Self-RAG (paper)</td><td>Model emits reflection tokens inline</td><td>Need, relevance, support, utility</td><td>0 extra calls (tokens are inline) but a special model</td><td>Yes: critic + generator fine-tuning</td><td>Research; teams able to fine-tune</td></tr>
+<tr><td>Self-RAG (prompted)</td><td>LLM graders in a state graph with loops</td><td>Need, relevance, grounding, usefulness</td><td>4–6 best case, 12–18 worst</td><td>No</td><td>High-stakes answers where "I don't know" beats a wrong answer</td></tr>
+<tr><td>Adaptive RAG</td><td>Route by question complexity</td><td>Complexity classifier</td><td>1 + route cost</td><td>Paper: small classifier</td><td>Mixed traffic: trivial and multi-hop questions</td></tr>
+<tr><td>Agentic RAG</td><td>Agent plans, calls tools, iterates</td><td>Whatever the agent reasons</td><td>Unbounded without limits</td><td>No</td><td>Investigations across many sources</td></tr>
+<tr><td>GraphRAG</td><td>Graph index over entities and relations</td><td>Orthogonal</td><td>Heavy at index time</td><td>No</td><td>"What are the themes across all postmortems?" style questions</td></tr>
+</table></div>
+<p><span class="cf c">Certain</span> The distinction between the paper and the prompted version is real and often blurred in tutorials: the Self-RAG paper (Asai et al., 2023) fine-tunes a model to emit reflection tokens; most "Self-RAG" LangChain/LangGraph examples approximate those tokens with separate grader prompts. Tab ⑧ maps one onto the other.</p>
+
+<h3>Decision table: which one should you build?</h3>
+<div class="tw"><table>
+<tr><th>Your situation</th><th>Build</th></tr>
+<tr><td>Static FAQ, wrong answer costs little</td><td>Advanced RAG (hybrid + rerank). Stop there.</td></tr>
+<tr><td>On-call engineers act on answers; wrong steps cause outages</td><td>Self-RAG (prompted): groundedness check and honest abstention are worth the latency</td></tr>
+<tr><td>Knowledge base known to be incomplete, web search allowed</td><td>CRAG, or Self-RAG with a web-search fallback node</td></tr>
+<tr><td>80% trivial questions, 20% hard multi-hop</td><td>Adaptive routing in front of Self-RAG, so easy questions skip the loop</td></tr>
+<tr><td>Questions need live data (logs, metrics, deploy history) plus docs</td><td>Agentic RAG, with Self-RAG-style checks on the doc-retrieval tool</td></tr>
+<tr><td>Questions ask for patterns across hundreds of documents</td><td>GraphRAG or map-reduce summarization; top-k retrieval can't see "all"</td></tr>
+</table></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>building Self-RAG before measuring an Advanced RAG baseline. <span class="cf l">Likely</span> On many corpora, hybrid search plus reranking closes most of the gap from naive RAG, at a fraction of the latency. Self-RAG's unique value is catching unsupported answers and abstaining; measure that specifically (Tab ⑪).</p></div>
+<div class="co course"><p><span class="ct">🎓 AIOps link.</span>Your agentic SRE work (a diagnosis agent that reasons about synthetic-monitor failures) is Agentic RAG territory. A Self-RAG runbook retriever makes an excellent <em>tool</em> for that agent: the agent decides what to investigate, the tool guarantees any runbook guidance it returns is grounded.</p></div>
+</section>
+
+<!-- ============ TAB 8 ============ -->
+<section class="tab" data-num="⑧" data-short="Architecture" data-phase="B" data-title="Self-RAG architecture">
+<div class="tab-head"><span class="tab-num">⑧</span><div><h2>Self-RAG architecture: from reflection tokens to a state graph</h2><span class="phase-tag">Phase B, building: architecture and trade-offs</span></div></div>
+<p class="lead">First the original idea, because it explains <em>why</em> each grader exists. Then the architecture you'll actually build: the same four judgments, implemented as nodes in a LangGraph loop.</p>
+
+<h3>The paper in one page</h3>
+<p><span class="cf c">Certain</span> Self-RAG was introduced by Asai et al. in "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection" (arXiv 2310.11511, 2023; ICLR 2024). The model generates special <em>reflection tokens</em> alongside normal text:</p>
+<div class="tw"><table>
+<tr><th>Token</th><th>Question it answers</th><th>Possible values</th></tr>
+<tr><td><code>Retrieve</code></td><td>Do I need to look something up for the next segment?</td><td>yes / no / continue (reuse evidence)</td></tr>
+<tr><td><code>IsRel</code></td><td>Is this retrieved passage relevant to the question?</td><td>relevant / irrelevant</td></tr>
+<tr><td><code>IsSup</code></td><td>Is what I just wrote supported by the passage?</td><td>fully / partially / no support</td></tr>
+<tr><td><code>IsUse</code></td><td>Is the overall response useful for the question?</td><td>5 (best) to 1</td></tr>
+</table></div>
+<p><span class="cf l">Likely</span> How it was trained: a critic model learned to produce these judgments from GPT-4-labelled examples; the critic then annotated a large corpus, and a generator (Llama 2 7B and 13B) was trained to emit the tokens itself. At inference it can retrieve on demand per segment, draft continuations for several passages in parallel, and pick the best with a score mixing fluency and critique-token probabilities; weights on those critiques can be changed at inference time to trade fluency for strict support.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: the careful doctor.</span>Decides whether to order tests (Retrieve), reads each lab report for relevance (IsRel), checks the diagnosis is backed by results (IsSup), and asks whether the explanation actually helps the patient (IsUse).</p></div>
+
+<h3>From tokens to nodes</h3>
+<p>You probably can't fine-tune a model for this, and you want to use any LLM via OpenRouter. So each reflection token becomes a small LLM call with structured output:</p>
+<div class="tw"><table>
+<tr><th>Paper token</th><th>Node in your graph</th><th>Output</th><th>If negative</th></tr>
+<tr><td><code>Retrieve</code></td><td><code>route</code></td><td><code>needs_retrieval: bool</code>, optional filters</td><td>Answer directly, skip retrieval</td></tr>
+<tr><td><code>IsRel</code></td><td><code>grade</code> (document grader)</td><td>list of relevant doc indexes</td><td>None relevant → rewrite query</td></tr>
+<tr><td><code>IsSup</code></td><td><code>check_grounded</code> (hallucination grader)</td><td><code>grounded: bool</code>, unsupported claims</td><td>Regenerate (bounded)</td></tr>
+<tr><td><code>IsUse</code></td><td><code>check_useful</code> (answer grader)</td><td><code>useful: bool</code></td><td>Rewrite query (bounded)</td></tr>
+<tr><td>(borrowed from CRAG/Adaptive)</td><td><code>rewrite</code>, <code>fallback</code></td><td>new search query / honest abstention</td><td>—</td></tr>
+</table></div>
+
+<h3>The state graph</h3>
+<pre class="ascii">                 ┌──────────┐
+   START ──────► │  route   │── needs_retrieval = no ──► generate_direct ──► END
+                 └────┬─────┘
+                      │ yes (+ validated filters)
+                      ▼
+                 ┌──────────┐    multi-query → hybrid search (filtered) → dedup → rerank
+          ┌────► │ retrieve │
+          │      └────┬─────┘
+          │           ▼
+          │      ┌──────────┐   none relevant & rewrites left
+          │      │  grade   │─────────────────────────────┐
+          │      └────┬─────┘   none relevant & no retries ──► fallback ──► END
+          │           │ ≥1 relevant                       │
+          │           ▼                                   │
+          │      ┌──────────┐ ◄── not grounded & regens left
+          │      │ generate │                             │
+          │      └────┬─────┘                             │
+          │           ▼                                   │
+          │      ┌────────────────┐ not grounded, no regens ──► fallback
+          │      │ check_grounded │                       │
+          │      └────┬───────────┘                       │
+          │           │ grounded                          │
+          │           ▼                                   │
+          │      ┌──────────────┐  useful ──► END         │
+          │      │ check_useful │                         │
+          │      └────┬─────────┘  not useful, no rewrites ──► fallback
+          │           │ not useful & rewrites left        │
+          │           ▼                                   │
+          │      ┌──────────┐ ◄───────────────────────────┘
+          └───── │ rewrite  │   (also relaxes filters on retry)
+                 └──────────┘</pre>
+
+<h3>The state object</h3>
+<div class="code"><script type="text/plain">
+from typing import TypedDict, Optional
+
+class RAGState(TypedDict):
+    question: str             # never modified: graders always judge against the ORIGINAL question
+    search_query: str         # what we actually search with; rewrite changes this
+    service: Optional[str]    # filter extracted by the router, already validated
+    documents: list           # current evidence (after rerank, then after grading)
+    generation: str
+    needs_retrieval: bool
+    grounded: bool
+    useful: bool
+    rewrites: int             # loop counters live in state so routing functions can read them
+    regens: int
+    log: list                 # human-readable trace of decisions
+</script></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>overwriting <code>question</code> with the rewritten query. After two rewrites the graders are judging relevance against a question the user never asked. Keep the original and the search query separate.</p></div>
+
+<h3>Why a graph and not a chain</h3>
+<ul>
+<li><strong>Loops.</strong> Chains flow one way; Self-RAG must go back to retrieval. LangGraph's conditional edges express this directly.</li>
+<li><strong>Inspectable decisions.</strong> Each node is a function you can test alone, time, and trace (Tab ⑩).</li>
+<li><strong>Hard bounds.</strong> Counters in state plus LangGraph's <code>recursion_limit</code> give two independent stops against runaway loops.</li>
+</ul>
+
+<h3>Paper vs prompted: the trade-off</h3>
+<div class="tw"><table>
+<tr><th></th><th>Paper Self-RAG</th><th>Prompted Self-RAG (this guide)</th></tr>
+<tr><td>Setup</td><td>Fine-tuned 7B/13B model</td><td>Any capable LLM + prompts</td></tr>
+<tr><td>Cost per query</td><td>One model pass (plus retrieval)</td><td>4–6 LLM calls best case</td></tr>
+<tr><td>Latency</td><td>Lower</td><td>Seconds higher; needs the Tab ⑩ fixes</td></tr>
+<tr><td>Transparency</td><td>Token probabilities</td><td>Readable reasons per grader</td></tr>
+<tr><td>Swapping the LLM</td><td>Retrain</td><td>Change one string</td></tr>
+</table></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>loops without counters. A question your docs can't answer will bounce between <code>grade</code> and <code>rewrite</code> until something times out, burning tokens on every lap. Every backward edge needs a counter and a fallback exit.</p></div>
+<div class="co course"><p><span class="ct">🎓 Course link.</span>This is the same LangGraph pattern as a ReAct agent from your course, with the "tool" being retrieval and the "reasoning" split into narrow graders. It's also the decide–act–verify loop your Strands diagnosis agent follows; the difference is that here each verification is a separate, testable node.</p></div>
+</section>
+
+<!-- ============ TAB 9 ============ -->
+<section class="tab" data-num="⑨" data-short="Pipeline" data-phase="B" data-title="Pipeline steps: multi-query, dedup, grading">
+<div class="tab-head"><span class="tab-num">⑨</span><div><h2>The pipeline, step by step: multi-query, dedup, grading, rewriting</h2><span class="phase-tag">Phase B, building: patterns and trade-offs</span></div></div>
+<p class="lead">Each step below has one job, one input, one output, and one typical way of failing. Build and test them one at a time (Programs P7–P9) before wiring the loop.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: a kitchen line.</span>Prep cook widens the order (multi-query), the pantry pulls ingredients (retrieve), someone throws out duplicates and spoiled items (dedup, grade), the chef cooks (generate), and the pass checks every plate against the ticket before it leaves (grounded, useful). A plate that fails goes back, but only twice before the manager steps in (fallback).</p></div>
+
+<div class="pipe"><span class="cap">Full order of operations</span>
+<span class="s gate">1. Route</span><span class="a">→</span><span class="s">2. Transform query</span><span class="a">→</span><span class="s">3. Retrieve (hybrid, filtered)</span><span class="a">→</span><span class="s">4. Dedup</span><span class="a">→</span><span class="s">5. Rerank</span><span class="a">→</span><span class="s gate">6. Grade docs</span><span class="a">→</span><span class="s">7. Generate</span><span class="a">→</span><span class="s gate">8. Grounded?</span><span class="a">→</span><span class="s gate">9. Useful?</span><span class="a">→</span><span class="s hl">Answer</span>
+<span class="cap">Gates (purple) can send the flow back to 10. Rewrite, or out to 11. Fallback.</span></div>
+
+<h3>1. Route: retrieve or not, and with what filters</h3>
+<p>Input: the question. Output: <code>needs_retrieval</code> and optional filter fields. "What's 17 × 3?" → no. "How do I purge the eCDN for one brand?" → yes, <code>service="cdn"</code>.</p>
+<p>Use structured output with an explicit list of allowed filter values in the prompt, then validate in code (Tab ⑤). Default to retrieving when unsure; a wasted retrieval costs milliseconds, a skipped one can cost a wrong answer.</p>
+
+<h3>2. Transform the query</h3>
+<div class="tw"><table>
+<tr><th>Technique</th><th>What it does</th><th>Helps when</th><th>Cost</th></tr>
+<tr><td>Multi-query</td><td>LLM writes 3 alternative phrasings; search each</td><td>Vocabulary mismatch between users and docs</td><td>1 LLM call, 3× searches</td></tr>
+<tr><td>HyDE</td><td>LLM writes a hypothetical answer; embed that instead of the question</td><td>Short questions vs long technical passages</td><td>1 LLM call; can import the LLM's wrong assumptions</td></tr>
+<tr><td>Step-back</td><td>Ask a more general question first ("how does SCAPI rate limiting work?")</td><td>Specific questions needing background</td><td>1 LLM call, 2 searches</td></tr>
+<tr><td>Decomposition</td><td>Split into sub-questions, answer each</td><td>Multi-hop: "did the tax-service change cause both incidents?"</td><td>Several calls; drifts toward agentic</td></tr>
+</table></div>
+<p><strong>Multi-query example.</strong> "checkout keeps failing with too many requests" becomes: (a) original, (b) "checkout API HTTP 429 rate limit", (c) "SCAPI quota exceeded checkout errors", (d) "throttling on basket and order endpoints". Query (b) is the one that hits the runbook's wording.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>letting multi-query run with no cap. 5 queries × 30 results = 150 candidates to dedup and rerank on every question. Cap at 3 extra queries and 10–20 results each.</p></div>
+
+<h3>3. Retrieve</h3>
+<p>Per query: hybrid search (Tab ⑥) with the validated filter (Tab ⑤). On a retry after a failed attempt, drop the filter first; rewrite second.</p>
+
+<h3>4. Dedup: four layers, cheapest first</h3>
+<div class="tw"><table>
+<tr><th>Layer</th><th>Catches</th><th>How</th><th>Cost</th></tr>
+<tr><td>Point ID</td><td>Same chunk returned by several sub-queries</td><td>Keep first occurrence (or best score) per ID</td><td>Free</td></tr>
+<tr><td>Content hash</td><td>Same text stored under different IDs (double ingestion, copied pages)</td><td>SHA-256 of whitespace-normalized lowercase text</td><td>Microseconds</td></tr>
+<tr><td>Near-duplicate</td><td>Same runbook step in brand A and brand B docs, slightly reworded</td><td>Drop if cosine to a kept chunk ≥ ~0.95</td><td>n² dot products on ≤50 items: fine</td></tr>
+<tr><td>MMR (diversity)</td><td>Five chunks all saying the same thing, crowding out a different angle</td><td>Maximal Marginal Relevance: trade relevance vs novelty with λ</td><td>Small</td></tr>
+</table></div>
+<p><strong>Example.</strong> 4 queries × 10 results = 40 hits → 17 unique IDs → 15 unique texts → 13 after near-dup removal → reranker sees 13, not 40. That's a 3× cut in rerank cost for zero quality loss.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>running near-duplicate removal with too low a threshold (say 0.85). Two genuinely different runbook steps about the same service get merged and the answer loses a step. Check what you drop.</p></div>
+
+<h3>5. Rerank</h3>
+<p>Cohere (or local cross-encoder) on the deduplicated pool; keep top 5–8. This is the cheapest precision boost in the whole pipeline, so it runs before the expensive LLM graders, never after.</p>
+
+<h3>6. Grade documents (IsRel)</h3>
+<p>For each surviving chunk: does it help answer <em>this</em> question? Design choices that matter:</p>
+<ul>
+<li><strong>Batch it.</strong> One call grading 6 documents returning a list of relevant indexes, instead of 6 calls. Same quality in practice for short chunks, 5 fewer round-trips. <span class="cf l">Likely</span></li>
+<li><strong>Reason before verdict.</strong> Put a short <code>reasoning</code> field <em>before</em> the verdict field in the schema. The model writes its justification first, then decides, which tends to improve consistency.</li>
+<li><strong>Define relevance for your domain.</strong> "Mentions checkout" is not relevant to "how to fix checkout 429s"; "explains the rate-limit fix" is. Spell this out.</li>
+<li><strong>Temperature 0, small fast model.</strong> Graders are classifiers, not writers.</li>
+</ul>
+<div class="grid2">
+<div class="panel"><h4>Grader too strict</h4><p>Rejects everything, context is empty, loop rewrites until fallback. Symptom: high fallback rate on questions you know are answerable.</p></div>
+<div class="panel"><h4>Grader too lenient</h4><p>Keeps everything; you've added a second of latency for nothing. Symptom: grader keep-rate near 100% in logs.</p></div>
+</div>
+
+<h3>7. Generate</h3>
+<p>Only relevant docs go in, numbered <code>[1]..[n]</code>. The prompt demands citations and explicitly permits "the sources don't cover this". Put the strongest document first and second-strongest last; weak evidence in the middle is where models pay least attention.</p>
+
+<h3>8. Check grounded (IsSup)</h3>
+<p>Input: the docs and the answer. Output: <code>unsupported_claims</code> (list) then <code>grounded</code> (bool). Asking for the list first forces the grader to actually look. If not grounded and a regeneration is left, regenerate with a stricter instruction; otherwise fall back.</p>
+<p><strong>Example.</strong> Answer says "increase the connection pool to 200". Source says "increase the pool only if saturation exceeds 80%". Unsupported claim: the number 200. Verdict: not grounded.</p>
+
+<h3>9. Check useful (IsUse)</h3>
+<p>Grounded is not the same as helpful. "The checkout runbook discusses 429 errors [1]" is perfectly grounded and useless. Input: the original question and the answer. Output: <code>useful</code>. If not useful, the problem is usually the evidence, so rewrite the query rather than regenerate.</p>
+
+<h3>10. Rewrite</h3>
+<p>Give the rewriter the original question, the last search query, and <em>why</em> it failed ("retrieved docs were about CDN purges"). Blind rewriting tends to produce near-synonyms of the query that just failed.</p>
+
+<h3>11. Fallback</h3>
+<p>When budgets run out, say so plainly and show what was found: "I couldn't find a runbook that answers this. Closest sources: [checkout runbook, section Mitigation]." For on-call use, a clear "not found" with pointers is a <em>correct</em> outcome, and your evaluation must count it as one for unanswerable questions (Tab ⑪).</p>
+
+<h3>Call budget: know your worst case</h3>
+<div class="tw"><table>
+<tr><th>Path</th><th>LLM calls</th><th>Rerank calls</th></tr>
+<tr><td>No retrieval needed</td><td>route + direct answer = 2</td><td>0</td></tr>
+<tr><td>Happy path</td><td>route, multi-query, grade, generate, grounded, useful = 6</td><td>1</td></tr>
+<tr><td>One rewrite</td><td>6 + rewrite, multi-query, grade, generate, grounded, useful = 12</td><td>2</td></tr>
+<tr><td>Two rewrites + one regen (worst, with MAX_REWRITES=2, MAX_REGENS=1)</td><td>roughly 18–20</td><td>3</td></tr>
+</table></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>grading before reranking. Grading 40 raw candidates with an LLM costs more and is slower than letting a reranker cut to 6 first.</p></div>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>using the big generation model for every grader. Graders make binary calls on short inputs; a small, fast model is usually enough. Verify by measuring grader agreement with your labels (Tab ⑪).</p></div>
+</section>
+<!-- ============ TAB 10 ============ -->
+<section class="tab" data-num="⑩" data-short="Production" data-phase="C" data-title="Production bottlenecks and fixes">
+<div class="tab-head"><span class="tab-num">⑩</span><div><h2>Known production bottlenecks, and their fixes</h2><span class="phase-tag">Phase C, production: failure modes and infrastructure</span></div></div>
+<p class="lead">Self-RAG's checks are what make it trustworthy, and they are also what make it slow and expensive. Production work is mostly about keeping the checks while paying for them less often.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: airport security.</span>Every check exists for a reason, but an airport that runs every passenger through every check in series grinds to a halt. Real airports run lanes in parallel, pre-clear trusted travellers, and escalate only the suspicious bags. Same toolkit here.</p></div>
+
+<h3>Bottleneck catalogue</h3>
+<div class="tw"><table>
+<tr><th>#</th><th>Symptom</th><th>Root cause</th><th>Fix</th><th>Metric to watch</th></tr>
+<tr><td>1</td><td>p95 latency 8–15 s</td><td>6+ sequential LLM calls</td><td>Batch doc grading; run grounded and useful checks in parallel; small grader model; confidence gate (below)</td><td>Latency per node, p50/p95</td></tr>
+<tr><td>2</td><td>Occasional 60 s+ queries, cost spikes</td><td>Unbounded or long loops on unanswerable questions</td><td>Counters in state + <code>recursion_limit</code>; fallback node; per-request token budget</td><td>Loops per query, fallback rate</td></tr>
+<tr><td>3</td><td>"Couldn't find" on answerable questions</td><td>Over-strict grader or over-filtering</td><td>Calibrate grader on labels; relax filters on retry; keep top-1 reranked doc if reranker score is high</td><td>Grader keep-rate; false-abstain rate</td></tr>
+<tr><td>4</td><td>No quality gain over Advanced RAG</td><td>Over-lenient grader</td><td>Stricter relevance definition with examples; measure grader precision</td><td>Grader keep-rate near 100%</td></tr>
+<tr><td>5</td><td>Rerank 429s or timeouts at peak</td><td>Hosted reranker rate limits</td><td>Exponential backoff with jitter; circuit breaker to local cross-encoder; cap candidates at ~40</td><td>Rerank error rate, fallback count</td></tr>
+<tr><td>6</td><td>Filtered queries slow as data grows</td><td>Missing payload indexes</td><td>Index every filtered field before bulk load; review query plans</td><td>Qdrant search latency by filter</td></tr>
+<tr><td>7</td><td>Memory pressure, pods OOM-killed</td><td>float32 vectors all in RAM</td><td>Scalar quantization + originals on disk; smaller embedding model</td><td>Qdrant RSS, cache hit ratio</td></tr>
+<tr><td>8</td><td>Quality drops after "just upgrading the embedding model"</td><td>Old vectors, new query model</td><td>Build a new collection, evaluate, switch alias atomically; store model name in collection metadata</td><td>Hit@5 on golden set per collection version</td></tr>
+<tr><td>9</td><td>Duplicate answers, growing collection</td><td>Random IDs on re-ingest</td><td>Deterministic <code>uuid5</code> IDs; content hash to skip unchanged chunks; delete points for removed files</td><td>Point count vs source chunk count</td></tr>
+<tr><td>10</td><td>Answer misses the step right after the one it quotes</td><td>Chunk boundary split</td><td>Overlap; structure-aware chunking; parent-child retrieval</td><td>Failure analysis on golden set</td></tr>
+<tr><td>11</td><td>Correct doc retrieved but ignored</td><td>Lost in the middle; too many docs in prompt</td><td>Top 5 after grading; strongest first and last</td><td>Faithfulness with k=5 vs k=10</td></tr>
+<tr><td>12</td><td>Random crashes in graders</td><td>Structured-output parse failures from some models</td><td>Retry once; fall back to JSON-in-text parsing; pin models known to support tool calling</td><td>Parse error rate per model</td></tr>
+<tr><td>13</td><td>Stale answers after a runbook changed</td><td>Answer cache without invalidation</td><td>Cache key includes collection version; short TTL; purge on ingest</td><td>Cache hit rate vs doc update times</td></tr>
+<tr><td>14</td><td>Nobody can explain why an answer was wrong</td><td>No per-node tracing</td><td>Trace each node's input, output, latency; log grader reasons</td><td>% of requests with full trace</td></tr>
+</table></div>
+
+<h3>Latency budget, illustrated</h3>
+<p><span class="cf g">Guessing</span> Illustrative numbers for a hosted small model and Cohere; measure your own with Program P11.</p>
+<div class="tw"><table>
+<tr><th>Step</th><th>Naive serial</th><th>After fixes</th><th>Fix applied</th></tr>
+<tr><td>Route</td><td>0.5 s</td><td>0 s (heuristic) – 0.4 s</td><td>Keyword heuristic for obvious cases</td></tr>
+<tr><td>Multi-query</td><td>0.8 s</td><td>0.8 s</td><td>—</td></tr>
+<tr><td>Embed + search ×4</td><td>0.3 s</td><td>0.1 s</td><td>Parallel searches; batch embed</td></tr>
+<tr><td>Rerank</td><td>0.4 s</td><td>0.4 s</td><td>—</td></tr>
+<tr><td>Grade docs</td><td>6 × 0.6 s = 3.6 s</td><td>0.8 s, or 0 s if gated</td><td>Batched; skip when top rerank score ≥ calibrated threshold</td></tr>
+<tr><td>Generate</td><td>2.5 s</td><td>2.5 s</td><td>—</td></tr>
+<tr><td>Grounded + useful</td><td>1.4 s</td><td>0.8 s</td><td>Run in parallel</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>~9.5 s</strong></td><td><strong>~4.6–5.8 s</strong></td><td></td></tr>
+</table></div>
+<p><strong>Confidence gate.</strong> If the reranker's top score is high and the second is close behind, skip the document grader. Calibrate the threshold on your golden set so the gate only skips cases where the grader would have kept the docs anyway.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>streaming the generated answer to the user before the grounded check finishes. The user reads the hallucination before your checker catches it. Stream a "checking sources" status instead, or stream with a visible "verifying" state and retract on failure.</p></div>
+
+<h3>Caching layers</h3>
+<div class="tw"><table>
+<tr><th>Layer</th><th>Key</th><th>Saves</th><th>Risk</th></tr>
+<tr><td>Embedding cache</td><td>hash(model + text)</td><td>Re-embedding unchanged chunks on re-ingest</td><td>None if model is in key</td></tr>
+<tr><td>Retrieval cache</td><td>hash(query + filter + collection version)</td><td>Search + rerank</td><td>Stale after ingest unless version is in key</td></tr>
+<tr><td>Semantic answer cache</td><td>Question embedding, similarity ≥ high threshold</td><td>The whole pipeline</td><td>Wrong reuse: "purge CDN for brand A" vs "brand B" are near-identical vectors. Use only with filters in key and a very high threshold.</td></tr>
+</table></div>
+
+<h3>Observability</h3>
+<ul>
+<li><strong>Traces.</strong> LangSmith or Langfuse show each node's input, output and latency for every request. Set <code>LANGSMITH_TRACING=true</code> plus an API key and LangGraph runs are traced automatically. <span class="cf l">Likely</span></li>
+<li><strong>Metrics</strong> (Prometheus, then Grafana): <code>selfrag_request_seconds</code> (histogram, by path), <code>selfrag_node_seconds</code> (histogram, by node), <code>selfrag_loops_total</code>, <code>selfrag_fallback_total</code>, <code>selfrag_grader_keep_ratio</code>, <code>selfrag_llm_calls_per_request</code>, <code>rerank_errors_total</code>.</li>
+<li><strong>Alerts worth having:</strong> fallback rate above its weekly baseline (knowledge gap or broken retrieval), p95 latency SLO burn, grader keep-rate suddenly at 0% or 100% (prompt or model change broke a grader).</li>
+</ul>
+
+<h3>Ingestion in production</h3>
+<div class="pipe"><span class="s">Changed files</span><span class="a">→</span><span class="s">Chunk (structure-aware)</span><span class="a">→</span><span class="s">Hash each chunk</span><span class="a">→</span><span class="s">Skip unchanged</span><span class="a">→</span><span class="s">Embed new (batched)</span><span class="a">→</span><span class="s">Upsert with uuid5 IDs</span><span class="a">→</span><span class="s">Delete orphans</span><span class="a">→</span><span class="s hl">Bump collection version</span></div>
+<div class="co course"><p><span class="ct">🎓 AIOps link.</span>Treat the Self-RAG service like any other service you own: an SLO on p95 latency and on answer faithfulness (sampled nightly with the Tab ⑪ harness), a Grafana board with the metrics above, and runbooks for its own failure modes. Given your cost guardrail on Bedrock, the same idea applies here: a per-request token cap and a monthly spend cap on the OpenRouter key.</p></div>
+</section>
+
+<!-- ============ TAB 11 ============ -->
+<section class="tab" data-num="⑪" data-short="Evaluation" data-phase="C" data-title="Evaluation">
+<div class="tab-head"><span class="tab-num">⑪</span><div><h2>Evaluation: proving it works, not just that it runs</h2><span class="phase-tag">Phase C, production: evaluation</span></div></div>
+<p class="lead">"It answered my three test questions" is a demo, not an evaluation. You need a labelled question set, metrics per layer, and a comparison against simpler baselines, or you can't tell whether Self-RAG's extra seconds bought anything.</p>
+<div class="co analogy"><p><span class="ct">🧭 Analogy: exams with an answer key.</span>A school doesn't judge a student by asking "did you enjoy the test?" It uses a fixed paper with a marking scheme, marks each section separately, and checks that two examiners would give the same grade. Your golden set is the paper; the metrics are the marking scheme; grader calibration is the second examiner.</p></div>
+
+<h3>Evaluate in layers</h3>
+<div class="tw"><table>
+<tr><th>Layer</th><th>Question</th><th>Metrics</th></tr>
+<tr><td>Retrieval</td><td>Did the right chunk make it to the LLM?</td><td>Hit@k, Recall@k, MRR, nDCG@k</td></tr>
+<tr><td>Graders</td><td>Do the graders agree with a human?</td><td>Precision, recall, agreement rate vs your labels</td></tr>
+<tr><td>Generation</td><td>Is the answer supported and responsive?</td><td>Faithfulness, answer relevance, correctness vs reference</td></tr>
+<tr><td>Behaviour</td><td>Does it abstain when it should, answer when it can?</td><td>Correct-abstain rate, false-abstain rate</td></tr>
+<tr><td>System</td><td>Can we afford it?</td><td>p50/p95 latency, LLM calls/query, cost/query, loop rate</td></tr>
+</table></div>
+
+<h3>Retrieval metrics, worked</h3>
+<p>Three questions; position of the correct chunk in the results: 1st, 3rd, not found.</p>
+<div class="tw"><table>
+<tr><th>Metric</th><th>Definition</th><th>Value here</th></tr>
+<tr><td>Hit@1</td><td>Share of questions with the correct chunk ranked first</td><td>1/3 = 0.33</td></tr>
+<tr><td>Hit@5</td><td>Share with the correct chunk anywhere in top 5</td><td>2/3 = 0.67</td></tr>
+<tr><td>MRR</td><td>Average of 1/rank (0 if missing)</td><td>(1 + 1/3 + 0) / 3 = 0.44</td></tr>
+<tr><td>Recall@k</td><td>For multi-chunk answers: share of needed chunks retrieved</td><td>—</td></tr>
+<tr><td>nDCG@k</td><td>Rank-weighted relevance, for graded (not binary) labels</td><td>—</td></tr>
+</table></div>
+
+<h3>Building a golden set that actually tests Self-RAG</h3>
+<div class="tw"><table>
+<tr><th>Category</th><th>Share</th><th>Example</th><th>Tests</th></tr>
+<tr><td>Single-chunk answerable</td><td>~40%</td><td>"How do I roll back a code version?"</td><td>Basic retrieval and generation</td></tr>
+<tr><td>Exact identifier</td><td>~15%</td><td>"What causes AUTH-403?"</td><td>Hybrid search</td></tr>
+<tr><td>Filter-dependent</td><td>~10%</td><td>"Checkout postmortems since 2024?"</td><td>Router filters</td></tr>
+<tr><td>Multi-chunk</td><td>~10%</td><td>"What went wrong in both CDN incidents?"</td><td>Multi-query, recall</td></tr>
+<tr><td>Unanswerable</td><td>~15–20%</td><td>"How do we rotate Kafka certs?"</td><td>Abstention: where Self-RAG should beat naive RAG</td></tr>
+<tr><td>No retrieval needed</td><td>~5–10%</td><td>"Convert 90 seconds to minutes"</td><td>Router</td></tr>
+</table></div>
+<p>For each question store: the question, the expected source chunk ID(s), a short reference answer, and whether it's answerable. 20 questions is enough to find big problems; 50+ to compare close alternatives.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>generating the whole golden set with an LLM from the same chunks. Questions come out phrased like the documents, so retrieval looks brilliant. Write at least half yourself, in the words an on-call engineer would actually type at 3 a.m.</p></div>
+
+<h3>Generation metrics and RAGAS</h3>
+<div class="tw"><table>
+<tr><th>Metric</th><th>Measures</th><th>Needs reference answer?</th></tr>
+<tr><td>Faithfulness</td><td>Share of answer claims supported by retrieved context</td><td>No</td></tr>
+<tr><td>Answer (response) relevancy</td><td>Does the answer address the question?</td><td>No</td></tr>
+<tr><td>Context precision</td><td>Are relevant chunks ranked above irrelevant ones?</td><td>Yes (or labelled chunks)</td></tr>
+<tr><td>Context recall</td><td>Does the context contain what the reference answer needs?</td><td>Yes</td></tr>
+</table></div>
+<p><span class="cf l">Likely</span> RAGAS implements these, but its API has changed substantially between versions (metric names, dataset classes, LLM wrappers). Pin the version you install and follow that version's docs. Program P10 builds a small dependency-free harness so you understand what RAGAS computes before you outsource it.</p>
+
+<h3>LLM-as-judge pitfalls</h3>
+<ul>
+<li><strong>Self-preference:</strong> a model grading its own family's answers tends to be generous. Use a different model family as judge.</li>
+<li><strong>Verbosity bias:</strong> longer answers get higher scores. Include a short correct answer in your spot checks.</li>
+<li><strong>Drift:</strong> judge scores are only comparable within one judge model and prompt. Changing the judge resets your baseline.</li>
+<li><strong>Trust, but spot-check:</strong> read 10% of judgments yourself each run.</li>
+</ul>
+
+<h3>Evaluate the graders themselves</h3>
+<p>Label ~50 (question, chunk) pairs as relevant or not. Run your document grader on them.</p>
+<div class="tw"><table>
+<tr><th></th><th>Human: relevant</th><th>Human: not relevant</th></tr>
+<tr><td>Grader: keep</td><td>True keep</td><td>False keep (lenient)</td></tr>
+<tr><td>Grader: drop</td><td>False drop (strict: causes false abstains)</td><td>True drop</td></tr>
+</table></div>
+<p>False drops hurt more than false keeps in Self-RAG, because a false drop can empty the context and trigger an abstain on an answerable question.</p>
+
+<h3>Ablation: what did each layer buy?</h3>
+<div class="tw"><table>
+<tr><th>System</th><th>Hit@5</th><th>Faithfulness</th><th>Correct abstain</th><th>False abstain</th><th>p95 latency</th><th>LLM calls/q</th></tr>
+<tr><td>Naive dense</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>1</td></tr>
+<tr><td>+ hybrid</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>1</td></tr>
+<tr><td>+ rerank</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>1</td></tr>
+<tr><td>+ Self-RAG loop</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>fill</td><td>~6</td></tr>
+</table></div>
+<p>If the last row doesn't improve faithfulness or abstention meaningfully over the "+ rerank" row, you're paying for checks that aren't catching anything on your data.</p>
+<div class="co mistake"><p><span class="ct">⚠️ Common mistake:</span>only scoring the final answer. When it's wrong you can't tell whether retrieval, a grader, or generation failed. Log per-layer results for every question.</p></div>
+<div class="co tip"><p><span class="ct">✅ Make it a regression gate.</span>Run the harness whenever you change a prompt, model, chunk size or embedding model. Fail the change if Hit@5 or faithfulness drops beyond a tolerance you set. This is the same idea as a CI test suite, applied to answer quality.</p></div>
+</section>
+<!-- ============ TAB 12 ============ -->
+<section class="tab" data-num="⑫" data-short="Code lab" data-phase="C" data-title="Code lab">
+<div class="tab-head"><span class="tab-num">⑫</span><div><h2>Code lab: twelve programs, one concept each</h2><span class="phase-tag">Phase C, production: runnable in Google Colab</span></div></div>
+<p class="lead">Run these in order in <strong>one</strong> Colab notebook; each program reuses objects from the ones before it. P0–P10 use a small built-in set of fictional runbook snippets so you can see every effect clearly; P11 runs the whole system on a real PDF.</p>
+<div class="tw"><table>
+<tr><th>Program</th><th>Adds exactly one concept</th><th>Tab</th></tr>
+<tr><td>P0</td><td>Environment, OpenRouter via LangChain, the toy corpus</td><td>⓪</td></tr>
+<tr><td>P1</td><td>Embeddings and cosine similarity</td><td>②</td></tr>
+<tr><td>P2</td><td>Comparing embedding models fairly (with the prefix mistake on purpose)</td><td>③</td></tr>
+<tr><td>P3</td><td>Qdrant collection, deterministic IDs, dense search</td><td>④</td></tr>
+<tr><td>P4</td><td>Qdrant filters and the post-filtering mistake</td><td>⑤</td></tr>
+<tr><td>P5</td><td>Hybrid search: BM25 sparse + dense with RRF</td><td>⑥</td></tr>
+<tr><td>P6</td><td>Reranking with Cohere, local fallback</td><td>⑥</td></tr>
+<tr><td>P7</td><td>Multi-query and three-layer dedup</td><td>⑨</td></tr>
+<tr><td>P8</td><td>Graders and grounded generation</td><td>⑨</td></tr>
+<tr><td>P9</td><td>The Self-RAG loop in LangGraph</td><td>⑧</td></tr>
+<tr><td>P10</td><td>Evaluation harness: naive vs Self-RAG</td><td>⑪</td></tr>
+<tr><td>P11</td><td>Real PDF end to end + change detection, per-node timing, versioned cache</td><td>⑩</td></tr>
+</table></div>
+<div class="co warnc"><p><span class="ct">Before you run.</span><span class="cf l">Likely</span> Library APIs shift; these programs target current releases of <code>qdrant-client</code>, <code>langchain</code>, <code>langgraph</code> and <code>cohere</code> as of mid-2026. If a structured-output call fails with your chosen model, pass <code>method="function_calling"</code> to <code>with_structured_output</code> or pick a model that supports tool calling on OpenRouter.</p></div>
+
+<details class="prog"><summary>P0. Setup <span class="adds">(adds: environment, LLM client, toy corpus)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P0. Install and configure. Run once per Colab session.
+!pip install -q -U langchain langchain-openai langchain-huggingface langchain-community langchain-text-splitters langgraph qdrant-client fastembed sentence-transformers cohere pypdf pandas
+
+import os
+from google.colab import userdata
+
+# Keys live in Colab Secrets (key icon, left sidebar), so they never appear in a notebook you share.
+os.environ["OPENROUTER_API_KEY"] = userdata.get("OPENROUTER_API_KEY")
+try:
+    os.environ["COHERE_API_KEY"] = userdata.get("COHERE_API_KEY")
+except Exception:
+    print("No COHERE_API_KEY: P6 onwards will use a free local reranker instead.")
+
+from langchain_openai import ChatOpenAI
+
+# OpenRouter speaks the OpenAI API, so ChatOpenAI works once base_url points at it.
+# Any model id from openrouter.ai/models works; graders need reliable structured (JSON/tool) output.
+OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+GEN_MODEL = "openai/gpt-4o-mini"                     # writes answers
+GRADER_MODEL = "openai/gpt-4o-mini"                  # yes/no judgments: try a cheaper one later and re-run P10
+JUDGE_MODEL = "meta-llama/llama-3.3-70b-instruct"    # evaluation judge from a DIFFERENT model family (Tab 11)
+
+def make_llm(model):
+    # temperature=0: graders and judges are classifiers; randomness only adds noise
+    return ChatOpenAI(model=model, base_url=OPENROUTER_BASE,
+                      api_key=os.environ["OPENROUTER_API_KEY"], temperature=0)
+
+llm, grader_llm, judge_llm = make_llm(GEN_MODEL), make_llm(GRADER_MODEL), make_llm(JUDGE_MODEL)
+print(llm.invoke("Reply with exactly one word: ready").content)
+
+# Toy corpus for P1-P10: FICTIONAL runbook snippets. Payload fields are chosen now
+# because Qdrant filters (P4) can only use what we store at ingestion time (Tab 2).
+DOCS = [
+ {"doc_id": "rb-01", "service": "checkout", "doc_type": "runbook", "severity": "sev2", "year": 2025,
+  "text": "Checkout API returning HTTP 429: the SCAPI rate limit was exceeded. Check the client's request quota, enable request coalescing in the BFF layer, and retry with exponential backoff and jitter."},
+ {"doc_id": "rb-02", "service": "checkout", "doc_type": "postmortem", "severity": "sev1", "year": 2024,
+  "text": "Postmortem: checkout p99 latency rose to 9 seconds after a promotion launch because a custom cartridge called the tax service synchronously on every basket update."},
+ {"doc_id": "rb-03", "service": "search", "doc_type": "runbook", "severity": "sev3", "year": 2025,
+  "text": "Search returns zero results for new products when the search index was not rebuilt after a catalog import. Trigger an incremental index rebuild in Business Manager and confirm the job finished."},
+ {"doc_id": "rb-04", "service": "cdn", "doc_type": "runbook", "severity": "sev3", "year": 2025,
+  "text": "To purge the CDN cache for a single brand site, use that brand's eCDN zone and purge by URL prefix. Never purge the full zone during peak traffic."},
+ {"doc_id": "rb-05", "service": "cdn", "doc_type": "postmortem", "severity": "sev1", "year": 2025,
+  "text": "Postmortem: a full-zone CDN purge during a sale sent origin load 12 times higher and caused 503 errors for 18 minutes."},
+ {"doc_id": "rb-06", "service": "auth", "doc_type": "runbook", "severity": "sev2", "year": 2026,
+  "text": "Login failures with error code AUTH-403 usually mean the SLAS client secret was rotated but the storefront configuration still has the old secret."},
+ {"doc_id": "rb-07", "service": "payments", "doc_type": "runbook", "severity": "sev1", "year": 2025,
+  "text": "Payment authorization timeouts: check the payment gateway status page first, then outbound connection pool metrics. Increase the pool only if saturation exceeds 80 percent."},
+ {"doc_id": "rb-08", "service": "search", "doc_type": "postmortem", "severity": "sev2", "year": 2023,
+  "text": "Postmortem: search latency doubled after a synonym list with 40,000 entries was loaded into the search configuration."},
+ {"doc_id": "rb-09", "service": "monitoring", "doc_type": "runbook", "severity": "sev3", "year": 2026,
+  "text": "A synthetic login monitor failing in only one region usually points to a regional CDN edge problem, not an application bug. Compare with another region before paging the platform team."},
+ {"doc_id": "rb-10", "service": "checkout", "doc_type": "runbook", "severity": "sev3", "year": 2025,
+  "text": "Basket merge errors after login happen when the guest and registered baskets contain the same product line item with different options."},
+ {"doc_id": "rb-11", "service": "oncall", "doc_type": "runbook", "severity": "sev3", "year": 2024,
+  "text": "On-call handoff: every open incident needs an owner, a current status, and the time of the next update posted in the incident channel."},
+ {"doc_id": "rb-12", "service": "deploy", "doc_type": "runbook", "severity": "sev2", "year": 2025,
+  "text": "Code version rollback: activate the previous code version in Business Manager, then clear the page cache. The rollback takes effect within about two minutes."},
+]
+print(len(DOCS), "docs loaded")
+</script></div></div></details>
+
+<details class="prog"><summary>P1. Embeddings <span class="adds">(adds: text to vectors, cosine similarity)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P1. Embeddings: turn text into vectors and look at similarity with your own eyes.
+import numpy as np
+from langchain_huggingface import HuggingFaceEmbeddings
+
+# normalize_embeddings=True scales every vector to length 1, so dot product == cosine similarity.
+emb = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5",
+                            encode_kwargs={"normalize_embeddings": True})
+
+# BGE v1.5 recommends this instruction for SHORT QUERIES only, never for documents (Tab 2).
+BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+
+def embed_query(q: str) -> list[float]:
+    return emb.embed_query(BGE_QUERY_PREFIX + q)
+
+def embed_docs(texts: list[str]) -> list[list[float]]:
+    return emb.embed_documents(texts)
+
+sentences = ["checkout is very slow", "payment page latency is high",
+             "check out this new book", "purge the CDN cache"]
+V = np.array(embed_docs(sentences))
+print("shape:", V.shape)                 # (4, 384): 4 texts, 384 numbers each
+S = V @ V.T                              # every pairwise cosine similarity in one matrix multiply
+for i, s in enumerate(sentences):
+    print(f"{s:32s}", " ".join(f"{x:5.2f}" for x in S[i]))
+
+# Look at row 1: does "payment page latency" beat "check out this new book"?
+# The second one shares words; the first shares MEANING. That gap is what embeddings buy you.
+DIM = V.shape[1]                         # reused when creating Qdrant collections
+</script></div></div></details>
+
+<details class="prog"><summary>P2. Choosing a model <span class="adds">(adds: fair model comparison, Hit@1, MRR)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P2. Compare candidate embedding models on YOUR questions, under identical conditions (Tab 3).
+import time
+from sentence_transformers import SentenceTransformer
+
+corpus = [d["text"] for d in DOCS]
+# (question in on-call wording, index of the DOCS entry that answers it): a tiny golden set
+TESTS = [
+    ("Why is checkout throwing too many requests errors?", 0),
+    ("customers cannot log in, AUTH-403", 5),
+    ("new products are missing from search", 2),
+    ("how do I clear cached pages for just one brand", 3),
+    ("what caused the 503s during the sale?", 4),
+    ("undo a bad deployment", 11),
+    ("payments timing out", 6),
+    ("monitor fails in one region only", 8),
+]
+CANDIDATES = [   # name, HuggingFace id, query prefix, passage prefix
+    ("bge-small-en-v1.5", "BAAI/bge-small-en-v1.5", BGE_QUERY_PREFIX, ""),
+    ("all-MiniLM-L6-v2", "sentence-transformers/all-MiniLM-L6-v2", "", ""),
+    ("e5-small-v2", "intfloat/e5-small-v2", "query: ", "passage: "),
+    ("e5-small-v2 NO prefix", "intfloat/e5-small-v2", "", ""),      # the common mistake, on purpose
+]
+
+def score_model(hf_id, qp, dp):
+    m = SentenceTransformer(hf_id)
+    t0 = time.perf_counter()
+    D = m.encode([dp + c for c in corpus], normalize_embeddings=True)
+    Q = m.encode([qp + q for q, _ in TESTS], normalize_embeddings=True)
+    secs = time.perf_counter() - t0
+    ranks = []
+    for i, (_, gold) in enumerate(TESTS):
+        order = np.argsort(-(Q[i] @ D.T))                  # best match first
+        ranks.append(int(np.where(order == gold)[0][0]) + 1)
+    hit1 = np.mean([r == 1 for r in ranks])
+    mrr = np.mean([1 / r for r in ranks])
+    return hit1, mrr, m.get_sentence_embedding_dimension(), m.max_seq_length, secs
+
+print(f"{'model':24s} hit@1   MRR  dims  max_len  encode_s")
+for name, hf_id, qp, dp in CANDIDATES:
+    h, mrr, d, L, s = score_model(hf_id, qp, dp)
+    print(f"{name:24s} {h:5.2f} {mrr:5.2f} {d:5d} {L:8d} {s:9.2f}")
+
+# 12 docs and 8 questions is far too small to crown a winner; the METHOD is the lesson.
+# Re-run with 30+ real questions before committing to a model you'll have to re-index to change.
+</script></div></div></details>
+
+<details class="prog"><summary>P3. Qdrant basics <span class="adds">(adds: collection, points, payload, deterministic IDs)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P3. Qdrant: store vectors with payload and search them.
+import uuid
+from qdrant_client import QdrantClient, models
+
+client = QdrantClient(":memory:")   # RAM only; use QdrantClient(url="http://localhost:6333") for a server
+COLL = "runbooks"
+
+if client.collection_exists(COLL):
+    client.delete_collection(COLL)  # makes this cell safe to re-run
+client.create_collection(
+    COLL,
+    vectors_config=models.VectorParams(size=DIM, distance=models.Distance.COSINE),
+)
+
+NS = uuid.UUID("6f1c2d3e-0000-4000-8000-000000000001")   # any fixed UUID = your project's ID namespace
+
+def point_id(key: str) -> str:
+    # Qdrant only accepts unsigned ints or UUIDs. uuid5 is deterministic: same key -> same id,
+    # so re-ingesting a chunk overwrites it instead of creating a duplicate.
+    return str(uuid.uuid5(NS, key))
+
+vectors = embed_docs([d["text"] for d in DOCS])            # one batched call, not one per doc
+client.upsert(COLL, points=[
+    models.PointStruct(id=point_id(d["doc_id"]), vector=v, payload=d)
+    for d, v in zip(DOCS, vectors)
+])
+print("points stored:", client.count(COLL).count)
+
+def dense_search(q, k=3, flt=None, coll=COLL):
+    return client.query_points(coll, query=embed_query(q), query_filter=flt,
+                               limit=k, with_payload=True).points
+
+for p in dense_search("checkout is returning 429 errors"):
+    print(f"{p.score:.3f}  {p.payload['doc_id']}  {p.payload['text'][:70]}")
+</script></div></div></details>
+
+<details class="prog"><summary>P4. Filters <span class="adds">(adds: must / should / must_not, payload indexes, post-filter pitfall)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P4. Filters restrict WHERE the similarity search looks (Tab 5).
+# In ':memory:' mode payload indexes have little effect; on a server they are essential.
+# Creating them anyway keeps this code production-shaped.
+for field, schema in [("service", models.PayloadSchemaType.KEYWORD),
+                      ("doc_type", models.PayloadSchemaType.KEYWORD),
+                      ("year", models.PayloadSchemaType.INTEGER)]:
+    client.create_payload_index(COLL, field_name=field, field_schema=schema)
+
+def show(title, points):
+    print(f"\n{title}")
+    for p in points:
+        pl = p.payload
+        print(f"  {p.score:.3f} {pl['service']:10s} {pl['doc_type']:10s} {pl['year']}  {pl['text'][:50]}")
+
+q = "latency got much worse"
+show("No filter", dense_search(q, k=4))
+
+only_checkout = models.Filter(must=[
+    models.FieldCondition(key="service", match=models.MatchValue(value="checkout"))])
+show("must: service == checkout", dense_search(q, k=4, flt=only_checkout))
+
+recent_postmortems = models.Filter(must=[
+    models.FieldCondition(key="doc_type", match=models.MatchValue(value="postmortem")),
+    models.FieldCondition(key="year", range=models.Range(gte=2024))])
+show("postmortems from 2024 onwards", dense_search(q, k=4, flt=recent_postmortems))
+
+cdn_or_search_not_pm = models.Filter(
+    should=[models.FieldCondition(key="service", match=models.MatchAny(any=["cdn", "search"]))],
+    must_not=[models.FieldCondition(key="doc_type", match=models.MatchValue(value="postmortem"))])
+show("(cdn OR search) AND NOT postmortem", dense_search(q, k=4, flt=cdn_or_search_not_pm))
+
+# The Tab 5 mistake: search first, filter in Python afterwards.
+post = [p for p in dense_search(q, k=4) if p.payload["service"] == "checkout"]
+inside = dense_search(q, k=4, flt=only_checkout)
+print(f"\nPost-filtered in Python: {len(post)} results. Filtered inside Qdrant: {len(inside)} results.")
+</script></div></div></details>
+
+<details class="prog"><summary>P5. Hybrid search <span class="adds">(adds: BM25 sparse vectors, named vectors, RRF fusion)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P5. Hybrid: dense (meaning) + BM25 sparse (exact words), fused with RRF inside Qdrant (Tab 6).
+from fastembed import SparseTextEmbedding
+
+bm25 = SparseTextEmbedding(model_name="Qdrant/bm25")
+HCOLL = "runbooks_hybrid"
+FILTER_FIELDS = [("service", models.PayloadSchemaType.KEYWORD),
+                 ("doc_type", models.PayloadSchemaType.KEYWORD),
+                 ("year", models.PayloadSchemaType.INTEGER)]
+
+def to_sparse(se):
+    # fastembed returns numpy arrays; Qdrant wants plain lists
+    return models.SparseVector(indices=se.indices.tolist(), values=se.values.tolist())
+
+def create_hybrid_collection(name):
+    if client.collection_exists(name):
+        client.delete_collection(name)
+    client.create_collection(
+        name,
+        vectors_config={"dense": models.VectorParams(size=DIM, distance=models.Distance.COSINE)},
+        # IDF modifier: Qdrant applies BM25's inverse-document-frequency weighting server-side
+        sparse_vectors_config={"bm25": models.SparseVectorParams(modifier=models.Modifier.IDF)},
+    )
+    for field, schema in FILTER_FIELDS:            # indexes BEFORE upload (Tab 5)
+        client.create_payload_index(name, field_name=field, field_schema=schema)
+
+def ingest_hybrid(name, records, key_fn, batch=64):
+    for i in range(0, len(records), batch):        # batched: one embed + one upsert per 64 chunks
+        part = records[i:i + batch]
+        texts = [r["text"] for r in part]
+        dense, sparse = embed_docs(texts), list(bm25.embed(texts))
+        client.upsert(name, points=[
+            models.PointStruct(id=point_id(key_fn(r)),
+                               vector={"dense": dv, "bm25": to_sparse(sv)}, payload=r)
+            for r, dv, sv in zip(part, dense, sparse)])
+
+create_hybrid_collection(HCOLL)
+ingest_hybrid(HCOLL, DOCS, key_fn=lambda r: r["doc_id"])
+
+def hybrid_search(q, k=5, flt=None, prefetch_k=20, coll=HCOLL):
+    sq = to_sparse(next(iter(bm25.query_embed(q))))
+    return client.query_points(
+        coll,
+        prefetch=[
+            models.Prefetch(query=embed_query(q), using="dense", limit=prefetch_k, filter=flt),
+            models.Prefetch(query=sq, using="bm25", limit=prefetch_k, filter=flt),
+        ],
+        query=models.FusionQuery(fusion=models.Fusion.RRF),   # rank-based: no score rescaling needed
+        limit=k, with_payload=True,
+    ).points
+
+for q in ["users cannot sign in, error AUTH-403", "undo a bad deployment"]:
+    print(f"\nQ: {q}")
+    print("  dense :", [p.payload["doc_id"] for p in dense_search(q, k=3)])
+    print("  hybrid:", [p.payload["doc_id"] for p in hybrid_search(q, k=3)])
+</script></div></div></details>
+
+<details class="prog"><summary>P6. Reranking <span class="adds">(adds: cross-encoder rerank, graceful fallback)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P6. A cross-encoder reads query and document TOGETHER and reorders the short list (Tab 6).
+import cohere
+from sentence_transformers import CrossEncoder
+
+_cohere = cohere.ClientV2(api_key=os.environ["COHERE_API_KEY"]) if os.environ.get("COHERE_API_KEY") else None
+_local_ce = None
+
+def rerank(query: str, docs: list[dict], top_n: int = 5) -> list[tuple[dict, float]]:
+    """(doc, score) pairs, best first. Cohere scores are 0-1; local scores are raw logits,
+    so a threshold tuned on one never transfers to the other."""
+    if not docs:
+        return []
+    texts = [d["text"] for d in docs]
+    if _cohere is not None:
+        try:
+            resp = _cohere.rerank(model="rerank-v3.5", query=query, documents=texts,
+                                  top_n=min(top_n, len(texts)))
+            return [(docs[r.index], r.relevance_score) for r in resp.results]
+        except Exception as e:    # rate limit, network, expired trial: degrade, don't fail the request
+            print(f"[rerank] Cohere failed ({type(e).__name__}); using local cross-encoder")
+    global _local_ce
+    if _local_ce is None:
+        _local_ce = CrossEncoder("BAAI/bge-reranker-base")
+    scores = _local_ce.predict([(query, t) for t in texts])
+    order = np.argsort(-scores)[:top_n]
+    return [(docs[i], float(scores[i])) for i in order]
+
+q = "checkout keeps failing with too many requests"
+candidates = [p.payload for p in hybrid_search(q, k=10)]        # retrieve WIDE...
+print("before rerank:", [d["doc_id"] for d in candidates[:5]])
+for d, s in rerank(q, candidates, top_n=3):                     # ...rerank NARROW
+    print(f"  {s:7.3f}  {d['doc_id']}  {d['text'][:60]}")
+</script></div></div></details>
+
+<details class="prog"><summary>P7. Multi-query and dedup <span class="adds">(adds: query rephrasing, id + hash + near-duplicate removal)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P7. Widen recall with rephrasings, then remove the duplicates that creates (Tab 9).
+import hashlib
+from pydantic import BaseModel, Field
+
+class Rephrasings(BaseModel):
+    queries: list[str] = Field(description="Alternative search queries, each with different wording")
+
+rephraser = grader_llm.with_structured_output(Rephrasings)
+
+def multi_query(question: str, n: int = 3) -> list[str]:
+    out = rephraser.invoke(
+        f"Write {n} alternative search queries for a documentation search engine. "
+        "Vary the vocabulary: technical terms, error codes, symptoms. "
+        f"Original question: {question}")
+    return [question] + out.queries[:n]      # keep the original: rephrasings can drift
+
+def norm_hash(text: str) -> str:
+    return hashlib.sha256(" ".join(text.lower().split()).encode()).hexdigest()
+
+def drop_near_duplicates(docs: list[dict], threshold: float = 0.95) -> list[dict]:
+    if len(docs) < 2:
+        return docs
+    V = np.array(embed_docs([d["text"] for d in docs]))
+    keep = []
+    for i in range(len(docs)):               # earlier (higher-ranked) docs win ties
+        if all(float(V[i] @ V[j]) < threshold for j in keep):
+            keep.append(i)
+    return [docs[i] for i in keep]
+
+def retrieve_multi(question, flt=None, per_query_k=10, coll=None, verbose=False):
+    coll = coll or HCOLL
+    queries = multi_query(question)
+    seen_ids, seen_hashes, pool, raw = set(), set(), [], 0
+    for sq in queries:
+        for p in hybrid_search(sq, k=per_query_k, flt=flt, coll=coll):
+            raw += 1
+            if p.id in seen_ids:                 # layer 1: same point from another sub-query
+                continue
+            h = norm_hash(p.payload["text"])
+            if h in seen_hashes:                 # layer 2: same text stored under another id
+                continue
+            seen_ids.add(p.id); seen_hashes.add(h); pool.append(p.payload)
+    unique = drop_near_duplicates(pool)          # layer 3: near-identical wording
+    if verbose:
+        print("queries:", *queries, sep="\n  ")
+        print(f"raw hits {raw} -> unique {len(pool)} -> after near-dup {len(unique)}")
+    return unique
+
+pool = retrieve_multi("checkout keeps failing with too many requests", verbose=True)
+</script></div></div></details>
+
+<details class="prog"><summary>P8. Graders and generation <span class="adds">(adds: IsRel, IsSup, IsUse as structured LLM calls)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P8. The Self-RAG judgments as small structured LLM calls (Tabs 8 and 9).
+from typing import Optional
+
+# Field ORDER matters: reasoning/claims come before the verdict so the model justifies, then decides.
+class DocGrades(BaseModel):
+    reasoning: str = Field(description="One short sentence per passage, written before the verdict")
+    relevant: list[int] = Field(description="Indexes of passages that help answer the question")
+
+class Grounded(BaseModel):
+    unsupported_claims: list[str] = Field(description="Claims in the answer NOT supported by the sources; empty if none")
+    grounded: bool
+
+class Useful(BaseModel):
+    reasoning: str
+    useful: bool = Field(description="True only if the answer actually resolves the question")
+
+doc_grader = grader_llm.with_structured_output(DocGrades)
+grounded_grader = grader_llm.with_structured_output(Grounded)
+useful_grader = grader_llm.with_structured_output(Useful)
+
+def numbered(docs):
+    return "\n".join(f"[{i}] {d['text']}" for i, d in enumerate(docs))
+
+def grade_documents(question: str, docs: list[dict]) -> list[dict]:
+    if not docs:
+        return []
+    g = doc_grader.invoke(                    # ONE batched call for all passages, not one per passage
+        "You grade retrieved passages for a question.\n"
+        "A passage is relevant ONLY if it contains information that helps answer this exact question. "
+        "Sharing a topic or a keyword is not enough.\n"
+        f"Question: {question}\n\nPassages:\n{numbered(docs)}")
+    return [docs[i] for i in g.relevant if 0 <= i < len(docs)]    # guard against invented indexes
+
+def generate(question: str, docs: list[dict], strict: bool = False) -> str:
+    sources = "\n".join(f"[{i+1}] {d['text']}" for i, d in enumerate(docs))
+    extra = " Do not add numbers, settings or steps that are not written in the sources." if strict else ""
+    return llm.invoke(
+        "Answer the question using ONLY the sources below. Cite sources like [1]. "
+        "If the sources do not contain the answer, say so plainly." + extra +
+        f"\n\nSources:\n{sources}\n\nQuestion: {question}").content
+
+def check_grounded(docs, answer) -> Grounded:
+    return grounded_grader.invoke(
+        "List every claim in the ANSWER that is not supported by the SOURCES, then decide if it is grounded.\n"
+        f"SOURCES:\n{numbered(docs)}\n\nANSWER:\n{answer}")
+
+def check_useful(question, answer) -> Useful:
+    return useful_grader.invoke(
+        "Does the answer actually resolve the question for the person asking? "
+        "Pointing to where information might be, or restating the question, is not useful.\n"
+        f"Question: {question}\nAnswer: {answer}")
+
+question = "checkout keeps failing with too many requests"
+top = [d for d, _ in rerank(question, pool, top_n=6)]
+kept = grade_documents(question, top)
+print("kept", len(kept), "of", len(top), ":", [d["doc_id"] for d in kept])
+answer = generate(question, kept)
+print(answer)
+print(check_grounded(kept, answer))
+print(check_useful(question, answer))
+</script></div></div></details>
+
+<details class="prog"><summary>P9. The Self-RAG graph <span class="adds">(adds: LangGraph state machine, bounded loops, fallback)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P9. The Self-RAG loop as a LangGraph state machine (architecture: Tab 8).
+from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+
+MAX_REWRITES, MAX_REGENS = 2, 1
+ALLOWED_SERVICES = {"checkout", "search", "cdn", "auth", "payments", "monitoring", "deploy", "oncall"}
+KB_DESCRIPTION = "SRE runbooks and postmortems for an e-commerce platform"
+ACTIVE_COLL = HCOLL        # P11 repoints this at the PDF collection
+
+class RAGState(TypedDict):
+    question: str          # original; graders always judge against this
+    search_query: str      # what we search with; rewrite changes this
+    service: Optional[str]
+    documents: list
+    generation: str
+    needs_retrieval: bool
+    grounded: bool
+    useful: bool
+    rewrites: int
+    regens: int
+    log: list
+
+class Route(BaseModel):
+    needs_retrieval: bool = Field(description="True if answering needs the knowledge base")
+    service: Optional[str] = Field(None, description="The one service the question is about, or null")
+
+router = grader_llm.with_structured_output(Route)
+
+def route(s):
+    r = router.invoke(
+        f"Knowledge base: {KB_DESCRIPTION}.\n"
+        f"Allowed service values: {sorted(ALLOWED_SERVICES)}. Use null if unsure.\n"
+        "If unsure whether the knowledge base is needed, answer true.\n"
+        f"Question: {s['question']}")
+    svc = r.service if r.service in ALLOWED_SERVICES else None     # validate: never trust an LLM-built filter
+    return {"needs_retrieval": r.needs_retrieval, "service": svc,
+            "log": s["log"] + [f"route: retrieve={r.needs_retrieval} service={svc}"]}
+
+def retrieve(s):
+    flt = None
+    if s["service"] and s["rewrites"] == 0:    # drop the filter after a failed attempt (Tab 5)
+        flt = models.Filter(must=[models.FieldCondition(
+            key="service", match=models.MatchValue(value=s["service"]))])
+    pool = retrieve_multi(s["search_query"], flt=flt, coll=ACTIVE_COLL)
+    top = [d for d, _ in rerank(s["search_query"], pool, top_n=6)]
+    return {"documents": top,
+            "log": s["log"] + [f"retrieve: '{s['search_query']}' filter={bool(flt)} -> {len(top)} docs"]}
+
+def grade(s):
+    kept = grade_documents(s["question"], s["documents"])
+    return {"documents": kept, "log": s["log"] + [f"grade: kept {len(kept)}/{len(s['documents'])}"]}
+
+def generate_node(s):
+    strict = s["regens"] > 0                    # a regeneration gets a stricter prompt, not the same one again
+    return {"generation": generate(s["question"], s["documents"], strict=strict),
+            "log": s["log"] + [f"generate (strict={strict})"]}
+
+def grounded_node(s):
+    g = check_grounded(s["documents"], s["generation"])
+    upd = {"grounded": g.grounded,
+           "log": s["log"] + [f"grounded={g.grounded} unsupported={g.unsupported_claims}"]}
+    if not g.grounded:
+        upd["regens"] = s["regens"] + 1         # counted in a node because routing functions can't write state
+    return upd
+
+def useful_node(s):
+    u = check_useful(s["question"], s["generation"])
+    return {"useful": u.useful, "log": s["log"] + [f"useful={u.useful}"]}
+
+def rewrite(s):
+    why = "no relevant passages were found" if not s["documents"] else "the answer did not resolve the question"
+    new_q = llm.invoke(
+        f"A search over {KB_DESCRIPTION} failed because {why}.\n"
+        f"Original question: {s['question']}\nLast search query: {s['search_query']}\n"
+        "Write ONE better search query using different, more specific wording. Output only the query."
+    ).content.strip().strip('"')
+    return {"search_query": new_q, "rewrites": s["rewrites"] + 1,
+            "log": s["log"] + [f"rewrite -> '{new_q}'"]}
+
+def generate_direct(s):
+    return {"generation": llm.invoke(s["question"]).content,
+            "log": s["log"] + ["answered without retrieval"]}
+
+def fallback(s):
+    seen = sorted({d.get("doc_id") or f"{d.get('source')} p.{d.get('page')}" for d in s["documents"]})
+    msg = ("I couldn't find a well-supported answer in the knowledge base. "
+           f"Closest sources checked: {', '.join(seen) or 'none'}.")
+    return {"generation": msg, "log": s["log"] + ["fallback"]}
+
+def after_route(s):
+    return "retrieve" if s["needs_retrieval"] else "generate_direct"
+def after_grade(s):
+    if s["documents"]:
+        return "generate"
+    return "rewrite" if s["rewrites"] < MAX_REWRITES else "fallback"
+def after_grounded(s):
+    if s["grounded"]:
+        return "check_useful"
+    return "generate" if s["regens"] <= MAX_REGENS else "fallback"
+def after_useful(s):
+    if s["useful"]:
+        return "done"
+    return "rewrite" if s["rewrites"] < MAX_REWRITES else "fallback"
+
+def build_graph(wrap=lambda name, fn: fn):
+    """`wrap` lets P11 add timing to every node without editing any node."""
+    g = StateGraph(RAGState)
+    for name, fn in [("route", route), ("retrieve", retrieve), ("grade", grade),
+                     ("generate", generate_node), ("check_grounded", grounded_node),
+                     ("check_useful", useful_node), ("rewrite", rewrite),
+                     ("generate_direct", generate_direct), ("fallback", fallback)]:
+        g.add_node(name, wrap(name, fn))
+    g.add_edge(START, "route")
+    g.add_conditional_edges("route", after_route, {"retrieve": "retrieve", "generate_direct": "generate_direct"})
+    g.add_edge("retrieve", "grade")
+    g.add_conditional_edges("grade", after_grade, {"generate": "generate", "rewrite": "rewrite", "fallback": "fallback"})
+    g.add_edge("generate", "check_grounded")
+    g.add_conditional_edges("check_grounded", after_grounded,
+                            {"check_useful": "check_useful", "generate": "generate", "fallback": "fallback"})
+    g.add_conditional_edges("check_useful", after_useful, {"done": END, "rewrite": "rewrite", "fallback": "fallback"})
+    g.add_edge("rewrite", "retrieve")
+    g.add_edge("generate_direct", END)
+    g.add_edge("fallback", END)
+    return g.compile()
+
+app = build_graph()
+
+def ask(question, graph=None, show_log=True):
+    init = {"question": question, "search_query": question, "service": None, "documents": [],
+            "generation": "", "needs_retrieval": True, "grounded": False, "useful": False,
+            "rewrites": 0, "regens": 0, "log": []}
+    out = (graph or app).invoke(init, config={"recursion_limit": 40})   # second stop behind the counters
+    if show_log:
+        print("\n".join("  - " + line for line in out["log"]))
+        print("ANSWER:", out["generation"], "\n")
+    return out
+
+ask("Checkout is returning 429 errors, what should I do?")
+ask("What is 17 times 3?")                                   # should skip retrieval
+ask("How do we rotate the Kafka broker TLS certificates?")   # not in the docs: should end in fallback
+
+# Optional picture of the graph (uses the mermaid.ink web service):
+# from IPython.display import Image, display; display(Image(app.get_graph().draw_mermaid_png()))
+</script></div></div></details>
+
+<details class="prog"><summary>P10. Evaluation harness <span class="adds">(adds: golden set, per-layer metrics, naive vs Self-RAG)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P10. Measure, don't assume: naive RAG vs Self-RAG on retrieval, faithfulness, abstention, latency (Tab 11).
+import re
+import pandas as pd
+
+GOLD = [   # question, gold doc_id (None = unanswerable), category
+    ("How do I fix checkout 429 too-many-requests errors?", "rb-01", "single"),
+    ("What does AUTH-403 at login usually mean?", "rb-06", "exact-id"),
+    ("New products don't show up in search, why?", "rb-03", "single"),
+    ("Safest way to purge the CDN for one brand?", "rb-04", "single"),
+    ("Which incident involved a full-zone purge?", "rb-05", "postmortem"),
+    ("How do I roll back to the previous code version?", "rb-12", "single"),
+    ("Synthetic login monitor fails in a single region. Page the platform team?", "rb-09", "single"),
+    ("Basket merge errors after customers log in", "rb-10", "single"),
+    ("How do we rotate Kafka broker TLS certificates?", None, "unanswerable"),
+    ("What's the SLA for the loyalty points service?", None, "unanswerable"),
+]
+
+def naive_rag(q):
+    docs = [p.payload for p in dense_search(q, k=4)]
+    return generate(q, docs), docs
+
+def judge(prompt: str) -> int:
+    # Plain-text score parsing instead of structured output: works with any judge model.
+    txt = judge_llm.invoke(prompt + "\nReply with only: SCORE: <1-5>").content
+    m = re.search(r"SCORE:\s*([1-5])", txt)
+    return int(m.group(1)) if m else 0        # 0 = unparseable; count these, never hide them
+
+def faithfulness(docs, answer):
+    return judge("Rate 1-5 how fully every claim in the ANSWER is supported by the SOURCES "
+                 "(5 = every claim supported, 1 = mostly unsupported).\n"
+                 f"SOURCES:\n{numbered(docs)}\n\nANSWER:\n{answer}")
+
+def abstained(answer):
+    return judge("Does this answer decline or say the information was not found, instead of giving a solution? "
+                 f"5 = clearly declines, 1 = clearly gives a solution.\nANSWER: {answer}") >= 4
+
+rows = []
+for q, gold, cat in GOLD:
+    for system in ["naive", "self-rag"]:
+        t0 = time.perf_counter()
+        if system == "naive":
+            answer, docs = naive_rag(q)
+            loops = 0
+        else:
+            out = ask(q, show_log=False)
+            answer, docs, loops = out["generation"], out["documents"], out["rewrites"] + out["regens"]
+        secs = time.perf_counter() - t0
+        ids = [d.get("doc_id") for d in docs]
+        ab = abstained(answer)
+        rows.append({
+            "system": system, "category": cat, "question": q[:45],
+            "hit": (gold in ids) if gold else None,
+            "faithful": faithfulness(docs, answer) if docs else None,
+            "abstained": ab,
+            # right behaviour = abstain on unanswerable, answer (with the right doc) on answerable
+            "correct": ab if gold is None else (gold in ids and not ab),
+            "loops": loops, "seconds": round(secs, 1)})
+
+df = pd.DataFrame(rows)
+num = lambda s: s.dropna().astype(float).mean()
+summary = df.groupby("system").agg(
+    hit_rate=("hit", num), faithfulness=("faithful", num), correct_behaviour=("correct", num),
+    mean_loops=("loops", "mean"), p95_seconds=("seconds", lambda s: s.quantile(0.95)))
+print(summary.round(2))
+display(df)
+# Read it critically: if Self-RAG doesn't win on 'correct_behaviour' for the unanswerable rows,
+# its extra seconds aren't buying you anything on this data.
+</script></div></div></details>
+
+<details class="prog"><summary>P11. Real file, end to end <span class="adds">(adds: PDF ingestion, change detection, per-node timing, versioned cache)</span></summary><div class="body">
+<div class="code"><script type="text/plain">
+# P11. The whole system on a REAL file, plus production touches from Tab 10.
+import urllib.request, functools
+from collections import defaultdict
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# Option A (default): the Self-RAG paper itself, so you can check answers against the source.
+PDF_PATH = "self_rag_paper.pdf"
+urllib.request.urlretrieve("https://arxiv.org/pdf/2310.11511", PDF_PATH)
+# Option B: your own SANITIZED runbook PDF
+# from google.colab import files; PDF_PATH = next(iter(files.upload()))
+
+pages = PyPDFLoader(PDF_PATH).load()
+chunks = RecursiveCharacterTextSplitter(chunk_size=900, chunk_overlap=120).split_documents(pages)
+records = [{
+    "text": c.page_content,
+    "source": os.path.basename(PDF_PATH),
+    "page": int(c.metadata.get("page", 0)) + 1,          # loader pages are 0-based
+    "hash": norm_hash(c.page_content),
+    "service": "paper", "doc_type": "paper", "year": 2023,  # same payload schema as the runbooks
+} for c in chunks]
+print(f"{len(pages)} pages -> {len(records)} chunks")
+
+PCOLL = "paper_v1"   # versioned; in production an alias 'paper_live' would point here (Tab 4)
+if not client.collection_exists(PCOLL):
+    create_hybrid_collection(PCOLL)
+    client.create_payload_index(PCOLL, field_name="page", field_schema=models.PayloadSchemaType.INTEGER)
+
+def stored_hashes(coll):
+    hashes, offset = set(), None
+    while True:
+        pts, offset = client.scroll(coll, limit=256, offset=offset, with_payload=["hash"], with_vectors=False)
+        hashes |= {p.payload["hash"] for p in pts}
+        if offset is None:
+            return hashes
+
+# Change detection: only embed chunks whose content hash isn't stored yet.
+# Run this cell twice: the second run ingests 0 chunks (idempotent ingestion).
+have = stored_hashes(PCOLL)
+new = [r for r in records if r["hash"] not in have]
+t0 = time.perf_counter()
+ingest_hybrid(PCOLL, new, key_fn=lambda r: f"{r['source']}|{r['hash']}")
+print(f"ingested {len(new)} new chunks in {time.perf_counter() - t0:.1f}s; stored {client.count(PCOLL).count}")
+
+# Observability: time every node without touching node code.
+NODE_TIMES = defaultdict(list)     # in a real service: a Prometheus histogram per node (Tab 10)
+def timed(name, fn):
+    @functools.wraps(fn)
+    def inner(state):
+        t = time.perf_counter()
+        try:
+            return fn(state)
+        finally:
+            NODE_TIMES[name].append(time.perf_counter() - t)
+    return inner
+
+traced_app = build_graph(wrap=timed)
+# Optional hosted tracing: set LANGSMITH_TRACING=true and LANGSMITH_API_KEY in the environment.
+
+# Point the pipeline at the paper (these globals are read at call time by the P9 nodes).
+ACTIVE_COLL = PCOLL
+KB_DESCRIPTION = "the Self-RAG research paper (Asai et al., 2023)"
+ALLOWED_SERVICES = set()           # no service filter for this corpus: the router's value gets dropped
+
+# Answer cache keyed by collection VERSION, so re-indexing can never serve stale answers.
+ANSWER_CACHE, COLLECTION_VERSION = {}, PCOLL
+def cached_ask(q):
+    key = (COLLECTION_VERSION, " ".join(q.lower().split()))
+    if key in ANSWER_CACHE:
+        print("  (cache hit)\n")
+        return ANSWER_CACHE[key]
+    ANSWER_CACHE[key] = ask(q, graph=traced_app)
+    return ANSWER_CACHE[key]
+
+for q in ["What are the four types of reflection tokens in Self-RAG, and what does each judge?",
+          "Which base language models did the authors fine-tune?",
+          "How does Self-RAG decide whether to retrieve at inference time?",
+          "How much did the authors pay for their GPU cluster?",     # probably not in the paper: expect fallback
+          "What are the four types of reflection tokens in Self-RAG, and what does each judge?"]:
+    print("Q:", q)
+    cached_ask(q)
+
+print("Per-node latency: calls, mean s, max s (slowest total first)")
+for name, ts in sorted(NODE_TIMES.items(), key=lambda kv: -sum(kv[1])):
+    print(f"  {name:16s} {len(ts):3d} {np.mean(ts):7.2f} {max(ts):7.2f}")
+# Now apply Tab 10: which node dominates? Try batching, parallel graders or a confidence gate, and re-measure.
+</script></div></div></details>
+</section>
+<!-- ============ TAB 13 ============ -->
+<section class="tab" data-num="⑬" data-short="🎯 Practice" data-phase="P" data-title="Practice">
+<div class="tab-head"><span class="tab-num">⑬</span><div><h2>🎯 Practice: one project, three versions</h2><span class="phase-tag">You build a runbook copilot and grow it from naive RAG to production Self-RAG</span></div></div>
+<p class="lead">All three assignments evolve the same project. Assignment 2 imports Assignment 1's code; Assignment 3 wraps Assignment 2's retriever in a Self-RAG graph. Scaffolds give signatures and TODOs, not solutions.</p>
+<div class="co warnc"><p><span class="ct">Data rule.</span>If you use real team runbooks, sanitize them first: no secrets, hostnames, customer data or internal URLs. A fictional-but-realistic dataset is fine for all three assignments.</p></div>
+
+<!-- ========== A1 ========== -->
+<div class="assign">
+<h3>Assignment 1: Foundation build, runbook FAQ bot v1</h3>
+<p class="diff">Difficulty: beginner. Uses only Phase A knowledge plus basic Qdrant from P3.</p>
+<p><strong>Tests:</strong> Tab ⓪ (RAG loop, cosine), Tab ① (map your build), Tab ② (embeddings, prefixes, metadata at chunk time), Tab ③ (model comparison), Tab ④ (collection, points, deterministic IDs).</p>
+<h4>Problem</h4>
+<p>Your on-call team keeps asking the same 20 questions in the incident channel. Build a bot that answers them from a CSV of 20 runbook entries, with citations, and says "not found" when the CSV doesn't cover the question.</p>
+<h4>Expected outcome</h4>
+<ul>
+<li>A <code>runbooks.csv</code> with 20 rows and columns <code>id, service, doc_type, severity, year, title, text</code>.</li>
+<li>Two embedding models compared on 8 of your questions (P2 method); one chosen with a one-sentence justification.</li>
+<li>A Qdrant collection <code>faq_v1</code> with deterministic IDs and all metadata in the payload.</li>
+<li><code>answer(question)</code> returning a cited answer or an explicit "not found".</li>
+<li>A 5-line README naming which mindmap branches (Tab ①) this version touches.</li>
+</ul>
+<div class="code"><script type="text/plain">
+# Assignment 1 starter: runbook FAQ bot v1 (naive RAG over a CSV)
+import csv, uuid
+import numpy as np
+from qdrant_client import QdrantClient, models
+
+ROWS = [  # id, service, doc_type, severity, year, title, text  -- 8 given, ADD 12 of your own
+ ("rb-01","checkout","runbook","sev2",2025,"Checkout 429s","SCAPI rate limit exceeded. Check the client quota, enable request coalescing, retry with backoff and jitter."),
+ ("rb-02","auth","runbook","sev2",2026,"AUTH-403 at login","Usually the SLAS client secret was rotated but the storefront config still has the old one."),
+ ("rb-03","cdn","runbook","sev3",2025,"Purge one brand","Purge by URL prefix in that brand's eCDN zone. Never purge the full zone at peak."),
+ ("rb-04","search","runbook","sev3",2025,"New products missing","Rebuild the search index incrementally after catalog import and confirm the job finished."),
+ ("rb-05","deploy","runbook","sev2",2025,"Rollback","Activate the previous code version, then clear the page cache. Takes about two minutes."),
+ ("rb-06","payments","runbook","sev1",2025,"Auth timeouts","Check gateway status first, then pool saturation; grow the pool only above 80 percent."),
+ ("rb-07","cdn","postmortem","sev1",2025,"Full-zone purge incident","Full-zone purge during a sale sent origin load 12x higher; 503s for 18 minutes."),
+ ("rb-08","monitoring","runbook","sev3",2026,"Single-region synthetic failure","Usually a regional CDN edge issue; compare regions before paging."),
+ # TODO: 12 more rows. Include at least 3 with exact identifiers (error codes, job names).
+]
+with open("runbooks.csv", "w", newline="") as f:
+    w = csv.writer(f)
+    w.writerow(["id", "service", "doc_type", "severity", "year", "title", "text"])
+    w.writerows(ROWS)
+
+def load_rows(path="runbooks.csv") -> list[dict]:
+    # TODO: read with csv.DictReader; convert 'year' to int
+    ...
+
+def to_chunks(rows: list[dict]) -> list[dict]:
+    # TODO: one chunk per row. text = title + ". " + text.
+    # Keep id, service, doc_type, severity, year in the dict: they become the Qdrant payload.
+    ...
+
+CANDIDATE_MODELS = ["BAAI/bge-small-en-v1.5", "TODO: a second candidate from Tab 3"]
+MODEL_ID = "TODO: winner, with a one-line reason in a comment"
+
+def embed_query(q: str) -> list[float]:
+    # TODO: apply the query prefix your chosen model needs (or none, and say why)
+    ...
+
+def embed_docs(texts: list[str]) -> list[list[float]]:
+    # TODO: normalized embeddings, batched
+    ...
+
+def build_index(client: QdrantClient, chunks: list[dict], name="faq_v1") -> None:
+    # TODO: create the collection (right size, COSINE); upsert with uuid5 ids derived from the row id
+    ...
+
+def search(client: QdrantClient, question: str, k=4, name="faq_v1") -> list[dict]:
+    # TODO: query_points; return payloads
+    ...
+
+def answer(question: str) -> str:
+    # TODO: search -> numbered sources -> LLM (OpenRouter via ChatOpenAI) that must cite [n]
+    #       and must say "not found in runbooks" when the sources don't answer
+    ...
+</script></div>
+<h4>Verify your work</h4>
+<ul class="check">
+<li>Re-running the ingestion cell leaves the point count at 20, not 40.</li>
+<li>Every answer contains at least one <code>[n]</code> citation that matches a real row.</li>
+<li>A question outside the CSV ("how do we renew the SSL cert for the VPN?") produces "not found", not an invented procedure.</li>
+<li>Your model comparison table shows Hit@1 and MRR for both candidates on the same 8 questions.</li>
+</ul>
+<h4>Self-check</h4>
+<ol>
+<li>Does <code>search("AUTH-403")</code> return rb-02 first? If not, note it: that's the gap hybrid search closes in Assignment 2.</li>
+<li>If you print one point's payload, do you see <code>service</code> and <code>year</code>? If not, Assignment 2's filters will have nothing to filter on.</li>
+<li>Does your query go through <code>embed_query</code> (with prefix) and your rows through <code>embed_docs</code> (without)? Mixing them silently lowers quality.</li>
+<li>Would switching <code>MODEL_ID</code> require re-running ingestion? (It should, and you should be able to say why.)</li>
+</ol>
+</div>
+
+<!-- ========== A2 ========== -->
+<div class="assign">
+<h3>Assignment 2: Integration challenge, runbook copilot v2</h3>
+<p class="diff">Difficulty: intermediate. Reuses Assignment 1's loaders and embedding functions.</p>
+<p><strong>Tests:</strong> Tab ② (chunking a long document), Tab ③ (model choice holds up at scale), Tab ④ (named vectors, batching), Tab ⑤ (filters, payload indexes, post-filter pitfall), Tab ⑥ (BM25, RRF, Cohere rerank, fallback), Tab ⑨ (multi-query, dedup), Tab ⑪ (retrieval metrics).</p>
+<h4>Scenario</h4>
+<p>The FAQ bot is popular, and now people ask things like "checkout postmortems since 2024" and "what does JOB-CATALOG-17 failing mean?". The team also wants one long, multi-section runbook (at least 3 pages of Markdown or PDF with headings like Symptoms / Diagnosis / Mitigation) added alongside the CSV rows.</p>
+<h4>Requirements</h4>
+<div class="tw"><table>
+<tr><th>Must have</th><th>Nice to have</th></tr>
+<tr><td>Hybrid collection <code>copilot_v2</code>: dense + BM25 sparse (IDF), RRF fusion</td><td>MMR diversity step after dedup</td></tr>
+<tr><td>Long runbook chunked (recursive or heading-aware), with section name in payload</td><td>Parent–child retrieval for the long runbook</td></tr>
+<tr><td>Payload indexes on every filter field, created before upload</td><td>Datetime field and <code>DatetimeRange</code> filter</td></tr>
+<tr><td><code>make_filter()</code> supporting service, doc_type, min_year</td><td>Nested (A or B) and not C filters</td></tr>
+<tr><td>Multi-query (≤3 rephrasings) + id, hash and near-duplicate dedup, with counts logged</td><td>HyDE as a switchable alternative</td></tr>
+<tr><td>Cohere rerank with local cross-encoder fallback</td><td>Measure reranker latency per call</td></tr>
+<tr><td>10-question test set (≥3 exact identifiers, ≥2 filter questions); Hit@1, Hit@5, MRR with and without rerank</td><td>Compare dense-only vs hybrid as a third column</td></tr>
+</table></div>
+<div class="code"><script type="text/plain">
+# Assignment 2 starter: runbook copilot v2
+from assignment1 import load_rows, to_chunks, embed_query, embed_docs   # or keep in one notebook
+from fastembed import SparseTextEmbedding
+from qdrant_client import models
+
+FILTER_FIELDS = {  # TODO: field -> PayloadSchemaType. Only fields you actually filter on (each index costs memory).
+}
+
+def chunk_long_doc(path: str) -> list[dict]:
+    # TODO: split on headings (or RecursiveCharacterTextSplitter); payload: source, section, service, doc_type, year
+    ...
+
+def build_hybrid_index(client, chunks: list[dict], name="copilot_v2") -> None:
+    # TODO: named vectors {"dense", "bm25"}; bm25 with Modifier.IDF; payload indexes BEFORE upsert; batch upserts
+    ...
+
+def make_filter(service=None, doc_type=None, min_year=None):
+    # TODO: build a must-list from the non-None args; return None if empty
+    ...
+
+def hybrid_search(client, question: str, flt=None, k=20, name="copilot_v2") -> list:
+    # TODO: prefetch dense + bm25 (both with the filter), FusionQuery(RRF)
+    ...
+
+def retrieve(client, question: str, flt=None, rerank_top_n=6, use_rerank=True) -> list[dict]:
+    # TODO: multi_query -> hybrid_search per query -> dedup (id, hash, near-dup) -> rerank (or not)
+    # Log: raw hits -> unique -> after near-dup -> returned
+    ...
+
+TEST_SET = [  # (question, gold_id, filter kwargs or None)
+    # TODO: 10 questions in on-call wording; >=3 with exact identifiers; >=2 needing a filter
+]
+
+def evaluate_retrieval(client, use_rerank: bool) -> dict:
+    # TODO: Hit@1, Hit@5, MRR over TEST_SET
+    ...
+</script></div>
+<details class="hint"><summary>Hint: which fields to index</summary><div class="body"><p>Index what your filters use: <code>service</code> and <code>doc_type</code> as keyword, <code>year</code> as integer. Don't index <code>text</code> or <code>title</code> unless you add a <code>MatchText</code> filter (full-text index).</p></div></details>
+<details class="hint"><summary>Hint: prefetch sizes and rerank depth</summary><div class="body"><p>With ~30–60 chunks total, prefetch 10–20 per side is plenty. Rerank the whole deduplicated pool (it will be under 40) and keep 5–6. Reranking only the top 5 of the fused list gives the reranker nothing to fix.</p></div></details>
+<details class="hint"><summary>Hint: near-duplicate threshold</summary><div class="body"><p>Start at 0.95 and print what gets dropped. If two different steps of the same runbook get merged, raise it. Your brand-specific variants of the same procedure are the real duplicates you want to catch.</p></div></details>
+<details class="hint"><summary>Hint: chunking the long runbook</summary><div class="body"><p>If headings are clean, split on them and store the heading as <code>section</code>. If a section is longer than ~1,000 characters, recursively split it further but keep the same <code>section</code> value on each piece.</p></div></details>
+<h4>Evaluation criteria (working well, not just working)</h4>
+<ul>
+<li>Hybrid gets the exact-identifier questions to Hit@1; dense-only from Assignment 1 probably didn't.</li>
+<li>Rerank improves MRR over no-rerank, or you can explain why it didn't on your data.</li>
+<li>Filter questions return only matching docs, and never fewer than k when enough matches exist.</li>
+<li>Dedup counts show a real reduction before rerank (the reranker sees fewer docs than raw hits).</li>
+</ul>
+<h4>Self-check</h4>
+<ol>
+<li>Does "JOB-CATALOG-17" (or your own identifier) rank its runbook first with hybrid but not with dense-only?</li>
+<li>With <code>make_filter(service="checkout", doc_type="postmortem", min_year=2024)</code>, is every returned doc a checkout postmortem from 2024+?</li>
+<li>Unset <code>COHERE_API_KEY</code>: does <code>retrieve()</code> still work via the local reranker?</li>
+<li>Does re-running ingestion keep the point count stable?</li>
+<li>Can you point to at least one question where rerank changed which document ranked first?</li>
+</ol>
+</div>
+
+<!-- ========== A3 ========== -->
+<div class="assign">
+<h3>Assignment 3: Production capstone, runbook copilot v3 (Self-RAG)</h3>
+<p class="diff">Difficulty: advanced. Architect, build, evaluate, justify.</p>
+<p><strong>Tests:</strong> Tab ④ (aliases), Tab ⑤ (self-query filters, validation, relaxation), Tab ⑥ (confidence gate from rerank score), Tab ⑦ (taxonomy justification), Tab ⑧ (state graph, bounded loops), Tab ⑨ (grading, rewrite, fallback), Tab ⑩ (latency, fallbacks, cache, observability), Tab ⑪ (golden set, grader calibration, ablation).</p>
+<h4>Scenario</h4>
+<p>Your SRE team will pilot the copilot during real incidents. The bar: it must never give an unsupported mitigation step, it must say "not found" rather than guess, and p95 latency must stay under a target you set and defend. You'll present a one-page report to the team.</p>
+<h4>Requirements specification</h4>
+<ol>
+<li><strong>Graph.</strong> LangGraph Self-RAG with nodes route, retrieve, grade, generate, check_grounded, check_useful, rewrite, fallback, generate_direct. Counters for rewrites (≤2) and regenerations (≤1) plus <code>recursion_limit</code>.</li>
+<li><strong>Router with self-query.</strong> Extracts <code>service</code>, <code>doc_type</code> and <code>min_year</code>; validates each against an allow-list; drops invalid values. Retrieval relaxes filters before rewriting.</li>
+<li><strong>Retriever.</strong> Assignment 2's <code>retrieve()</code>, unchanged, querying the alias <code>copilot_live</code>.</li>
+<li><strong>At least four Tab ⑩ fixes</strong>, including: batched document grading; grounded and useful checks run in parallel (or justify why not); reranker circuit breaker; answer cache keyed by collection version.</li>
+<li><strong>Confidence gate.</strong> Skip document grading when the top rerank score passes a threshold you calibrate on your golden set. Report how often it fires and what it saves.</li>
+<li><strong>Re-index drill.</strong> Build <code>copilot_v3</code> (e.g. new chunking or model), evaluate it, switch <code>copilot_live</code> to it without changing application code.</li>
+<li><strong>Observability.</strong> Per-node timing for every request, decision log, counts of loops, fallbacks and grader keep-rate. Export as Prometheus-style metrics (a dict printed in exposition format is enough).</li>
+<li><strong>Golden set of 20:</strong> 8 single-chunk, 3 exact-identifier, 2 filter, 2 multi-chunk, 3 unanswerable, 2 no-retrieval.</li>
+<li><strong>Grader calibration.</strong> Label 30 (question, chunk) pairs; report the document grader's false-drop and false-keep counts.</li>
+<li><strong>Ablation report.</strong> v1 (naive), v2 (hybrid + rerank), v3 (Self-RAG): Hit@5, faithfulness, correct-abstain, false-abstain, p95 latency, LLM calls per question. Plus one paragraph placing v3 in the Tab ⑦ taxonomy and saying which failures CRAG or Adaptive routing would handle better.</li>
+</ol>
+<div class="code"><script type="text/plain">
+# Assignment 3 starter: runbook copilot v3 (production Self-RAG)
+from typing import TypedDict, Optional
+from concurrent.futures import ThreadPoolExecutor
+from pydantic import BaseModel, Field
+from langgraph.graph import StateGraph, START, END
+from assignment2 import retrieve, make_filter    # reuse, don't rewrite
+
+ALIAS = "copilot_live"
+ALLOWED = {"service": {...}, "doc_type": {"runbook", "postmortem"}}   # TODO fill from your payloads
+MAX_REWRITES, MAX_REGENS = 2, 1
+GATE_THRESHOLD = None     # TODO: calibrate on the golden set, then set
+
+class CopilotState(TypedDict):
+    question: str
+    search_query: str
+    filters: dict          # validated only
+    documents: list
+    top_rerank_score: float
+    generation: str
+    grounded: bool
+    useful: bool
+    rewrites: int
+    regens: int
+    trace: list            # (node, seconds, note)
+
+class Route(BaseModel):
+    needs_retrieval: bool
+    service: Optional[str] = None
+    doc_type: Optional[str] = None
+    min_year: Optional[int] = None
+
+def validate_filters(r: Route) -> dict:
+    # TODO: keep only allow-listed values; sanity-check min_year
+    ...
+
+def route(s): ...            # TODO
+def retrieve_node(s): ...    # TODO: filters on first attempt only; record top rerank score
+def grade(s): ...            # TODO: one batched call; skip when the confidence gate passes
+def generate_node(s): ...    # TODO: citations; strongest doc first and last; strict mode on regen
+def verify(s): ...           # TODO: run grounded + useful checks in parallel with ThreadPoolExecutor
+def rewrite(s): ...          # TODO: include WHY the last attempt failed
+def fallback(s): ...         # TODO: honest "not found" + sources checked
+def build_graph(): ...       # TODO: bounded loops; compile
+
+GOLDEN = [  # (question, gold_ids or [], category)
+    # TODO: 20 questions per the spec mix
+]
+def run_eval(answer_fn) -> "pd.DataFrame": ...   # TODO: per-layer metrics per question
+def metrics_exposition() -> str: ...             # TODO: Prometheus text format of your counters/histograms
+def report(): ...                                # TODO: ablation table + taxonomy paragraph
+</script></div>
+<details class="hint"><summary>Architecture hint: parallel verification</summary><div class="body"><p>Running grounded and useful checks together saves one round-trip on the happy path but wastes a useful-check call when the answer isn't grounded. Measure how often generation fails grounding; if it's rare, parallel wins. A single <code>verify</code> node returning both verdicts keeps the graph simple.</p></div></details>
+<details class="hint"><summary>Architecture hint: calibrating the confidence gate</summary><div class="body"><p>Run the golden set with the gate disabled and log (top rerank score, did the grader keep the top doc?). Choose the lowest threshold above which the grader kept the top doc in every case. Re-check after any reranker change: Cohere and local cross-encoder scores live on different scales.</p></div></details>
+<details class="hint"><summary>Architecture hint: filter relaxation order</summary><div class="body"><p>Drop the most specific condition first (usually <code>min_year</code>, then <code>doc_type</code>, then <code>service</code>). Log each relaxation in the trace so you can see how many answers depended on it.</p></div></details>
+<details class="hint"><summary>Architecture hint: the alias drill</summary><div class="body"><p>Qdrant's <code>update_collection_aliases</code> can delete the old alias link and create the new one in a single atomic request. Your app should reference only <code>copilot_live</code>; if any code mentions <code>copilot_v2</code> directly, the drill fails.</p></div></details>
+<h4>Grading rubric</h4>
+<div class="tw"><table>
+<tr><th>Criterion</th><th>Needs work</th><th>Good</th><th>Excellent</th></tr>
+<tr><td>Retrieval quality</td><td>Hit@5 below v2</td><td>Hit@5 ≥ v2; exact-identifier questions pass</td><td>Plus filter questions pass with relaxation logged</td></tr>
+<tr><td>Faithfulness and abstention</td><td>Unsupported steps appear in answers</td><td>All 3 unanswerable questions abstain; faithfulness ≥ v2</td><td>Zero false abstains on answerable questions, verified by hand</td></tr>
+<tr><td>Efficiency</td><td>No latency numbers</td><td>p95 measured, per-node breakdown, target met</td><td>Each Tab ⑩ fix quantified (before/after)</td></tr>
+<tr><td>Robustness</td><td>Loops can run away; crashes without Cohere</td><td>Bounded loops, fallback node, reranker fallback, validated filters</td><td>Plus parse-failure retry and alias drill completed</td></tr>
+<tr><td>Evaluation and justification</td><td>Only final answers scored</td><td>Ablation across v1–v3; grader calibration reported</td><td>Report explains where Self-RAG didn't help and what you'd change</td></tr>
+</table></div>
+<h4>Self-check</h4>
+<ol>
+<li>For "How do we rotate Kafka certificates?", does the trace end in <code>fallback</code> within the loop budget?</li>
+<li>If the router returns <code>service="checkout-api"</code> (not in your allow-list), is it dropped rather than used?</li>
+<li>After switching the alias to v3, does the cache miss for previously cached questions?</li>
+<li>Can you name the single slowest node, with numbers, and one change that reduced it?</li>
+<li>Does v3 beat v2 on correct-abstain? If not, does your report say so honestly?</li>
+</ol>
+<h4>Stretch goals</h4>
+<ul>
+<li>Add a CRAG-style web-search fallback node for questions about public vendor docs, and compare against plain fallback.</li>
+<li>Put an Adaptive-RAG classifier in front so trivial questions skip the whole loop; measure latency saved.</li>
+<li>Run Qdrant in Docker with scalar quantization and compare memory and Hit@5.</li>
+<li>Send metrics to Prometheus and build a Grafana panel for fallback rate and p95 latency.</li>
+<li>Expose the copilot as a tool for your agentic SRE diagnosis agent, so the agent's remediation suggestions come only from grounded runbook answers.</li>
+</ul>
+</div>
+
+<h3>Coverage check: every tab is practiced</h3>
+<div class="tw"><table>
+<tr><th>Tab</th><th>Assignment 1</th><th>Assignment 2</th><th>Assignment 3</th></tr>
+<tr><td>⓪ Prerequisites</td><td>✔ naive RAG loop</td><td></td><td></td></tr>
+<tr><td>① Mindmap</td><td>✔ README mapping</td><td></td><td>✔ concept map below</td></tr>
+<tr><td>② Embeddings and chunking</td><td>✔ prefixes, metadata</td><td>✔ long-doc chunking</td><td></td></tr>
+<tr><td>③ Model choice</td><td>✔ two-model comparison</td><td>✔ holds at scale</td><td>✔ re-index drill option</td></tr>
+<tr><td>④ Qdrant core</td><td>✔ collection, uuid5</td><td>✔ named vectors</td><td>✔ aliases</td></tr>
+<tr><td>⑤ Filters</td><td></td><td>✔ make_filter, indexes</td><td>✔ self-query, validation, relaxation</td></tr>
+<tr><td>⑥ Hybrid and rerank</td><td></td><td>✔ BM25, RRF, Cohere, fallback</td><td>✔ confidence gate</td></tr>
+<tr><td>⑦ Taxonomy</td><td></td><td></td><td>✔ report paragraph</td></tr>
+<tr><td>⑧ Architecture</td><td></td><td></td><td>✔ state graph, bounds</td></tr>
+<tr><td>⑨ Pipeline steps</td><td></td><td>✔ multi-query, dedup</td><td>✔ grading, rewrite, fallback</td></tr>
+<tr><td>⑩ Production</td><td></td><td></td><td>✔ four fixes, observability</td></tr>
+<tr><td>⑪ Evaluation</td><td>✔ Hit@1, MRR</td><td>✔ rerank ablation</td><td>✔ full ablation, grader calibration</td></tr>
+</table></div>
+
+<h3>Concept map: what you've now practiced</h3>
+<ul>
+<li><span class="tag concept">concept</span> Embeddings, bi-encoders, normalization, query/passage prefixes, chunking and metadata</li>
+<li><span class="tag decision">decision</span> Embedding model selection by measurement; filter field vs collection; when Self-RAG is worth it</li>
+<li><span class="tag tool">tool</span> Qdrant collections, payloads, named dense + sparse vectors, payload indexes, aliases</li>
+<li><span class="tag technique">technique</span> Filters with validation and relaxation, hybrid search with RRF, reranking, multi-query, three-layer dedup</li>
+<li><span class="tag variant">variant</span> Naive vs Advanced vs Self-RAG compared on your own data; CRAG and Adaptive positioned</li>
+<li><span class="tag technique">technique</span> Self-RAG graph: route, grade, generate, grounded, useful, rewrite, fallback, bounded loops</li>
+<li><span class="tag failure">failure</span> Post-filtering, over-filtering, strict and lenient graders, runaway loops, stale caches, model mismatch</li>
+<li><span class="tag production">production</span> Batched grading, parallel verification, confidence gates, circuit breakers, versioned caches, per-node metrics</li>
+<li><span class="tag decision">decision</span> Golden sets with unanswerable questions, retrieval and generation metrics, grader calibration, ablations</li>
+</ul>
+</section>
+</main>
+
+<script>
+(function(){
+  // ---- theme toggle (auto / light / dark) ----
+  var root=document.documentElement, btn=document.getElementById('themeBtn'), modes=['auto','light','dark'];
+  function applyTheme(m){ if(m==='auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme',m); btn.textContent='Theme: '+m; }
+  var saved='auto'; try{ saved=localStorage.getItem('srg-theme')||'auto'; }catch(e){}
+  applyTheme(saved);
+  btn.addEventListener('click',function(){ var m=modes[(modes.indexOf(btn.textContent.replace('Theme: ',''))+1)%3]; applyTheme(m); try{localStorage.setItem('srg-theme',m);}catch(e){} });
+
+  // ---- code blocks: raw text lives in plain-text script tags, so no HTML escaping is needed ----
+  function esc(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function commentAt(line){ var q=null; for(var i=0;i<line.length;i++){ var c=line[i];
+    if(q){ if(c===q && line[i-1]!=='\\') q=null; } else if(c==='"'||c==="'") q=c; else if(c==='#') return i; } return -1; }
+  function hl(src){ return src.split('\n').map(function(line){ var i=commentAt(line);
+    if(i<0) return esc(line); return esc(line.slice(0,i))+'<span class="cm">'+esc(line.slice(i))+'</span>'; }).join('\n'); }
+  document.querySelectorAll('div.code > script[type="text/plain"]').forEach(function(s){
+    var raw=s.textContent.replace(/^\n/,'').replace(/\s+$/,'');
+    var pre=document.createElement('pre'), code=document.createElement('code');
+    code.innerHTML=hl(raw); pre.appendChild(code);
+    var b=document.createElement('button'); b.type='button'; b.className='copy'; b.textContent='Copy';
+    b.addEventListener('click',function(){
+      var done=function(){ b.textContent='Copied'; setTimeout(function(){b.textContent='Copy';},1600); };
+      var sel=function(){ var r=document.createRange(); r.selectNodeContents(code); var g=getSelection(); g.removeAllRanges(); g.addRange(r); b.textContent='Selected: press Ctrl+C'; setTimeout(function(){b.textContent='Copy';},2500); };
+      try{ navigator.clipboard.writeText(raw).then(done,sel); }catch(e){ sel(); }
+    });
+    s.parentNode.insertBefore(b,s); s.parentNode.insertBefore(pre,s); s.remove();
+  });
+
+  // ---- mindmap ----
+  var mm=document.getElementById('mindmap');
+  mm.addEventListener('click',function(e){ var n=e.target.closest('.node'); if(!n) return; var li=n.parentElement; if(li.querySelector(':scope > ul')){ li.classList.toggle('open'); n.setAttribute('aria-expanded',li.classList.contains('open')); } });
+  mm.querySelectorAll('.node').forEach(function(n){ n.setAttribute('aria-expanded', n.parentElement.classList.contains('open')); });
+  document.getElementById('mmOpen').addEventListener('click',function(){ mm.querySelectorAll('li').forEach(function(li){ if(li.querySelector(':scope > ul')) li.classList.add('open'); }); });
+  document.getElementById('mmClose').addEventListener('click',function(){ mm.querySelectorAll('li').forEach(function(li,i){ li.classList.toggle('open', li===mm.firstElementChild); }); });
+
+  // ---- tabs + route rail ----
+  var tabs=[].slice.call(document.querySelectorAll('section.tab'));
+  var rail=document.getElementById('rail');
+  var phaseNames={A:'Phase A: foundations',B:'Phase B: building',C:'Phase C: production',P:'Practice'};
+  var seen={}; try{ seen=JSON.parse(localStorage.getItem('srg-seen')||'{}'); }catch(e){}
+  var stops=[], groups={};
+  tabs.forEach(function(t,i){
+    var p=t.dataset.phase;
+    if(!groups[p]){ var g=document.createElement('div'); g.className='phase'; g.dataset.p=p;
+      g.innerHTML='<div class="phase-name">'+phaseNames[p]+'</div><div class="stops"></div>'; rail.appendChild(g); groups[p]=g.querySelector('.stops'); }
+    var b=document.createElement('button'); b.type='button'; b.className='stop'; b.dataset.i=i;
+    b.innerHTML='<span class="dot">'+t.dataset.num+'</span><span>'+t.dataset.short+'</span>';
+    b.setAttribute('aria-label','Tab '+t.dataset.num+': '+t.dataset.title);
+    b.addEventListener('click',function(){ show(i,true); });
+    groups[p].appendChild(b); stops.push(b);
+    // prev / next footer
+    var f=document.createElement('div'); f.className='tab-foot';
+    var prev=tabs[i-1], next=tabs[i+1];
+    f.innerHTML=(prev?'<button class="btn" type="button" data-go="'+(i-1)+'">← '+prev.dataset.num+' '+prev.dataset.title+'</button>':'<span></span>')+
+                (next?'<button class="btn primary" type="button" data-go="'+(i+1)+'">Next: '+next.dataset.num+' '+next.dataset.title+'</button>':'');
+    t.appendChild(f);
+  });
+  document.addEventListener('click',function(e){ var g=e.target.closest('[data-go]'); if(g) show(+g.dataset.go,true); });
+  function show(i,scroll){
+    tabs.forEach(function(t,j){ t.hidden = j!==i; });
+    seen[i]=1; try{ localStorage.setItem('srg-seen',JSON.stringify(seen)); localStorage.setItem('srg-tab',i); }catch(e){}
+    stops.forEach(function(s,j){ s.setAttribute('aria-current', j===i ? 'true':'false'); s.classList.toggle('seen', !!seen[j]); });
+    stops[i].scrollIntoView({block:'nearest',inline:'center'});
+    if(scroll) document.getElementById('main').scrollIntoView({block:'start'});
+    try{ history.replaceState(null,'','#tab-'+i); }catch(e){}
+  }
+  var start=0, m=location.hash.match(/tab-(\d+)/);
+  if(m) start=+m[1]; else { try{ var s=localStorage.getItem('srg-tab'); if(s!==null) start=+s; }catch(e){} }
+  if(!(start>=0 && start<tabs.length)) start=0;
+  show(start,false);
+})();
+</script>
+</body>
+</html>
