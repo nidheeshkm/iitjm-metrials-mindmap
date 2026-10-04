@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RAGAS, zero to production: a guide built from your two notebooks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F6F8; --surface:#FFFFFF; --sunk:#E9EEF2; --ink:#14202B; --muted:#56636F; --line:#D5DDE4;
+  --accent:#1D5C86; --accent-soft:#DCEAF4; --teal:#0F766E; --teal-soft:#D7F0EC;
+  --warn:#9A4A07; --warn-soft:#FBEBD7; --bad:#A82A1E; --bad-soft:#F8DEDA;
+  --fix:#5B2BB5; --fix-soft:#ECE4FB; --ok:#146C36; --ok-soft:#DBF1E2;
+  --code-bg:#14202B; --code-ink:#E4ECF2; --code-c:#8FB3A8;
+  --t-concept:#1D5C86; --t-tool:#0F766E; --t-tech:#6D4C0F; --t-variant:#7A3E8F; --t-fail:#A82A1E; --t-prod:#2F5E1E; --t-dec:#8A5A00;
+  --serif:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans:Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151C; --surface:#152029; --sunk:#1B2833; --ink:#E3EAF0; --muted:#9AA8B4; --line:#2A3946;
+    --accent:#7DB8E3; --accent-soft:#1A3346; --teal:#5CC7B8; --teal-soft:#123632;
+    --warn:#F0B26A; --warn-soft:#3A2814; --bad:#F2928A; --bad-soft:#3D1D1A;
+    --fix:#BCA2F5; --fix-soft:#2A2042; --ok:#7FD39B; --ok-soft:#163222;
+    --code-bg:#0A1016; --code-ink:#DCE6EE; --code-c:#7FA89B;
+    --t-concept:#7DB8E3; --t-tool:#5CC7B8; --t-tech:#E2B66B; --t-variant:#D49BE6; --t-fail:#F2928A; --t-prod:#9BD38A; --t-dec:#F0C060;
+  }
+}
+:root[data-theme="dark"]{
+    --bg:#0E151C; --surface:#152029; --sunk:#1B2833; --ink:#E3EAF0; --muted:#9AA8B4; --line:#2A3946;
+    --accent:#7DB8E3; --accent-soft:#1A3346; --teal:#5CC7B8; --teal-soft:#123632;
+    --warn:#F0B26A; --warn-soft:#3A2814; --bad:#F2928A; --bad-soft:#3D1D1A;
+    --fix:#BCA2F5; --fix-soft:#2A2042; --ok:#7FD39B; --ok-soft:#163222;
+    --code-bg:#0A1016; --code-ink:#DCE6EE; --code-c:#7FA89B;
+    --t-concept:#7DB8E3; --t-tool:#5CC7B8; --t-tech:#E2B66B; --t-variant:#D49BE6; --t-fail:#F2928A; --t-prod:#9BD38A; --t-dec:#F0C060;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.62 var(--sans);-webkit-text-size-adjust:100%}
+img,svg{max-width:100%}
+h1,h2,h3,h4{font-family:var(--serif);line-height:1.2;color:var(--ink)}
+h1{font-size:clamp(2rem,5vw,3.1rem);margin:.2em 0 .3em;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.75rem;margin:2.2rem 0 .6rem;font-weight:600}
+h3{font-size:1.28rem;margin:1.8rem 0 .5rem;font-weight:600}
+h4{font-size:1.05rem;margin:1.3rem 0 .4rem;font-weight:600}
+p{margin:.6em 0}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.88em;background:var(--sunk);padding:.08em .35em;border-radius:4px}
+strong{font-weight:600}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header.hero{padding:40px 0 24px;border-bottom:1px solid var(--line);background:var(--surface)}
+.hero .lede{font-size:1.1rem;color:var(--muted);max-width:62ch}
+.scoreboard{margin:22px 0 4px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.scoreboard .cap{padding:10px 14px;font-size:.9rem;color:var(--muted);border-bottom:1px solid var(--line)}
+.sb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+.sb-cell{padding:12px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.sb-cell b{display:block;font-family:var(--serif);font-size:1.6rem}
+.sb-cell span{font-size:.8rem;color:var(--muted)}
+.sb-cell.sat b{color:var(--bad)}
+.sb-q{padding:12px 14px;font-family:var(--serif);font-size:1.15rem}
+nav.tabs{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+nav.tabs .scroller{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;max-width:1100px;margin:0 auto;padding:0 12px}
+nav.tabs button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:500 .9rem var(--sans);padding:14px 12px 12px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:focus-visible,summary:focus-visible,.copy:focus-visible,.pager button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav.tabs .ph{font-size:.72rem;color:var(--muted);padding:15px 6px 0 14px;flex:0 0 auto}
+main section.panel{display:none;padding:12px 0 60px}
+main section.panel.active{display:block}
+.phase{display:inline-block;font-size:.82rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin-top:22px}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.callout .t{font-weight:600;display:block;margin-bottom:4px}
+.callout.mistake{border-color:var(--warn);background:var(--warn-soft)}
+.callout.analogy{border-color:var(--teal);background:var(--teal-soft)}
+.callout.enh{border-color:var(--warn);background:var(--warn-soft)}
+.callout.fix{border-color:var(--fix);background:var(--fix-soft)}
+.callout.fix .t{color:var(--fix)}
+.callout.ok{border-color:var(--ok);background:var(--ok-soft)}
+.callout.aiops{border-color:var(--t-prod);background:var(--ok-soft)}
+.fixgrid{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 0}
+.fixgrid div{font-size:.92rem}
+.fixgrid .lbl{font-size:.78rem;color:var(--muted);display:block}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+.tbl{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--sunk);font-weight:600;font-size:.86rem}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-size:.86rem;white-space:nowrap}
+.heat-hi{background:var(--ok-soft)} .heat-mid{background:var(--warn-soft)} .heat-lo{background:var(--bad-soft)}
+pre.code{position:relative;background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:16px;overflow-x:auto;font:13px/1.55 var(--mono);margin:12px 0}
+pre.code code{background:none;padding:0;font-size:inherit;color:inherit}
+pre.code .c{color:var(--code-c)}
+.copy{position:absolute;top:8px;right:8px;font:500 .72rem var(--sans);background:rgba(255,255,255,.1);color:var(--code-ink);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 8px;cursor:pointer}
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+details>summary{cursor:pointer;padding:10px 14px;font-weight:600;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";display:inline-block;width:1.1em;color:var(--muted);transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+details>.body{padding:2px 16px 14px}
+details.prog>summary{font-family:var(--serif);font-size:1.08rem}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:16px 0}
+.flow .n{flex:1 1 110px;min-width:96px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:.86rem;text-align:center}
+.flow .n b{display:block;font-size:.9rem}
+.flow .n small{color:var(--muted);display:block;line-height:1.35;margin-top:2px}
+.flow .a{align-self:center;color:var(--muted);font-weight:700}
+.flow .n.hl{border-color:var(--accent);background:var(--accent-soft)}
+.flow .n.bad{border-color:var(--bad);background:var(--bad-soft)}
+.flow .n.good{border-color:var(--ok);background:var(--ok-soft)}
+.flow.v{flex-direction:column;max-width:440px}
+.flow.v .a{align-self:center}
+figure{margin:18px 0}
+figcaption{font-size:.85rem;color:var(--muted);margin-top:6px}
+.svgbox{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto}
+.svgbox svg{display:block;margin:0 auto;height:auto}
+svg text{font-family:var(--sans);fill:var(--ink)}
+.conf{display:inline-block;font:600 .72rem var(--sans);padding:1px 6px;border-radius:4px;vertical-align:1px;margin-right:4px}
+.conf.c{background:var(--ok-soft);color:var(--ok)} .conf.l{background:var(--accent-soft);color:var(--accent)} .conf.g{background:var(--warn-soft);color:var(--warn)}
+.mm{font-size:.95rem}
+.mm details{border:0;border-left:2px solid var(--line);border-radius:0;margin:2px 0 2px 10px;background:none}
+.mm details>summary{padding:5px 8px;font-weight:500}
+.mm>details{border-left:0;margin-left:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:8px 0}
+.mm>details>summary{font-family:var(--serif);font-size:1.08rem;font-weight:600;padding:10px 12px}
+.mm ul{list-style:none;margin:0;padding:2px 0 6px 22px}
+.mm li{padding:3px 0}
+.tag{display:inline-block;font:600 .68rem var(--sans);padding:1px 6px;border-radius:999px;border:1px solid currentColor;margin-left:5px;vertical-align:1px}
+.tg-concept{color:var(--t-concept)}.tg-tool{color:var(--t-tool)}.tg-tech{color:var(--t-tech)}.tg-variant{color:var(--t-variant)}.tg-fail{color:var(--t-fail)}.tg-prod{color:var(--t-prod)}.tg-dec{color:var(--t-dec)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:.85rem;margin:10px 0}
+.qa{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px 16px;margin:16px 0}
+.qa .qn{font-family:var(--serif);font-size:1.08rem;font-weight:600;margin:0 0 6px}
+.qa .ref{font-size:.85rem;color:var(--muted);margin-top:8px}
+.qa details{margin:6px 0}
+.lvl{font-size:.75rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-left:6px;font-family:var(--sans);font-weight:500}
+.check li{margin:4px 0}
+.pager{display:flex;justify-content:space-between;gap:10px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+.pager button{font:500 .9rem var(--sans);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px 14px;cursor:pointer}
+.formula{font-family:var(--mono);background:var(--sunk);border-radius:8px;padding:10px 14px;overflow-x:auto;font-size:.9rem;margin:10px 0;white-space:pre}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){ .two{grid-template-columns:1fr} h2{font-size:1.45rem} body{font-size:15.5px} .flow .n{flex-basis:100%} .flow:not(.v) .a{transform:rotate(90deg);width:1.2em;margin:0 auto} }
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;padding:20px 0 40px}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <h1>RAGAS, zero to production</h1>
+    <p class="lede">A guide built from your two notebooks, <em>RAGAS_LLM_Metric_Definition</em> and <em>RAGAS_Additional_Metrics</em>. It teaches every metric they use, the theory they skip, and the places their code needs correcting.</p>
+    <div class="scoreboard" aria-label="The notebook's own results">
+      <div class="cap">Notebook result, 3 golden questions, averaged</div>
+      <div class="sb-grid">
+        <div class="sb-cell sat"><b>1.00</b><span>Ragas faithfulness</span></div>
+        <div class="sb-cell sat"><b>1.00</b><span>Context precision</span></div>
+        <div class="sb-cell sat"><b>1.00</b><span>Context recall</span></div>
+        <div class="sb-cell sat"><b>1.00</b><span>Custom judge, all 3</span></div>
+        <div class="sb-cell"><b>0.88</b><span>Answer correctness</span></div>
+        <div class="sb-cell"><b>0.58</b><span>ROUGE-L</span></div>
+      </div>
+      <div class="sb-q">Every red number is a perfect 1.0. By the end of tab ④ you'll be able to explain why they prove almost nothing.</div>
+    </div>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:14px">Confidence tags used throughout: <span class="conf c">Certain</span> verified against the notebook, its outputs, or the installed ragas 0.4.3 source · <span class="conf l">Likely</span> strong inference · <span class="conf g">Guessing</span> filling a gap. Callouts: 🛠 <b>Correction</b> = notebook code that is wrong or misleading; ⚠️ <b>Notebook Enhancement</b> = works but should be improved; ⚠️ <b>Common Mistake</b> = learner pitfall.</p>
+  </div>
+</header>
+<nav class="tabs" aria-label="Guide sections">
+  <div class="scroller" role="tablist">
+    <span class="ph">A</span>
+    <button role="tab" data-t="t0">⓪ ML eval foundations</button>
+    <button role="tab" data-t="t1">① Mindmap</button>
+    <button role="tab" data-t="t2">② Embeddings &amp; retrieval</button>
+    <button role="tab" data-t="t3">③ RAG &amp; Ragas</button>
+    <span class="ph">B</span>
+    <button role="tab" data-t="t4">④ Notebook pipeline</button>
+    <button role="tab" data-t="t5">⑤ Non-LLM metrics</button>
+    <button role="tab" data-t="t6">⑥ Custom LLM judge</button>
+    <button role="tab" data-t="t7">⑦ Core Ragas metrics</button>
+    <button role="tab" data-t="t8">⑧ Additional metrics</button>
+    <span class="ph">C</span>
+    <button role="tab" data-t="t9">⑨ Taxonomy &amp; diagnosis</button>
+    <button role="tab" data-t="t10">⑩ Judging the judge</button>
+    <button role="tab" data-t="t11">⑪ Production</button>
+    <button role="tab" data-t="t12">⑫ Code</button>
+    <button role="tab" data-t="t13">⑬ Practice</button>
+    <button role="tab" data-t="t14">⑭ Interview prep</button>
+  </div>
+</nav>
+<main class="wrap">
+<section class="panel" id="t0" role="tabpanel">
+<span class="phase">Phase A, foundations</span>
+<h2>⓪ ML evaluation foundations</h2>
+<p>Neither notebook trains a model, so this tab is a prerequisite you added rather than notebook content <span class="conf c">Certain</span>. It is here for one reason: every Ragas metric is a classical evaluation idea wearing a new outfit. Context recall is recall. Faithfulness is a precision. Factual correctness is literally an F1. Learn the originals once and Ragas becomes readable.</p>
+
+<h3>How a simple ML algorithm works</h3>
+<p>A supervised model learns a mapping from inputs to known answers, then gets graded on examples it never saw.</p>
+<div class="flow">
+  <div class="n"><b>Labelled data</b><small>scans + did OCR fail?</small></div><div class="a">→</div>
+  <div class="n hl"><b>Split</b><small>80% train / 20% test</small></div><div class="a">→</div>
+  <div class="n"><b>fit()</b><small>learn on X_train, y_train</small></div><div class="a">→</div>
+  <div class="n"><b>predict()</b><small>on X_test only</small></div><div class="a">→</div>
+  <div class="n good"><b>Score</b><small>compare with y_test</small></div>
+</div>
+<div class="callout analogy"><span class="t">Analogy: the school exam</span>The textbook problems are <code>X_train</code> and their worked answers are <code>y_train</code>. The final exam is <code>X_test</code>, and the answer key the teacher hides is <code>y_test</code>. A student who memorised the exam paper scores 100% and has learned nothing. That is data leakage.</div>
+
+<h4>The four variables</h4>
+<div class="tbl"><table>
+<tr><th>Variable</th><th>What it holds</th><th>Example: predict OCR failure from scan features</th><th>RAG equivalent</th></tr>
+<tr><td><code>X_train</code></td><td>Inputs the model learns from</td><td>pages, firmware, weekday for 800 scans</td><td>Prompts/few-shot examples you tune on</td></tr>
+<tr><td><code>y_train</code></td><td>Correct answers for those inputs</td><td>failed = 1 / ok = 0</td><td>—</td></tr>
+<tr><td><code>X_test</code></td><td>Held-out inputs</td><td>200 unseen scans</td><td><code>golden_dataset["question"]</code></td></tr>
+<tr><td><code>y_test</code></td><td>Held-out answers, used only for grading</td><td>their true labels</td><td><code>ground_truth</code> / <code>reference</code></td></tr>
+</table></div>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: tuning on the test set</span>If you tweak your RAG prompt until the 3 golden questions score 1.0, your golden set has become training data. Keep a second, untouched set for the final check, exactly like <code>X_test</code>.</div>
+
+<h3>Classification metrics</h3>
+<p>Worked example: 200 test scans, the model flags likely failures.</p>
+<figure><div class="svgbox">
+<svg viewBox="0 0 460 250" width="460" role="img" aria-label="Confusion matrix: TP 40, FN 20, FP 10, TN 130">
+  <text x="270" y="18" text-anchor="middle" font-size="13" font-weight="600">Predicted</text>
+  <text x="200" y="40" text-anchor="middle" font-size="12">Fail</text><text x="340" y="40" text-anchor="middle" font-size="12">OK</text>
+  <text x="22" y="140" font-size="13" font-weight="600" transform="rotate(-90 22 140)" text-anchor="middle">Actual</text>
+  <text x="80" y="95" text-anchor="end" font-size="12">Fail</text><text x="80" y="185" text-anchor="end" font-size="12">OK</text>
+  <rect x="130" y="50" width="140" height="85" rx="6" fill="#2E8B57" opacity=".22"/><text x="200" y="90" text-anchor="middle" font-size="22" font-weight="700">40</text><text x="200" y="112" text-anchor="middle" font-size="11">True positive</text>
+  <rect x="272" y="50" width="140" height="85" rx="6" fill="#C0392B" opacity=".2"/><text x="342" y="90" text-anchor="middle" font-size="22" font-weight="700">20</text><text x="342" y="112" text-anchor="middle" font-size="11">False negative (missed)</text>
+  <rect x="130" y="137" width="140" height="85" rx="6" fill="#D68910" opacity=".22"/><text x="200" y="177" text-anchor="middle" font-size="22" font-weight="700">10</text><text x="200" y="199" text-anchor="middle" font-size="11">False positive (false alarm)</text>
+  <rect x="272" y="137" width="140" height="85" rx="6" fill="#2E8B57" opacity=".12"/><text x="342" y="177" text-anchor="middle" font-size="22" font-weight="700">130</text><text x="342" y="199" text-anchor="middle" font-size="11">True negative</text>
+</svg></div><figcaption>Confusion matrix: every classification metric is a ratio of these four boxes.</figcaption></figure>
+<div class="tbl"><table>
+<tr><th>Metric</th><th>Formula</th><th>Here</th><th>Question it answers</th><th>Ragas descendant</th></tr>
+<tr><td>Accuracy</td><td class="num">(TP+TN)/all</td><td class="num">170/200 = 0.85</td><td>How often right overall?</td><td>Exact Match averaged over rows</td></tr>
+<tr><td>Precision</td><td class="num">TP/(TP+FP)</td><td class="num">40/50 = 0.80</td><td>When I raise an alarm, am I right?</td><td>Faithfulness, Context Precision, Factual Correctness (precision mode)</td></tr>
+<tr><td>Recall</td><td class="num">TP/(TP+FN)</td><td class="num">40/60 = 0.67</td><td>Of real failures, how many did I catch?</td><td>Context Recall, Context Entity Recall</td></tr>
+<tr><td>F1</td><td class="num">2PR/(P+R)</td><td class="num">0.73</td><td>Balance of both</td><td>Factual Correctness (f1), the factual half of Answer Correctness</td></tr>
+</table></div>
+<div class="callout analogy"><span class="t">Analogy: the fishing net</span>Recall is how many of the fish in the lake ended up in your net. Precision is how much of what's in your net is actually fish rather than old boots. A huge net (big <code>top_k</code>) raises recall and drags in boots, which is exactly the Context Recall vs Context Precision trade-off in tab ⑦.</div>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: trusting accuracy on imbalanced data</span>If only 5% of scans fail, a model that always says "OK" scores 95% accuracy and catches zero failures. Same trap in RAG: if 95% of golden questions are easy lookups, a high average hides failures on the hard 5%. Always slice.</div>
+
+<h3>Regression metrics: MAE and R²</h3>
+<p>Used when the target is a number, e.g. predicting how many pages a batch will fail on.</p>
+<div class="formula">MAE = mean(|y_true − y_pred|)          → "on average I'm off by N pages"
+R²  = 1 − Σ(y_true − y_pred)² / Σ(y_true − mean(y_true))²
+      1.0 = perfect · 0 = no better than predicting the mean · &lt;0 = worse than the mean</div>
+<p><span class="conf c">Certain</span> Neither has a direct Ragas metric. Ragas scores are bounded 0–1 per row and nobody regresses them. <span class="conf l">Likely</span> The one place MAE earns its keep in RAG work is tab ⑩: measuring how far an LLM judge's scores sit from human scores (judge MAE of 0.05 is good; 0.25 means the judge is noise). R² has essentially no practical use here, so this guide stops at the definition.</p>
+
+<h3>ROC and AUC</h3>
+<p>Many models output a probability, and you choose a threshold to turn it into yes/no. The ROC curve plots recall (true positive rate) against false positive rate at every possible threshold. AUC is the area under it.</p>
+<figure><div class="svgbox">
+<svg viewBox="0 0 320 260" width="320" role="img" aria-label="ROC curve example with AUC 0.88">
+  <line x1="40" y1="220" x2="300" y2="220" stroke="currentColor" opacity=".4"/><line x1="40" y1="220" x2="40" y2="20" stroke="currentColor" opacity=".4"/>
+  <line x1="40" y1="220" x2="300" y2="20" stroke="#888" stroke-dasharray="5 4"/>
+  <path d="M40 220 C 55 90, 120 45, 300 20" fill="none" stroke="#1D5C86" stroke-width="3"/>
+  <circle cx="92" cy="68" r="5" fill="#C0392B"/><text x="100" y="84" font-size="11">threshold 0.5</text>
+  <text x="170" y="245" text-anchor="middle" font-size="12">False positive rate</text>
+  <text x="14" y="120" font-size="12" transform="rotate(-90 14 120)" text-anchor="middle">True positive rate</text>
+  <text x="200" y="150" font-size="11" fill="#888">random = 0.5</text>
+  <text x="150" y="60" font-size="13" font-weight="600">AUC ≈ 0.88</text>
+</svg></div><figcaption>AUC = probability the model ranks a random positive above a random negative.</figcaption></figure>
+<p>Where it returns in this guide: a Ragas score is a continuous number, and production gates turn it into pass/fail. When you collect human "this answer is wrong" labels and check how well <em>faithfulness</em> separates good from bad answers, that is an ROC/AUC analysis. It tells you whether a threshold like <code>faithfulness ≥ 0.8</code> means anything (tab ⑩).</p>
+
+<details class="prog"><summary>Runnable: all of the above in 25 lines (scikit-learn)</summary><div class="body">
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code>from sklearn.datasets import make_classification, make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
+                             roc_auc_score, mean_absolute_error, r2_score, confusion_matrix)
+
+<span class="c"># Imbalanced on purpose (~20% positives) so accuracy looks better than it should</span>
+X, y = make_classification(n_samples=1000, weights=[0.8], random_state=42)
+<span class="c"># stratify=y keeps the 80/20 ratio in both splits; without it a small test set can be skewed</span>
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
+
+clf = LogisticRegression(max_iter=1000).fit(X_train, y_train)  <span class="c"> # learn ONLY from train</span>
+y_pred = clf.predict(X_test)                                    <span class="c"> # hard 0/1 at threshold 0.5</span>
+y_prob = clf.predict_proba(X_test)[:, 1]                        <span class="c"> # probabilities, needed for ROC</span>
+
+print(confusion_matrix(y_test, y_pred))
+print("accuracy ", accuracy_score(y_test, y_pred))
+print("precision", precision_score(y_test, y_pred))
+print("recall   ", recall_score(y_test, y_pred))
+print("f1       ", f1_score(y_test, y_pred))
+print("roc_auc  ", roc_auc_score(y_test, y_prob))  <span class="c"> # uses probabilities, not hard labels</span>
+
+<span class="c"># Regression counterpart</span>
+Xr, yr = make_regression(n_samples=500, noise=20, random_state=0)
+Xr_tr, Xr_te, yr_tr, yr_te = train_test_split(Xr, yr, test_size=0.2, random_state=0)
+reg = LinearRegression().fit(Xr_tr, yr_tr)
+print("MAE", mean_absolute_error(yr_te, reg.predict(Xr_te)), " R2", r2_score(yr_te, reg.predict(Xr_te)))</code></pre>
+</div></details>
+
+<h3>The bridge to Ragas</h3>
+<div class="tbl"><table>
+<tr><th>Classical ML</th><th>RAG evaluation with Ragas</th></tr>
+<tr><td>Test set <code>X_test, y_test</code></td><td>Golden dataset: question + ground truth + ground-truth context</td></tr>
+<tr><td>Label is a class/number; comparison is <code>==</code></td><td>Label is free text; comparison needs embeddings or an LLM judge</td></tr>
+<tr><td>Metric is deterministic</td><td>LLM-based metrics are stochastic: same input, slightly different score</td></tr>
+<tr><td>One model to grade</td><td>Two stages to grade separately: retriever and generator</td></tr>
+<tr><td>Data leakage</td><td>Judge sees ground truth while grading faithfulness (🛠 C5) or prompts tuned on the golden set</td></tr>
+</table></div>
+<p>That second row is the whole reason Ragas exists. When answers are sentences, <code>y_test == y_pred</code> fails on "15%" vs "fifteen percent", so we need smarter comparisons. Each one brings new failure modes.</p>
+</section>
+<section class="panel" id="t1" role="tabpanel">
+<span class="phase">Phase A, foundations</span>
+<h2>① Mindmap: the whole landscape</h2>
+<p>Expand any branch. Source markers show where each topic came from: 📘 from your notebooks (file noted: <b>LLM</b> = RAGAS_LLM_Metric_Definition, <b>ADD</b> = RAGAS_Additional_Metrics), 📗 added prerequisite, 📙 added depth.</p>
+<div class="legend"><span class="tag tg-concept">concept</span><span class="tag tg-tool">tool</span><span class="tag tg-tech">technique</span><span class="tag tg-variant">variant</span><span class="tag tg-fail">failure</span><span class="tag tg-prod">production</span><span class="tag tg-dec">decision</span></div>
+<div class="mm">
+<details open><summary>RAG evaluation with Ragas</summary>
+ <details><summary>📗 Classical evaluation <span class="tag tg-concept">concept</span></summary><ul>
+  <li>📗 Train/test split, <code>X_train…y_test</code> <span class="tag tg-concept">concept</span></li>
+  <li>📗 Confusion matrix, accuracy, precision, recall, F1 <span class="tag tg-concept">concept</span></li>
+  <li>📗 MAE, R² <span class="tag tg-variant">variant</span></li>
+  <li>📗 ROC / AUC → reused for judge calibration <span class="tag tg-tech">technique</span></li>
+  <li>📗 Data leakage <span class="tag tg-fail">failure</span></li></ul></details>
+ <details><summary>Retrieval foundations <span class="tag tg-concept">concept</span></summary><ul>
+  <li>📗 Vectors, embeddings, cosine similarity <span class="tag tg-concept">concept</span></li>
+  <li>📘 LLM: <code>all-MiniLM-L6-v2</code> SentenceTransformer <span class="tag tg-tool">tool</span></li>
+  <li>📘 LLM: normalized dot-product <code>retrieve(top_k=3)</code> <span class="tag tg-tech">technique</span></li>
+  <li>📙 Choosing top_k, chunk size <span class="tag tg-dec">decision</span></li>
+  <li>📙 Same model for retrieval and evaluation, shared blind spots <span class="tag tg-fail">failure</span></li></ul></details>
+ <details><summary>Ragas itself <span class="tag tg-tool">tool</span></summary><ul>
+  <li>📙 What / When / Why <span class="tag tg-concept">concept</span></li>
+  <li>📙 Architecture: samples → metrics → LLM/embedding wrappers → results <span class="tag tg-concept">concept</span></li>
+  <li>📘 LLM: <code>HuggingFaceEmbeddings</code>, <code>llm_factory</code> <span class="tag tg-tool">tool</span></li>
+  <li>📘 LLM: <code>metric.ascore()</code>, <code>result.value</code> <span class="tag tg-tech">technique</span></li>
+  <li>📙 Collections API vs legacy <code>evaluate()</code> API <span class="tag tg-variant">variant</span></li>
+  <li>📙 Dependency breakage (VertexAI monkeypatch) <span class="tag tg-fail">failure</span></li></ul></details>
+ <details><summary>Golden dataset <span class="tag tg-concept">concept</span></summary><ul>
+  <li>📘 LLM: <code>audit_data</code> (20 docs), <code>golden_dataset</code> (3 rows) <span class="tag tg-tool">tool</span></li>
+  <li>📙 Size, coverage, unanswerable &amp; multi-hop cases <span class="tag tg-dec">decision</span></li>
+  <li>📙 Synthetic testset generation <span class="tag tg-tech">technique</span></li>
+  <li>📙 Extractive generator makes faithfulness tautological <span class="tag tg-fail">failure</span></li></ul></details>
+ <details><summary>Non-LLM metrics <span class="tag tg-concept">concept</span></summary><ul>
+  <li>📘 LLM: Semantic Similarity <span class="tag tg-tech">technique</span></li>
+  <li>📘 LLM: ROUGE-L <span class="tag tg-tech">technique</span></li>
+  <li>📘 LLM: Levenshtein string similarity <span class="tag tg-tech">technique</span></li>
+  <li>📘 LLM: Context Hit <span class="tag tg-tech">technique</span> · 📙 Hit@k, MRR <span class="tag tg-variant">variant</span></li>
+  <li>📘 ADD: BLEU, CHRF <span class="tag tg-tech">technique</span></li>
+  <li>📘 ADD: Exact Match, String Presence <span class="tag tg-tech">technique</span></li>
+  <li>📙 Case sensitivity, verbosity penalty <span class="tag tg-fail">failure</span></li></ul></details>
+ <details><summary>LLM-as-judge <span class="tag tg-concept">concept</span></summary><ul>
+  <li>📘 LLM: custom judge via OpenRouter <code>gpt-4o-mini</code> <span class="tag tg-tool">tool</span></li>
+  <li>📘 LLM: Pydantic <code>JudgeResult</code> + strict JSON schema <span class="tag tg-tech">technique</span></li>
+  <li>📙 Criterion leakage, position/verbosity/self-preference bias <span class="tag tg-fail">failure</span></li>
+  <li>📙 Sync/async client rebinding bug <span class="tag tg-fail">failure</span></li></ul></details>
+ <details><summary>Ragas LLM metrics <span class="tag tg-concept">concept</span></summary><ul>
+  <li>📘 LLM: Faithfulness <span class="tag tg-tech">technique</span></li>
+  <li>📘 LLM: Answer Relevancy <span class="tag tg-tech">technique</span></li>
+  <li>📘 LLM: Answer Correctness (0.75 factual + 0.25 semantic) <span class="tag tg-tech">technique</span></li>
+  <li>📘 LLM: Context Precision, Context Recall <span class="tag tg-tech">technique</span></li>
+  <li>📘 ADD: Context Entity Recall <span class="tag tg-tech">technique</span></li>
+  <li>📘 ADD: Noise Sensitivity (relevant / irrelevant mode) <span class="tag tg-variant">variant</span></li>
+  <li>📘 ADD: Factual Correctness (precision / recall / f1) <span class="tag tg-variant">variant</span></li>
+  <li>📙 Reference-free vs reference-based <span class="tag tg-dec">decision</span></li></ul></details>
+ <details><summary>Diagnosis <span class="tag tg-dec">decision</span></summary><ul>
+  <li>📘 ADD: "Which metric should I use?" <span class="tag tg-dec">decision</span></li>
+  <li>📘 ADD: High recall + low precision + high noise → reranking <span class="tag tg-tech">technique</span></li>
+  <li>📙 Full symptom → cause → fix table <span class="tag tg-dec">decision</span></li></ul></details>
+ <details><summary>📙 Judging the judge <span class="tag tg-concept">concept</span></summary><ul>
+  <li>📙 Human labels, agreement, Cohen's κ <span class="tag tg-tech">technique</span></li>
+  <li>📙 ROC/AUC of a metric vs human verdicts <span class="tag tg-tech">technique</span></li>
+  <li>📙 Variance, bootstrap confidence intervals <span class="tag tg-tech">technique</span></li>
+  <li>📙 Metric saturation (all 1.0) <span class="tag tg-fail">failure</span></li></ul></details>
+ <details><summary>📙 Production <span class="tag tg-prod">production</span></summary><ul>
+  <li>📙 Latency of serial <code>await</code> loops → concurrency <span class="tag tg-prod">production</span></li>
+  <li>📙 Rate limits (429), retries, timeouts <span class="tag tg-prod">production</span></li>
+  <li>📙 Cost per eval run, caching, tiered evaluation <span class="tag tg-prod">production</span></li>
+  <li>📙 CI regression gates, online sampling, judge drift <span class="tag tg-prod">production</span></li>
+  <li>📙 AIOps framing: scores as SLIs <span class="tag tg-prod">production</span></li></ul></details>
+</details>
+</div>
+</section>
+
+<section class="panel" id="t2" role="tabpanel">
+<span class="phase">Phase A, foundations</span>
+<h2>② Embeddings &amp; retrieval</h2>
+<p>The notebook builds its retriever in four lines and evaluates it later with Semantic Similarity and Answer Relevancy. Both metrics run on the same machinery: turn text into vectors and measure angles.</p>
+
+<h3>What an embedding is</h3>
+<p>An embedding model maps a sentence to a fixed list of numbers. <code>all-MiniLM-L6-v2</code> outputs 384 numbers per sentence <span class="conf c">Certain</span>, which is why the notebook prints <code>Embedding shape: (20, 384)</code> for its 20 audit documents. Sentences with similar meaning land near each other in this 384-dimensional space.</p>
+<div class="callout analogy"><span class="t">Analogy: the library</span>A librarian doesn't shelve books alphabetically by title; they shelve by subject, so "OCR scanner failures" and "document digitisation errors" sit on the same shelf even though they share no words. An embedding gives every sentence a shelf address. Retrieval means walking to the shelf nearest your question.</div>
+
+<h3>Cosine similarity and why the notebook normalizes</h3>
+<div class="formula">cosine(a, b) = (a · b) / (‖a‖ × ‖b‖)
+if ‖a‖ = ‖b‖ = 1 (normalized)  →  cosine(a, b) = a · b</div>
+<p>The notebook's comment says the dot product is "effectively cosine similarity". It is exactly cosine similarity, because both sides were encoded with <code>normalize_embeddings=True</code> <span class="conf c">Certain</span>. That lets <code>document_embeddings @ question_embedding</code> score all 20 documents in one matrix multiply.</p>
+<div class="flow">
+  <div class="n"><b>Question</b><small>"Why do OCR failures peak on Tuesdays?"</small></div><div class="a">→</div>
+  <div class="n"><b>encode + normalize</b><small>384-d unit vector</small></div><div class="a">→</div>
+  <div class="n hl"><b>@ doc matrix</b><small>20 cosine scores</small></div><div class="a">→</div>
+  <div class="n"><b>argsort desc</b><small>best first</small></div><div class="a">→</div>
+  <div class="n good"><b>top_k = 3</b><small>contexts</small></div>
+</div>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: normalizing one side only</span>If documents are normalized but the query isn't (or vice versa), dot-product scores scale with the query's length. The ranking for a single query is unchanged, but any score <em>threshold</em> ("drop chunks below 0.4") becomes meaningless across queries. Normalize both or call a true cosine function.</div>
+
+<h3>Why <code>top_k=3</code>?</h3>
+<p>The notebook hardcodes 3 without explanation. <span class="conf l">Likely</span> it fits the corpus: 20 one-sentence documents, and each golden question has exactly one answering document. What changes when you move it:</p>
+<div class="tbl"><table>
+<tr><th>top_k</th><th>Context Recall</th><th>Context Precision</th><th>Noise Sensitivity</th><th>Cost/latency</th></tr>
+<tr><td>1</td><td>Drops on multi-fact questions</td><td>High</td><td>Low</td><td>Lowest</td></tr>
+<tr><td>3 (notebook)</td><td>Good for single-fact questions</td><td>≤ 1/3 useful chunks for single-fact questions</td><td>Moderate</td><td>Low</td></tr>
+<tr><td>10</td><td>Highest</td><td>Low</td><td>Rises: more distractors reach the LLM</td><td>More tokens per call</td></tr>
+</table></div>
+<p>Note the precision cell for top_k=3. Only one of the three chunks answers each golden question, yet the notebook reports <b>Context Precision = 1.0</b>. That isn't a contradiction. Ragas context precision is a <em>rank-weighted</em> average precision over the useful chunks, so one useful chunk at rank 1 scores 1.0 no matter what follows it (tab ⑦).</p>
+
+<h3>Retrieval model vs evaluation model</h3>
+<p>The notebook draws this distinction in a markdown cell: <code>SentenceTransformer → Retrieval</code>, <code>HuggingFaceEmbeddings → Evaluation</code>. Both load the same MiniLM weights.</p>
+<div class="callout fix"><span class="t">🛠 Correction C10: don't evaluate with the model you retrieve with</span>
+<div class="fixgrid"><div><span class="lbl">Notebook</span><code>ragas_embeddings = HuggingFaceEmbeddings(model=MODEL_NAME, ...)</code>, where MODEL_NAME is also the retriever.</div>
+<div><span class="lbl">Corrected</span><code>EVAL_EMBED_MODEL = "BAAI/bge-small-en-v1.5"</code> (or any different, ideally stronger, model) for SemanticSimilarity, AnswerRelevancy and AnswerCorrectness.</div>
+<div><span class="lbl">Why</span><span class="conf l">Likely</span> If MiniLM thinks two sentences are similar when they aren't, the retriever makes that mistake and the evaluator approves it. Shared blind spots inflate scores. It's the same reason you don't let a student mark their own exam. For a 3-row teaching demo it's harmless; for any decision it isn't.</div></div></div>
+</section>
+<section class="panel" id="t3" role="tabpanel">
+<span class="phase">Phase A, foundations</span>
+<h2>③ RAG &amp; Ragas: what, when, why, architecture</h2>
+
+<h3>The pipeline being evaluated</h3>
+<p>The additional-metrics notebook opens with this diagram, and it is the most important idea in both notebooks: <b>a RAG system has two stages that fail independently</b>.</p>
+<div class="flow">
+  <div class="n"><b>User question</b></div><div class="a">→</div>
+  <div class="n hl"><b>Retriever</b><small>embeddings, top_k</small></div><div class="a">→</div>
+  <div class="n"><b>Retrieved context</b></div><div class="a">→</div>
+  <div class="n hl"><b>LLM generator</b><small>prompt + context</small></div><div class="a">→</div>
+  <div class="n"><b>Final answer</b></div>
+</div>
+<div class="tbl"><table>
+<tr><th>Failure</th><th>Stage</th><th>Metric that catches it</th></tr>
+<tr><td>Right document never retrieved</td><td>Retriever</td><td>Context Recall, Context Hit, Context Entity Recall</td></tr>
+<tr><td>Right document buried under junk</td><td>Retriever</td><td>Context Precision</td></tr>
+<tr><td>Junk confuses the LLM</td><td>Generator (caused by retriever)</td><td>Noise Sensitivity</td></tr>
+<tr><td>LLM invents facts not in context</td><td>Generator</td><td>Faithfulness</td></tr>
+<tr><td>Answer dodges the question</td><td>Generator</td><td>Answer Relevancy</td></tr>
+<tr><td>Answer is wrong vs truth</td><td>Either</td><td>Answer / Factual Correctness</td></tr>
+</table></div>
+<div class="callout analogy"><span class="t">Analogy: the doctor</span>A diagnosis can go wrong because the lab sent the wrong test results (retrieval) or because the doctor misread correct results (generation). "The patient got the wrong treatment" doesn't tell you which one to fix. Ragas metrics are the separate lab audit and the separate doctor review.</div>
+
+<h3>The 3 W's</h3>
+<div class="two">
+<div class="callout"><span class="t">What</span>Ragas is an open-source Python library of evaluation metrics for RAG and LLM apps. Each metric takes some combination of <code>user_input</code>, <code>response</code>, <code>retrieved_contexts</code> and <code>reference</code>, and returns a score, usually 0–1. Some metrics are deterministic; most of the important ones call an LLM judge with metric-specific prompts.</div>
+<div class="callout"><span class="t">Why</span>Free-text answers can't be graded with <code>==</code> (tab ⓪). Writing your own judge prompt per criterion is possible (tab ⑥) but you'd be re-inventing claim decomposition, verdict parsing and scoring formulas. Ragas gives standardized, published definitions, so "faithfulness 0.82" means the same thing across teams and runs.</div>
+</div>
+<div class="callout"><span class="t">When</span>
+<b>Offline, before shipping:</b> compare retrievers, chunk sizes, prompts and models on a golden set. This is the notebook's use.<br>
+<b>In CI:</b> a regression gate on every prompt or index change (tab ⑪).<br>
+<b>Online, sampled:</b> reference-free metrics (faithfulness, answer relevancy) on a small share of live traffic, because live traffic has no ground truth.<br>
+<b>Not when:</b> the output is fully structured (use exact checks), or you need a legal-grade verdict (use humans; Ragas is a screening tool).</div>
+
+<h3>Ragas architecture</h3>
+<p>Neither notebook shows what happens inside <code>ascore()</code>. Here is the flow for an LLM metric in the collections API that the notebooks use <span class="conf c">Certain</span>, verified against ragas 0.4.3 source:</p>
+<div class="flow v">
+  <div class="n"><b>Inputs</b><small>user_input · response · retrieved_contexts · reference</small></div><div class="a">↓</div>
+  <div class="n hl"><b>Metric object</b><small>e.g. Faithfulness(llm=ragas_judge_llm)</small></div><div class="a">↓</div>
+  <div class="n"><b>Step 1: decompose</b><small>LLM splits text into atomic claims / questions / entities</small></div><div class="a">↓</div>
+  <div class="n"><b>Step 2: verify</b><small>LLM gives a verdict per claim (supported? relevant?)</small></div><div class="a">↓</div>
+  <div class="n"><b>Step 3: aggregate</b><small>plain Python formula: ratio, F1, average precision, cosine mean</small></div><div class="a">↓</div>
+  <div class="n good"><b>MetricResult</b><small>.value = float</small></div>
+</div>
+<p>Below the metric layer sit two wrappers:</p>
+<div class="tbl"><table>
+<tr><th>Layer</th><th>Notebook object</th><th>Job</th></tr>
+<tr><td>LLM wrapper</td><td><code>llm_factory("openai/gpt-4o-mini", provider="openai", client=openrouter_client)</code></td><td>Sends structured-output prompts to any OpenAI-compatible endpoint (OpenRouter here) and parses them into Pydantic models</td></tr>
+<tr><td>Embedding wrapper</td><td><code>HuggingFaceEmbeddings(model=MODEL_NAME, normalize_embeddings=True)</code></td><td>Runs locally; used by SemanticSimilarity, AnswerRelevancy, AnswerCorrectness</td></tr>
+<tr><td>Metric</td><td><code>Faithfulness(llm=…)</code>, <code>RougeScore()</code> …</td><td>Prompts + scoring formula</td></tr>
+</table></div>
+<p>The key design insight: <b>the LLM never outputs the score</b>. It outputs small, checkable judgments (claim lists, yes/no verdicts), and Python computes the number. That is why Ragas scores are more stable than the custom judge in tab ⑥, which asks the LLM to emit a 0–1 float directly.</p>
+
+<h3>Two Ragas APIs: which one your notebooks use</h3>
+<div class="tbl"><table>
+<tr><th></th><th>Collections API (your notebooks)</th><th>Legacy API (most online tutorials)</th></tr>
+<tr><td>Import</td><td><code>from ragas.metrics.collections import Faithfulness</code></td><td><code>from ragas.metrics import faithfulness</code></td></tr>
+<tr><td>Run</td><td><code>await metric.ascore(user_input=…, response=…)</code> per row</td><td><code>evaluate(dataset, metrics=[…])</code> on a whole Dataset</td></tr>
+<tr><td>Result</td><td><code>result.value</code></td><td>pandas DataFrame from <code>result.to_pandas()</code></td></tr>
+<tr><td>Field names</td><td><code>user_input, response, retrieved_contexts, reference</code></td><td>older: <code>question, answer, contexts, ground_truth</code></td></tr>
+<tr><td>Batching</td><td>You write the loop (and the concurrency, tab ⑪)</td><td>Built in</td></tr>
+</table></div>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: mixing the two</span>Copying a tutorial's <code>evaluate()</code> call into the notebook's setup fails with confusing type errors, because collections metrics aren't legacy metric objects. Match the API family. Your golden dataset uses the old field names (<code>question</code>, <code>ground_truth</code>), and the notebook maps them by hand in each <code>ascore()</code> call. That mapping is where typos happen.</div>
+
+<div class="callout fix"><span class="t">🛠 Correction C9: the VertexAI monkeypatch is a symptom, not a fix</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cell 10, "play later")</span><code>sys.modules["langchain_community.chat_models.vertexai"] = fake_module</code></div>
+<div><span class="lbl">Corrected</span>Pin compatible versions in the install cell, e.g. <code>!pip install -q "ragas==0.4.3" "langchain-community&lt;0.4"</code>, and keep the patch only as a documented fallback.</div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> In a clean environment with ragas 0.4.3, <code>import ragas</code> fails with <code>ModuleNotFoundError: langchain_community.chat_models.vertexai</code>. Ragas still imports a module that newer langchain-community releases removed, and the notebook's <code>pip install -U</code> pulls the newest. The fake module hides the error but silently breaks anything that genuinely needs Vertex. Unpinned <code>-U</code> installs also mean the notebook may score differently next month. Pin the versions. <span class="conf g">Guessing</span> about the exact langchain-community version boundary; check <code>pip show</code> output and pin what works for you.</div></div></div>
+
+<div class="callout aiops"><span class="t">AIOps connection</span>If your IIT Jammu Agentic AI with AIOps work covers observability, map it like this: Ragas metrics are <b>SLIs for answer quality</b>, thresholds are <b>SLOs</b>, the golden set is a <b>synthetic probe</b>, and an eval regression in CI is a <b>failed canary</b>. Tab ⑪ builds this out. <span class="conf g">Guessing</span> about how your syllabus labels these modules.</div>
+</section>
+<section class="panel" id="t4" role="tabpanel">
+<span class="phase">Phase B, building</span>
+<h2>④ The notebook pipeline &amp; golden dataset</h2>
+<p>The LLM notebook evaluates one fixed system in three layers. Read this tab with the notebook open; every name here matches it.</p>
+<div class="flow">
+  <div class="n"><b><code>audit_data</code></b><small>20 MLOps audit sentences</small></div><div class="a">→</div>
+  <div class="n"><b><code>retrieve()</code></b><small>MiniLM, top_k=3</small></div><div class="a">→</div>
+  <div class="n bad"><b><code>generate_answer()</code></b><small>returns top chunk verbatim</small></div><div class="a">→</div>
+  <div class="n"><b><code>evaluation_rows</code></b><small>3 rows</small></div><div class="a">→</div>
+  <div class="n hl"><b>Layer 1</b><small>non-LLM metrics</small></div><div class="a">→</div>
+  <div class="n hl"><b>Layer 2</b><small>custom judge</small></div><div class="a">→</div>
+  <div class="n hl"><b>Layer 3</b><small>Ragas LLM metrics</small></div>
+</div>
+
+<h3>The corpus and golden set</h3>
+<p><code>audit_data</code> is 20 one-sentence facts about European OCR failures: 15% failure rate, Legacy Scan-X hardware, firmware v2.1, Jaymin's $45,000 budget, Project Vision, and so on. <code>golden_dataset</code> has 3 rows, each with <code>question</code>, <code>ground_truth</code>, and <code>ground_truth_context</code> (the exact <code>audit_data</code> sentence that answers it).</p>
+<div class="tbl"><table>
+<tr><th>#</th><th>Question</th><th>Ground truth</th><th>Gold doc</th></tr>
+<tr><td>0</td><td>What is the OCR failure rate in European legacy branches?</td><td>The OCR failure rate is 15%.</td><td>audit_data[0]</td></tr>
+<tr><td>1</td><td>Why do OCR failures peak on Tuesdays?</td><td>…weekly bulk-batch processing of handwritten PDFs.</td><td>audit_data[3]</td></tr>
+<tr><td>2</td><td>What is the codename for the upgrade project?</td><td>…codenamed Project Vision.</td><td>audit_data[13]</td></tr>
+</table></div>
+
+<div class="callout fix"><span class="t">🛠 Correction C1: the generator makes faithfulness meaningless</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cell 5)</span><code>answer = results[0]["text"]  # usually llm combined answer</code></div>
+<div><span class="lbl">Corrected</span>Add a real LLM generation step: <code>generate_answer_llm(question, contexts)</code> calling the model with a "use only this context" prompt (Program 3 in tab ⑫). Keep the extractive version as a baseline.</div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> The "answer" is a copy of retrieved chunk #1, so every claim in it is trivially supported by the retrieved context. Faithfulness = 1.0 and custom-judge faithfulness = 1.0 aren't findings; they are true by construction. The notebook concludes the answers "are not introducing unsupported information," but this generator <em>cannot</em> introduce any. Faithfulness exists to catch LLM hallucination, and there is no LLM in the generation path to hallucinate. Its own comment admits the real system would use an LLM.</div></div></div>
+
+<div class="callout fix"><span class="t">🛠 Correction C2: three easy questions can't support "the pipeline is working"</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cell 40)</span>"Overall, the RAG pipeline is working successfully on these test cases."</div>
+<div><span class="lbl">Corrected</span>Grow the golden set to ≥ 30 rows (tab ⑩ explains why) and cover the case types below. For the notebook's scope, the defensible claim is: "The pipeline answers these 3 single-fact lookups correctly."</div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> All three are single-hop questions whose answer sits in one sentence that shares key words with the question ("Tuesdays", "codename"). None test multi-fact answers, unanswerable questions, or distractors. With n=3, one flipped row moves an average by 0.33. Scores of 1.0 across the board are <b>saturation</b>: the test is too easy to tell systems apart.</div></div></div>
+
+<h4>Golden set: case types it should include</h4>
+<div class="tbl"><table>
+<tr><th>Type</th><th>Example from <code>audit_data</code></th><th>What it tests</th></tr>
+<tr><td>Single-hop (notebook has 3)</td><td>What is the target failure rate after the upgrade? → below 2%</td><td>Basic retrieval</td></tr>
+<tr><td>Multi-hop</td><td>Who approved the budget for the scanner upgrade, and how much? → Jaymin, $45,000</td><td>Context Recall, entity recall</td></tr>
+<tr><td>Cross-document</td><td>Why are only European branches affected? → only units still on firmware v2.1 + Legacy Scan-X</td><td>Recall across docs [1] and [7]</td></tr>
+<tr><td>Distractor-prone</td><td>What firmware do European legacy branches use? (v3.0 doc is a tempting distractor)</td><td>Noise Sensitivity</td></tr>
+<tr><td>Unanswerable</td><td>What is the OCR failure rate in Asia?</td><td>Does the system say "not in the documents"? Faithfulness on refusals</td></tr>
+<tr><td>Paraphrased</td><td>How often do scans break in Europe's old branches?</td><td>Retrieval without keyword overlap</td></tr>
+</table></div>
+
+<h3>Reading the notebook's actual numbers</h3>
+<div class="tbl"><table>
+<tr><th>Row</th><th>Semantic</th><th>ROUGE-L</th><th>Levenshtein</th><th>Hit</th><th>Ragas answer correctness</th></tr>
+<tr><td>0 · failure rate</td><td class="num heat-mid">0.670</td><td class="num heat-lo">0.316</td><td class="num heat-lo">0.188</td><td class="num">1</td><td class="num heat-hi">0.917</td></tr>
+<tr><td>1 · Tuesdays</td><td class="num heat-hi">0.985</td><td class="num heat-hi">0.769</td><td class="num heat-hi">0.849</td><td class="num">1</td><td class="num heat-hi">0.996</td></tr>
+<tr><td>2 · codename</td><td class="num heat-hi">0.891</td><td class="num heat-mid">0.667</td><td class="num heat-mid">0.608</td><td class="num">1</td><td class="num heat-mid">0.723</td></tr>
+</table></div>
+<p>Row 0's answer is the whole chunk "MLOps Audit Q4: European division legacy branches report a 15% OCR failure rate." against the short truth "The OCR failure rate is 15%." It is correct but verbose, so the overlap metrics punish it. Row 2 is more interesting: why does a correct answer get only 0.723 correctness? Tab ⑦ reproduces that number exactly.</p>
+
+<div class="callout enh"><span class="t">⚠️ Notebook Enhancement C6: one variable name, two tables</span><code>ragas_results_df</code> first holds the non-LLM metric table (cell 15), then is overwritten with the fully merged table (cell 37). Re-running cell 28 after cell 37 merges the judge scores in a second time, producing <code>_x</code>/<code>_y</code> duplicate columns. Use one name per meaning: <code>nonllm_df</code>, <code>judge_df</code>, <code>ragas_llm_df</code>, <code>final_df</code>.</div>
+
+<h3>Corrections ledger</h3>
+<p>Every notebook issue flagged in this guide, in one place. 🛠 = correctness problem, ⚠️ = improvement.</p>
+<div class="tbl"><table>
+<tr><th>ID</th><th>Where</th><th>Issue</th><th>Tab</th></tr>
+<tr><td>🛠 C1</td><td>LLM nb, cell 5</td><td>Extractive generator makes faithfulness tautological</td><td>④ ⑦</td></tr>
+<tr><td>🛠 C2</td><td>LLM nb, cells 9, 40</td><td>3-row golden set; overclaimed conclusion</td><td>④ ⑩</td></tr>
+<tr><td>🛠 C3</td><td>LLM nb, cell 15</td><td>Context Hit is exact string membership, rank-blind</td><td>⑤</td></tr>
+<tr><td>🛠 C4</td><td>LLM nb, cells 17 &amp; 32</td><td><code>openrouter_client</code> rebound from sync to async; judge breaks on re-run</td><td>⑥</td></tr>
+<tr><td>🛠 C5</td><td>LLM nb, cell 19</td><td>Judge sees ground truth while scoring faithfulness (criterion leakage)</td><td>⑥</td></tr>
+<tr><td>⚠️ C6</td><td>LLM nb, cells 15, 37</td><td><code>ragas_results_df</code> reused for two meanings</td><td>④</td></tr>
+<tr><td>⚠️ C7</td><td>LLM nb, cells 28, 37</td><td>Merging on question text instead of an ID</td><td>⑥ ⑫</td></tr>
+<tr><td>🛠 C8</td><td>LLM nb, cell 28</td><td>Comment claims Ragas LLM metrics are joined before they exist</td><td>⑥</td></tr>
+<tr><td>🛠 C9</td><td>LLM nb, cell 10</td><td>VertexAI monkeypatch masks unpinned dependency breakage</td><td>③</td></tr>
+<tr><td>⚠️ C10</td><td>LLM nb, cell 15</td><td>Same embedding model for retrieval and evaluation</td><td>②</td></tr>
+<tr><td>🛠 C11</td><td>ADD nb, cells 12–13</td><td>Noise Sensitivity example likely scores 0, not "high"</td><td>⑧</td></tr>
+<tr><td>⚠️ C12</td><td>ADD nb, cells 29, 32</td><td>Exact Match / String Presence are case-sensitive; no normalization</td><td>⑤</td></tr>
+<tr><td>⚠️ C13</td><td>Both, all eval loops</td><td>Serial <code>await</code>, no retries/timeouts/cost tracking</td><td>⑪</td></tr>
+<tr><td>🛠 C14</td><td>ADD nb, cells 6–18</td><td>All LLM metric code is commented out and <code>llm</code> is never defined</td><td>⑧</td></tr>
+</table></div>
+</section>
+<section class="panel" id="t5" role="tabpanel">
+<span class="phase">Phase B, building</span>
+<h2>⑤ Non-LLM metrics</h2>
+<p>These eight metrics come from both notebooks. They're fast, free and deterministic: same input, same score, every time. Each one answers a narrow question, and every score in this tab marked <span class="conf c">Certain</span> was produced by running ragas 0.4.3 on the exact strings shown.</p>
+
+<h3>The headline experiment</h3>
+<p>Here is a deliberately mixed set of answers scored by every deterministic metric. Read it row by row and note where each metric is fooled.</p>
+<div class="tbl"><table>
+<tr><th>Reference → Response</th><th>BLEU</th><th>CHRF</th><th>ROUGE-L</th><th>Leven.</th><th>Exact</th><th>Presence</th><th>Truth</th></tr>
+<tr><td>"OCR failure rate is 15%." → "…is 16%."</td><td class="num heat-mid">0.49</td><td class="num heat-hi">0.85</td><td class="num heat-hi">0.80</td><td class="num heat-hi">0.96</td><td class="num">0</td><td class="num">0</td><td><b style="color:var(--bad)">Wrong</b></td></tr>
+<tr><td>"The OCR failure rate is 15%." → "Fifteen percent of the OCR scans fail."</td><td class="num heat-lo">0.07</td><td class="num heat-lo">0.25</td><td class="num heat-lo">0.31</td><td class="num heat-lo">0.21</td><td class="num">0</td><td class="num">0</td><td><b style="color:var(--ok)">Right</b></td></tr>
+<tr><td>Notebook row 0: "…15%." → full audit sentence</td><td class="num heat-lo">0.12</td><td class="num heat-mid">0.46</td><td class="num heat-lo">0.32</td><td class="num heat-lo">0.19</td><td class="num">0</td><td class="num">0</td><td><b style="color:var(--ok)">Right</b></td></tr>
+<tr><td>"The Eiffel Tower is located in Paris, France." → "Paris is home to the Eiffel Tower."</td><td class="num heat-lo">0.11</td><td class="num heat-mid">0.42</td><td class="num heat-mid">0.40</td><td class="num heat-lo">0.22</td><td class="num">0</td><td class="num">0</td><td><b style="color:var(--ok)">Right</b></td></tr>
+<tr><td>"Python…released in 1991." → "…released in 1995."</td><td class="num heat-hi">0.84</td><td class="num heat-hi">0.97</td><td class="num heat-hi">0.92</td><td class="num heat-hi">0.99</td><td class="num">0</td><td class="num">0</td><td><b style="color:var(--bad)">Wrong</b></td></tr>
+<tr><td>"Paris" → "Paris"</td><td class="num heat-lo">0.00</td><td class="num heat-hi">1.00</td><td class="num heat-hi">1.00</td><td class="num heat-hi">1.00</td><td class="num">1</td><td class="num">1</td><td><b style="color:var(--ok)">Right</b></td></tr>
+<tr><td>"Approved" → "approved"</td><td class="num heat-lo">0.00</td><td class="num heat-hi">0.80</td><td class="num heat-hi">1.00</td><td class="num heat-hi">0.88</td><td class="num">0</td><td class="num">0</td><td><b style="color:var(--ok)">Right</b></td></tr>
+</table></div>
+<p><b>The lesson in one line:</b> lexical metrics give wrong answers with near-identical wording <em>higher</em> scores than right answers with different wording. They measure surface form, not truth. And BLEU scores a perfect one-word match as 0.</p>
+
+<h3>1. Semantic Similarity <small style="font-weight:400">📘 LLM nb</small></h3>
+<p><b>Measures:</b> cosine similarity between the embeddings of reference and response (tab ②). <b>Catches:</b> paraphrases ("15%" vs "fifteen percent"). <b>Misses:</b> numbers and negations. Embeddings place "15%" and "16%" very close, and "is approved" vs "is not approved" are often close too.</p>
+<div class="formula">semantic_similarity = cos(embed(reference), embed(response))     # optional threshold → 0/1</div>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: treating 0.85 semantic similarity as "85% correct"</span>It's an angle between vectors, not a proportion of correctness. MiniLM similarity between two unrelated English sentences often sits around 0.1–0.3, not 0, so the usable range is compressed. Calibrate against examples you've labelled before picking a threshold.</div>
+
+<h3>2. ROUGE-L <small style="font-weight:400">📘 LLM nb</small></h3>
+<p><b>Measures:</b> the longest common subsequence (LCS) of words: shared words in the same order, gaps allowed. Ragas defaults to <code>rouge_type="rougeL"</code>, <code>mode="fmeasure"</code> <span class="conf c">Certain</span>.</p>
+<div class="formula">P = LCS / words(response)     R = LCS / words(reference)     ROUGE-L F = 2PR / (P + R)</div>
+<p>Row 0 worked: the reference "the ocr failure rate is 15" (6 tokens) and the 13-token response share the subsequence "ocr failure rate" (3 tokens). <span class="conf l">Likely</span> P = 3/13, R = 3/6, F ≈ 0.316, matching the notebook output exactly. The verbose answer is penalized through precision.</p>
+<p>Also note: ROUGE scored "predicts" vs "predicted" as 1.0 because the scorer uses stemming, and it lowercases ("Approved" = "approved").</p>
+
+<h3>3. String similarity (Levenshtein) <small style="font-weight:400">📘 LLM nb</small></h3>
+<div class="formula">score = 1 − levenshtein_distance(ref, resp) / max(len(ref), len(resp))</div>
+<p>Edit distance counts single-character inserts, deletes and substitutions. "15%" → "16%" is one edit in 24 characters, so 0.96, while the answer is factually wrong. Ragas also offers <code>HAMMING</code>, <code>JARO</code> and <code>JARO_WINKLER</code> via <code>DistanceMeasure</code>.</p>
+<div class="callout analogy"><span class="t">Analogy: the spell-checker</span>A spell-checker would say "16%" is a perfect spelling of a number. That's all Levenshtein knows. Use it for IDs, codes and names where typos matter, never for factual answers.</div>
+
+<h3>4. BLEU <small style="font-weight:400">📘 ADD nb</small></h3>
+<div class="formula">BLEU = BP × exp( Σ_{n=1..4} ¼ · log p_n )
+p_n = clipped n-gram precision     BP = brevity penalty = min(1, e^(1 − ref_len/resp_len))</div>
+<p>BLEU is a <em>geometric</em> mean of 1- to 4-gram precisions. If the response has no matching 4-gram, one factor is 0 and the whole product collapses to 0. That's why "Paris" vs "Paris" scores 0.00 <span class="conf c">Certain</span>. BLEU was designed for corpus-level machine translation, where thousands of sentences smooth this out.</p>
+<div class="callout enh"><span class="t">⚠️ Notebook Enhancement: BLEU on short answers</span>The additional-metrics notebook demonstrates BLEU on a sentence identical to its reference (score 1.0), which hides the failure. Add a one-word example to show the collapse, and prefer CHRF or ROUGE for short RAG answers.</div>
+
+<h3>5. CHRF <small style="font-weight:400">📘 ADD nb</small></h3>
+<p>Character n-gram F-score (default n up to 6, with recall weighted higher). It tolerates inflection ("predicts"/"predicted" = 0.84) and casing changes better than BLEU, and it doesn't collapse to 0 on short strings. A good cheap default when you need one lexical metric.</p>
+<div class="tbl"><table><tr><th></th><th>BLEU</th><th>CHRF</th><th>ROUGE-L</th></tr>
+<tr><td>Unit</td><td>word n-grams (1–4)</td><td>character n-grams</td><td>word LCS</td></tr>
+<tr><td>Orientation</td><td>precision + brevity penalty</td><td>F-score (recall-weighted)</td><td>F-score</td></tr>
+<tr><td>Short answers</td><td>Collapses to 0</td><td>Stable</td><td>Stable</td></tr>
+<tr><td>Word-form changes</td><td>Penalized</td><td>Tolerant</td><td>Tolerant (stemming)</td></tr>
+<tr><td>Best for</td><td>Long, corpus-level comparisons</td><td>Short answers, morphology-rich languages</td><td>Summaries, verbose answers</td></tr></table></div>
+
+<h3>6. Exact Match and 7. String Presence <small style="font-weight:400">📘 ADD nb</small></h3>
+<p>Exact Match is <code>response == reference</code>. String Presence is <code>reference in response</code>. Both return 0 or 1 and are right for structured outputs: labels like <code>Approved</code>, codes like <code>HTTP 404</code>, required warnings.</p>
+<div class="callout fix"><span class="t">⚠️ Notebook Enhancement C12: both metrics are case- and punctuation-sensitive</span>
+<div class="fixgrid"><div><span class="lbl">Notebook</span>Uses <code>ExactMatch()</code> / <code>StringPresence()</code> on raw strings and only shows the matching case.</div>
+<div><span class="lbl">Corrected</span>Normalize before scoring: <code>norm = lambda s: re.sub(r"[^\w\s%$.-]", "", s).strip().lower().rstrip(".")</code>, then score <code>norm(ref)</code> vs <code>norm(resp)</code>.</div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> Verified: "Approved" vs "approved" → Exact 0, Presence 0. "Approved" vs "Approved." → Exact 0. "Paris" vs "paris" → Presence 0. A classifier that returns lowercase labels would score 0% while being 100% correct.</div></div></div>
+
+<h3>8. Context Hit <small style="font-weight:400">📘 LLM nb (hand-written, not a Ragas metric)</small></h3>
+<p><code>context_hit = float(row["ground_truth_context"] in row["contexts"])</code>: was the gold document anywhere in the top 3?</p>
+<div class="callout fix"><span class="t">🛠 Correction C3: Context Hit is brittle and rank-blind</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cell 15)</span><code>float(row["ground_truth_context"] in row["contexts"])</code></div>
+<div><span class="lbl">Corrected</span>Track document <b>IDs</b>, not text, and report rank-aware metrics:<br><code>hit@k = gold_id in retrieved_ids[:k]</code><br><code>mrr = 1/(retrieved_ids.index(gold_id)+1) if gold_id in retrieved_ids else 0</code></div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> Python <code>in</code> on a list checks for an exactly equal string. The moment you chunk differently, strip whitespace, or the retriever returns a chunk that <em>contains</em> the gold sentence plus neighbours, the hit becomes 0 even though retrieval worked. It also gives a gold doc at rank 3 the same credit as rank 1, though LLMs use top-ranked context more reliably. MRR captures that.</div></div></div>
+
+<div class="flow">
+  <div class="n"><b>Need exact label?</b><small>Exact Match (normalized)</small></div>
+  <div class="n"><b>Need a required term?</b><small>String Presence (normalized)</small></div>
+  <div class="n"><b>Need meaning?</b><small>Semantic Similarity</small></div>
+  <div class="n"><b>Need cheap overlap?</b><small>CHRF > ROUGE-L > BLEU</small></div>
+  <div class="n"><b>Need retrieval check?</b><small>Hit@k + MRR by ID</small></div>
+  <div class="n bad"><b>Need factual truth?</b><small>None of these. Go to ⑦ ⑧</small></div>
+</div>
+</section>
+<section class="panel" id="t6" role="tabpanel">
+<span class="phase">Phase B, building</span>
+<h2>⑥ The custom LLM judge</h2>
+<p>Before Ragas, the notebook builds its own judge: one prompt to <code>openai/gpt-4o-mini</code> via OpenRouter that returns correctness, relevance and faithfulness as floats. It's a valuable exercise, because it shows exactly what Ragas automates and where hand-rolled judges go wrong.</p>
+
+<h3>How it works</h3>
+<div class="flow">
+  <div class="n"><b>question, answer, ground_truth, contexts</b></div><div class="a">→</div>
+  <div class="n"><b>One prompt</b><small>three criteria at once</small></div><div class="a">→</div>
+  <div class="n hl"><b>gpt-4o-mini</b><small>temperature=0, strict JSON schema</small></div><div class="a">→</div>
+  <div class="n"><b>Pydantic</b><small><code>JudgeResult.model_validate_json</code></small></div><div class="a">→</div>
+  <div class="n good"><b>3 floats + reason</b></div>
+</div>
+<div class="tbl"><table>
+<tr><th>Criterion</th><th>Compares</th><th>Ragas counterpart</th></tr>
+<tr><td>Correctness</td><td>Answer ↔ Ground truth</td><td>Answer Correctness</td></tr>
+<tr><td>Relevance</td><td>Answer ↔ Question</td><td>Answer Relevancy</td></tr>
+<tr><td>Faithfulness</td><td>Answer ↔ Retrieved contexts</td><td>Faithfulness</td></tr>
+</table></div>
+
+<h3>What it does well</h3>
+<p><b>Structured output with a strict schema</b> is the right call. <code>response_format={"type":"json_schema", "strict":True}</code> plus <code>ConfigDict(extra="forbid")</code> and <code>Field(ge=0, le=1)</code> means malformed or out-of-range output fails loudly instead of being silently mis-parsed. <code>temperature=0</code> reduces, but does not remove, run-to-run variance.</p>
+<div class="callout analogy"><span class="t">Analogy: the exam form</span>Asking a teacher to "write your thoughts on this essay" gives you prose you then have to interpret. Handing them a form with three boxes that only accept 0–1 gives you data. The JSON schema is the form.</div>
+
+<h3>Where it goes wrong</h3>
+<div class="callout fix"><span class="t">🛠 Correction C4: the client gets swapped under the judge</span>
+<div class="fixgrid"><div><span class="lbl">Notebook</span>Cell 17: <code>openrouter_client = OpenAI(...)</code> (sync), used by <code>llm_judge</code>. Cell 32: <code>openrouter_client = AsyncOpenAI(...)</code> (async), same name, plus a second <code>getpass</code> prompt.</div>
+<div><span class="lbl">Corrected</span>Create both clients once, with distinct names, from one key prompt:<br><code>sync_client = OpenAI(api_key=key, base_url=OR_URL)</code><br><code>async_client = AsyncOpenAI(api_key=key, base_url=OR_URL)</code><br><code>llm_judge</code> uses <code>sync_client</code>; <code>llm_factory(..., client=async_client)</code>.</div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> <code>llm_judge</code> looks up <code>openrouter_client</code> when it is <em>called</em>, not when it's defined. Run cell 32 and then re-run cell 26, and <code>.create()</code> now returns a coroutine, so <code>response.choices</code> raises <code>AttributeError: 'coroutine' object has no attribute 'choices'</code>. The notebook only works if cells run strictly top to bottom, once.</div></div></div>
+
+<div class="callout fix"><span class="t">🛠 Correction C5: the judge can peek at the answer key while grading faithfulness</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cell 19)</span>One prompt contains the ground truth <em>and</em> asks for faithfulness ("supported by the retrieved contexts").</div>
+<div><span class="lbl">Corrected</span>One call per criterion, each given only the inputs its definition needs. Faithfulness gets <code>answer + contexts</code>, relevance gets <code>question + answer</code>, correctness gets <code>answer + ground_truth</code>. See Program 5 in tab ⑫.</div>
+<div><span class="lbl">Why</span><span class="conf l">Likely</span> When an answer matches the ground truth, the judge tends to rate it faithful even if the retrieved contexts don't support it, because "it's correct" bleeds into "it's supported". That is data leakage in the tab ⓪ sense. Ragas avoids it by design: <code>Faithfulness.ascore()</code> doesn't even accept a <code>reference</code> argument <span class="conf c">Certain</span>.</div></div></div>
+
+<div class="callout fix"><span class="t">🛠 Correction C8: misleading comment</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cell 28)</span><code># Join local metrics, RAGAS LLM metrics, and custom-judge scores.</code></div>
+<div><span class="lbl">Corrected</span><code># Join local (non-LLM) metrics with custom-judge scores. Ragas LLM metrics are added in a later cell.</code></div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> At cell 28, <code>ragas_results_df</code> holds only the non-LLM metrics. The Ragas LLM metrics are computed in cell 36. A reader trusting the comment will look for columns that aren't there.</div></div></div>
+
+<div class="callout enh"><span class="t">⚠️ Notebook Enhancement C7: merge on an ID, not on question text</span><code>merge(on="question")</code> silently duplicates rows if two golden items share a question, and drops rows if one copy has a trailing space. Give each golden row a <code>qid</code> and merge on that, with <code>validate="one_to_one"</code> so pandas raises an error on duplicates instead of hiding them.</div>
+
+<h3>Known judge biases</h3>
+<div class="tbl"><table>
+<tr><th>Bias</th><th>What happens</th><th>Mitigation</th></tr>
+<tr><td>Score saturation</td><td>Direct 0–1 scoring clusters at 0, 0.5 and 1. The notebook got 1.0 on all 9 cells.</td><td>Decompose into binary verdicts and compute the score in code (the Ragas approach)</td></tr>
+<tr><td>Verbosity</td><td>Longer answers rated higher</td><td>Rubric that penalizes unsupported extra claims</td></tr>
+<tr><td>Self-preference</td><td>A judge favours text from its own model family</td><td>Judge from a different family than the generator</td></tr>
+<tr><td>Position</td><td>In pairwise comparison, the first option wins more often</td><td>Score both orders, average</td></tr>
+<tr><td>Criterion bleed</td><td>One criterion's verdict leaks into others (C5)</td><td>One call per criterion</td></tr>
+</table></div>
+
+<h3>Custom judge vs Ragas</h3>
+<div class="tbl"><table>
+<tr><th></th><th>Custom judge (notebook)</th><th>Ragas metrics</th></tr>
+<tr><td>Who writes the rubric</td><td>You</td><td>Library, published definitions</td></tr>
+<tr><td>LLM calls per row</td><td>1</td><td>~9 for the five core metrics at top_k=3 <span class="conf l">Likely</span></td></tr>
+<tr><td>Score produced by</td><td>The LLM, as a float</td><td>Python, from LLM verdicts</td></tr>
+<tr><td>Explanation</td><td>Free-text <code>reason</code></td><td>Per-claim verdicts (inspectable, if you log them)</td></tr>
+<tr><td>Domain-specific criteria ("must cite the audit ID")</td><td>Easy</td><td>Needs a custom metric</td></tr>
+<tr><td>Comparability across teams/time</td><td>Low: change one prompt word and history breaks</td><td>High, if the version is pinned</td></tr>
+</table></div>
+<p>The notebook makes this point in cell 39: the two produce different scores "because they use different evaluation instructions." The practical answer is both. Ragas for standard dimensions, a custom judge for business rules Ragas can't express, and both validated against human labels (tab ⑩).</p>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: reading the <code>reason</code> as ground truth</span>The judge's explanation is generated after (or alongside) the score and can rationalize a wrong verdict fluently. Use reasons to debug, not as evidence the score is right.</div>
+</section>
+<section class="panel" id="t7" role="tabpanel">
+<span class="phase">Phase B, building</span>
+<h2>⑦ Core Ragas LLM metrics</h2>
+<p>The notebook runs five metrics and gives each a one-line description. This tab shows what each one actually computes. Once you know the formula, you can predict scores before running them, and spot when a score is lying.</p>
+<div class="tbl"><table>
+<tr><th>Metric</th><th>Stage</th><th>Inputs (<code>ascore</code> args)</th><th>Needs reference?</th><th>Formula family</th></tr>
+<tr><td>Faithfulness</td><td>Generation</td><td>user_input, response, retrieved_contexts</td><td>No</td><td>precision of claims</td></tr>
+<tr><td>Answer Relevancy</td><td>Generation</td><td>user_input, response (+embeddings)</td><td>No</td><td>mean cosine</td></tr>
+<tr><td>Answer Correctness</td><td>Generation</td><td>user_input, response, reference (+embeddings)</td><td>Yes</td><td>weighted F1 + cosine</td></tr>
+<tr><td>Context Precision</td><td>Retrieval</td><td>user_input, reference, retrieved_contexts</td><td>Yes</td><td>average precision</td></tr>
+<tr><td>Context Recall</td><td>Retrieval</td><td>user_input, retrieved_contexts, reference</td><td>Yes</td><td>recall of claims</td></tr>
+</table></div>
+<p><span class="conf c">Certain</span> Argument lists verified from the ragas 0.4.3 signatures. The "needs reference?" column is the most important production fact on this page: <b>only Faithfulness and Answer Relevancy can run on live traffic</b>, where no ground truth exists.</p>
+
+<h3>Faithfulness</h3>
+<div class="flow">
+  <div class="n"><b>response</b></div><div class="a">→</div>
+  <div class="n hl"><b>LLM: split into atomic statements</b></div><div class="a">→</div>
+  <div class="n hl"><b>LLM: is each supported by contexts?</b><small>yes / no per statement</small></div><div class="a">→</div>
+  <div class="n good"><b>supported / total</b></div>
+</div>
+<div class="formula">faithfulness = |statements supported by retrieved_contexts| / |statements in response|</div>
+<p><b>Example with the audit data:</b> Q: "Why do OCR failures peak on Tuesdays?" An LLM generator answers "Failures peak on Tuesdays due to weekly bulk-batch processing of handwritten PDFs, which overheats the Legacy Scan-X machines." Statement 1 is supported by audit_data[3]. Statement 2 is the LLM gluing doc [11] onto doc [3]; the overheating link to Tuesdays is never stated, and doc [11] wasn't in the top 3 anyway. Faithfulness = 1/2 = 0.5. This is the hallucination the notebook's extractive generator can never produce (🛠 C1).</p>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: faithful ≠ correct</span>If retrieval returns an outdated document saying the failure rate is 12%, an answer of "12%" is perfectly faithful and wrong. Faithfulness grades the generator's honesty <em>relative to what it was given</em>, nothing more.</div>
+
+<h3>Answer Relevancy</h3>
+<div class="flow">
+  <div class="n"><b>response</b></div><div class="a">→</div>
+  <div class="n hl"><b>LLM: generate 3 questions this answer would answer</b><small>strictness=3</small></div><div class="a">→</div>
+  <div class="n"><b>embed each + original question</b></div><div class="a">→</div>
+  <div class="n good"><b>mean cosine</b><small>0 if answer flagged noncommittal</small></div>
+</div>
+<div class="formula">answer_relevancy = (1/N) Σ cos( embed(generated_question_i), embed(user_input) )      N = strictness = 3</div>
+<p>Why the reverse direction? Embedding the answer directly against the question compares an answer-shaped sentence to a question-shaped one. Regenerating questions compares like with like. Notice it <b>never checks truth</b>: a confident, wrong, on-topic answer scores high. The notebook's 0.87–0.93 rather than 1.0 is normal; generated questions are paraphrases, and cosine between paraphrases under MiniLM rarely reaches 1.0 <span class="conf l">Likely</span>.</p>
+<div class="callout analogy"><span class="t">Analogy: Jeopardy</span>Give the answer to a contestant and ask them to guess the question. If they reconstruct something close to what the user actually asked, the answer was on topic. If they come up with a different question, the answer drifted.</div>
+
+<h3>Answer Correctness: reproducing the notebook's 0.723</h3>
+<div class="formula">answer_correctness = 0.75 × factual_F1 + 0.25 × semantic_similarity        (weights=[0.75, 0.25], verified default)
+factual_F1 = TP / (TP + ½(FP + FN))        over statements in response vs reference</div>
+<p>Notebook row 2. Reference: "The upgrade project is codenamed Project Vision." Response (the extractive chunk): "The upgrade project is codenamed 'Project Vision' and is led by the MLOps team."</p>
+<div class="tbl"><table>
+<tr><th>Statement</th><th>Verdict</th></tr>
+<tr><td>Upgrade project is codenamed Project Vision</td><td>TP: in both</td></tr>
+<tr><td>Project is led by the MLOps team</td><td>FP: in response, not in reference</td></tr>
+</table></div>
+<div class="formula">factual_F1 = 1 / (1 + ½·(1 + 0)) = 0.667
+answer_correctness = 0.75 × 0.667 + 0.25 × 0.891 (row 2 semantic sim) = 0.500 + 0.223 = 0.723 ✓ notebook: 0.722820
+Row 0: 0.75 × 1.0 + 0.25 × 0.670 = 0.917 ✓ notebook: 0.917472
+Row 1: 0.75 × 1.0 + 0.25 × 0.985 = 0.996 ✓ notebook: 0.996247</div>
+<p><span class="conf c">Certain</span> All three notebook values reproduce to 3–4 decimals. That tells you two things the notebook doesn't say. First, the "low" 0.723 isn't an error; true but unrequested extra facts count as false positives. Second, because Answer Correctness reuses the evaluator embeddings, the C10 shared-model issue leaks into it too.</p>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: "the answer was right, so the metric is broken"</span>Answer Correctness punishes extra claims by design, because in a factual system an unrequested claim is a liability. If you want to reward completeness instead, compare <code>FactualCorrectness(mode="recall")</code> (tab ⑧).</div>
+
+<h3>Context Precision</h3>
+<p>For each retrieved chunk in rank order, the LLM judges whether it was useful for producing the reference answer (vₖ = 1 or 0). The score is average precision:</p>
+<div class="formula">context_precision = Σ_k ( precision@k × v_k ) / (number of useful chunks)
+precision@k = useful chunks in top k / k</div>
+<figure><div class="svgbox"><svg viewBox="0 0 520 170" width="520" role="img" aria-label="Rank order effect on context precision">
+<text x="10" y="22" font-size="12" font-weight="600">Same 3 chunks, different order</text>
+<g font-size="11">
+<text x="10" y="58">A: [useful, noise, noise]</text>
+<rect x="190" y="44" width="40" height="22" rx="4" fill="#2E8B57" opacity=".5"/><rect x="236" y="44" width="40" height="22" rx="4" fill="#999" opacity=".35"/><rect x="282" y="44" width="40" height="22" rx="4" fill="#999" opacity=".35"/>
+<text x="340" y="59">(1/1·1) / 1 = <tspan font-weight="700">1.00</tspan></text>
+<text x="10" y="98">B: [noise, useful, noise]</text>
+<rect x="190" y="84" width="40" height="22" rx="4" fill="#999" opacity=".35"/><rect x="236" y="84" width="40" height="22" rx="4" fill="#2E8B57" opacity=".5"/><rect x="282" y="84" width="40" height="22" rx="4" fill="#999" opacity=".35"/>
+<text x="340" y="99">(1/2·1) / 1 = <tspan font-weight="700">0.50</tspan></text>
+<text x="10" y="138">C: [noise, noise, useful]</text>
+<rect x="190" y="124" width="40" height="22" rx="4" fill="#999" opacity=".35"/><rect x="236" y="124" width="40" height="22" rx="4" fill="#999" opacity=".35"/><rect x="282" y="124" width="40" height="22" rx="4" fill="#2E8B57" opacity=".5"/>
+<text x="340" y="139">(1/3·1) / 1 = <tspan font-weight="700">0.33</tspan></text>
+</g></svg></div><figcaption>Context precision rewards putting the useful chunk first. Noise <em>after</em> it costs nothing, which is why the notebook scores 1.0 with 2 of 3 chunks irrelevant.</figcaption></figure>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: reading context precision as "fraction of chunks that were useful"</span>The notebook's own comment says "how many were actually useful/relevant", which describes plain precision. In fact chunks ranked after the last useful one don't lower the score, so [useful, noise ×9] still scores 1.0. Those 9 noise chunks can still hurt the generator; that's what Noise Sensitivity measures (tab ⑧).</div>
+
+<h3>Context Recall</h3>
+<div class="formula">context_recall = |reference statements attributable to retrieved_contexts| / |reference statements|</div>
+<p>It decomposes the <em>reference</em> (not the response) into statements and checks each against the retrieved chunks. Example: reference "Jaymin approved $45,000 to upgrade scanners; the upgrade is codenamed Project Vision." If retrieval returns doc [2] but not doc [13], recall = 1/2. Every notebook question has a one-statement reference, so recall can only be 0 or 1. A multi-hop golden set is needed for this metric to say anything nuanced (🛠 C2).</p>
+
+<h3>The five side by side</h3>
+<div class="tbl"><table>
+<tr><th>Metric</th><th>Classical twin (tab ⓪)</th><th>Fooled by</th><th>LLM calls/row (k=3) <span class="conf l">Likely</span></th></tr>
+<tr><td>Faithfulness</td><td>Precision</td><td>Wrong-but-retrieved facts; extractive generators</td><td>2</td></tr>
+<tr><td>Answer Relevancy</td><td>—</td><td>Confident wrong answers</td><td>1 (+ embeddings)</td></tr>
+<tr><td>Answer Correctness</td><td>F1</td><td>Imperfect references</td><td>1–2 (+ embeddings)</td></tr>
+<tr><td>Context Precision</td><td>Average precision</td><td>Trailing noise (invisible)</td><td>k = 3</td></tr>
+<tr><td>Context Recall</td><td>Recall</td><td>Single-fact references (0/1 only)</td><td>1</td></tr>
+</table></div>
+</section>
+<section class="panel" id="t8" role="tabpanel">
+<span class="phase">Phase B, building</span>
+<h2>⑧ Additional LLM metrics</h2>
+<p>The additional-metrics notebook names three LLM metrics as the "most valuable additions": Context Entity Recall, Noise Sensitivity and Factual Correctness. That ranking is sound. This tab adds the internals, and fixes an example that won't behave the way the notebook says.</p>
+
+<div class="callout fix"><span class="t">🛠 Correction C14: none of the LLM code in this notebook runs</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cells 6, 9, 13, 18)</span>Every LLM metric call is commented out, and <code>llm</code> is never created ("Uncomment after creating <code>llm</code>").</div>
+<div><span class="lbl">Corrected</span>Reuse the judge from the first notebook. <code>llm = ragas_judge_llm</code> (built with <code>llm_factory("openai/gpt-4o-mini", provider="openai", client=async_client)</code>), then un-comment. Program 6 in tab ⑫ runs all three.</div>
+<div><span class="lbl">Why</span><span class="conf c">Certain</span> As shipped, only the deterministic metrics (BLEU, CHRF, Exact Match, String Presence) execute. A learner can finish the notebook without ever seeing an entity-recall or noise score.</div></div></div>
+
+<h3>Context Entity Recall</h3>
+<div class="formula">context_entity_recall = |entities(reference) ∩ entities(retrieved_contexts)| / |entities(reference)|</div>
+<p>The LLM extracts named entities (people, orgs, places, dates, products, numbers) from both sides. Notebook example: "Eiffel Tower, Paris, France" in the reference, "Eiffel Tower, Paris" in context → 2/3 = 0.67.</p>
+<p><b>On the audit data:</b> Q "Who approved the scanner budget and what is the project called?" Reference entities: {Jaymin, $45,000, Project Vision}. If top-3 returns docs [2], [9], [16]: Jaymin ✓, $45,000 ✓, and doc [16] mentions "Project Vision" ✓, so 3/3. Swap [16] for [0] and it's 2/3.</p>
+<div class="tbl"><table><tr><th></th><th>Context Recall</th><th>Context Entity Recall</th></tr>
+<tr><td>Unit checked</td><td>Whole statements</td><td>Named entities</td></tr>
+<tr><td>Strength</td><td>Catches missing relationships</td><td>Cheap, precise for name-heavy domains</td></tr>
+<tr><td>Weakness</td><td>Coarse with one-statement references</td><td>Blind to facts without entities ("failures peak due to batch processing")</td></tr>
+<tr><td>Use when</td><td>Answers are explanations</td><td>Answers are about who/what/where/when: KYC, runbooks, product catalogues</td></tr></table></div>
+
+<h3>Noise Sensitivity (lower is better)</h3>
+<p>The notebook gets the intent right: does irrelevant context cause wrong claims? But the scoring rule is more specific than its description. Here is the actual computation from the ragas 0.4.3 source <span class="conf c">Certain</span>:</p>
+<div class="flow v">
+  <div class="n"><b>1. Split reference and response into statements</b></div><div class="a">↓</div>
+  <div class="n"><b>2. Mark each retrieved chunk relevant or irrelevant</b><small>relevant = supports some reference statement</small></div><div class="a">↓</div>
+  <div class="n"><b>3. For each response statement ask</b><small>(a) is it NOT supported by the reference? → incorrect<br>(b) which chunks support it?</small></div><div class="a">↓</div>
+  <div class="n hl"><b>mode="irrelevant"</b><small>count statements that are incorrect AND supported by an irrelevant chunk AND not supported by any relevant chunk</small></div><div class="a">↓</div>
+  <div class="n good"><b>score = count / total response statements</b></div>
+</div>
+<p>The key condition: a statement only counts if an irrelevant chunk <b>actually supports it</b>. The metric detects "the model copied from the distractor", not "the model said something wrong near a distractor". Note also that the default mode is <code>"relevant"</code> <span class="conf c">Certain</span>; the notebook explicitly passes <code>"irrelevant"</code>.</p>
+
+<div class="callout fix"><span class="t">🛠 Correction C11: the notebook's Noise Sensitivity example probably scores 0</span>
+<div class="fixgrid"><div><span class="lbl">Notebook (cells 12–13)</span>Contexts: "Paris is the capital of France." / "Berlin is the capital of Germany." Response: "Paris is the capital of France <b>and Germany</b>." Claimed: noise sensitivity "should increase".</div>
+<div><span class="lbl">Corrected example</span>Same contexts. Response: "Paris is the capital of France. Berlin is the capital of Germany." The second statement is not in the reference (incorrect) and is supported by the irrelevant Berlin chunk. Expected score = 1/2 = 0.5.<br><b>Audit-data version:</b> Q "Why do OCR failures peak on Tuesdays?", response "Failures peak due to weekly bulk-batch processing of handwritten PDFs. A temporary patch was deployed on Monday to reduce memory leaks." Statement 2 is copied from noise chunk [18] → 0.5.</div>
+<div><span class="lbl">Why</span><span class="conf l">Likely</span> "Paris is the capital of Germany" is wrong, but no chunk supports it. The Berlin chunk says the opposite. Under the source logic, a statement must be <em>entailed</em> by an irrelevant chunk to count, so the notebook's statement contributes 0. The model invented it; it didn't copy it from noise. That makes it a faithfulness failure (unsupported claim), not a noise-sensitivity one. I haven't run the LLM call itself, hence Likely rather than Certain. Run both examples in Program 6 and compare.</div></div></div>
+<div class="callout analogy"><span class="t">Analogy: the open-book exam with extra pages</span>You hand a student the right textbook page plus two pages from a different subject. Noise sensitivity measures how often their answer contains sentences copied from the wrong pages. A student who makes something up entirely is failing a different test (faithfulness).</div>
+
+<h3>Factual Correctness</h3>
+<div class="formula">precision = TP / (TP + FP)     recall = TP / (TP + FN)     f1 = 2PR / (P + R)
+TP = response claims supported by reference · FP = response claims not in reference · FN = reference claims missing from response</div>
+<p>Notebook example: "completed in 1887" vs reference 1889 gives Paris ✓ (TP), 1887 ✗ (FP), 1889 missing (FN) → P = R = F1 = 0.5. The notebook's abstract A/B/C/D example (P = R = 2/3) is correct arithmetic.</p>
+<div class="tbl"><table><tr><th>Parameter (verified)</th><th>Values</th><th>Effect</th></tr>
+<tr><td><code>mode</code></td><td>precision · recall · <b>f1</b></td><td>Precision: "never say anything false" (compliance). Recall: "never omit required facts" (checklists). F1: both</td></tr>
+<tr><td><code>atomicity</code></td><td><b>low</b> · high</td><td>High splits "located in Paris and completed in 1889" into finer claims, making scores more granular and more sensitive to the decomposer</td></tr>
+<tr><td><code>coverage</code></td><td><b>low</b> · high</td><td>High keeps more peripheral detail when extracting claims</td></tr>
+</table></div>
+<div class="tbl"><table><tr><th></th><th>Answer Correctness (⑦)</th><th>Factual Correctness</th></tr>
+<tr><td>Score</td><td>0.75·F1 + 0.25·semantic sim</td><td>Pure claim P / R / F1</td></tr>
+<tr><td>Needs embeddings</td><td>Yes</td><td>No</td></tr>
+<tr><td>Wording affects score</td><td>A little (25%)</td><td>No</td></tr>
+<tr><td>Choose when</td><td>You want one blended "how right" number</td><td>You need to know which kind of error: false claims vs omissions</td></tr></table></div>
+
+<h3>The notebook's practice exercise, answered</h3>
+<p>Q: "Who created Python and when was it first released?" Contexts: Guido ✓, 1991 ✓, Java/Gosling (noise). Response says 1995.</p>
+<div class="tbl"><table>
+<tr><th>Question</th><th>Answer</th><th>Reasoning</th></tr>
+<tr><td>Context Entity Recall?</td><td>High (1.0)</td><td>Python, Guido van Rossum and 1991 are all in contexts 1–2</td></tr>
+<tr><td>Noise present?</td><td>Yes, chunk 3</td><td>Context precision still 1.0 if the useful chunks rank 1–2</td></tr>
+<tr><td>Factual Correctness perfect?</td><td>No. F1 = 0.5</td><td>TP: created by Guido. FP: 1995. FN: 1991. P = R = 0.5</td></tr>
+<tr><td>Noise Sensitivity?</td><td>0</td><td>"1995" isn't supported by the Java chunk; it's a faithfulness failure (faithfulness = 0.5)</td></tr>
+<tr><td>Exact Match?</td><td>0</td><td>Strings differ</td></tr>
+<tr><td>Why is BLEU high?</td><td>0.84 (verified)</td><td>Only one token differs. ROUGE-L 0.92, Levenshtein 0.99</td></tr>
+</table></div>
+<p>The notebook's conclusion holds: retrieval was fine, generation failed. Grade the two stages separately.</p>
+</section>
+<section class="panel" id="t9" role="tabpanel">
+<span class="phase">Phase C, production</span>
+<h2>⑨ Metric taxonomy &amp; diagnosis</h2>
+<h3>All 15 metrics on one map</h3>
+<div class="tbl"><table>
+<tr><th>Metric</th><th>Source</th><th>Stage</th><th>LLM?</th><th>Reference?</th><th>Better</th><th>Use on live traffic?</th></tr>
+<tr><td>Context Hit / Hit@k / MRR</td><td>📘 LLM / 📙</td><td>Retrieval</td><td>No</td><td>Gold doc ID</td><td>↑</td><td>No</td></tr>
+<tr><td>Context Precision</td><td>📘 LLM</td><td>Retrieval</td><td>Yes</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>Context Recall</td><td>📘 LLM</td><td>Retrieval</td><td>Yes</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>Context Entity Recall</td><td>📘 ADD</td><td>Retrieval</td><td>Yes</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>Noise Sensitivity</td><td>📘 ADD</td><td>Robustness</td><td>Yes</td><td>Yes</td><td><b>↓</b></td><td>No</td></tr>
+<tr><td>Faithfulness</td><td>📘 LLM</td><td>Generation</td><td>Yes</td><td>No</td><td>↑</td><td><b>Yes</b></td></tr>
+<tr><td>Answer Relevancy</td><td>📘 LLM</td><td>Generation</td><td>Yes + emb</td><td>No</td><td>↑</td><td><b>Yes</b></td></tr>
+<tr><td>Answer Correctness</td><td>📘 LLM</td><td>End-to-end</td><td>Yes + emb</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>Factual Correctness</td><td>📘 ADD</td><td>End-to-end</td><td>Yes</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>Semantic Similarity</td><td>📘 LLM</td><td>End-to-end</td><td>Emb only</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>ROUGE-L / BLEU / CHRF</td><td>📘 both</td><td>End-to-end</td><td>No</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>Levenshtein</td><td>📘 LLM</td><td>End-to-end</td><td>No</td><td>Yes</td><td>↑</td><td>No</td></tr>
+<tr><td>Exact Match / String Presence</td><td>📘 ADD</td><td>Format</td><td>No</td><td>Yes</td><td>1</td><td>Presence: yes, for required disclaimers</td></tr>
+</table></div>
+
+<h3>Diagnosis: from symptoms to fixes</h3>
+<p>The additional notebook's "example diagnosis" (high recall, low precision, high noise → too much irrelevant context) is the right method. Here it is generalized into a lookup table.</p>
+<div class="tbl"><table>
+<tr><th>Symptom</th><th>Likely cause</th><th>Fix to try first</th></tr>
+<tr><td>Context Recall ↓</td><td>Retriever misses the facts</td><td>Raise top_k, hybrid search (BM25 + vectors), better embedding model, smaller chunks</td></tr>
+<tr><td>Recall ↑, Precision ↓, Noise ↑ (📘 notebook case)</td><td>Right facts buried in junk</td><td>Reranker, lower top_k, similarity cutoff</td></tr>
+<tr><td>Recall ↑, Precision ↑, Faithfulness ↓</td><td>Generator ignores or embellishes context</td><td>Stricter "answer only from context" prompt, lower temperature, cite-the-chunk requirement</td></tr>
+<tr><td>Faithfulness ↑, Correctness ↓</td><td>Retrieved facts are wrong or stale</td><td>Fix the corpus, add freshness metadata. Not a model problem.</td></tr>
+<tr><td>Correctness ↓ with extra FP claims, Factual recall ↑</td><td>Answers too verbose</td><td>Prompt for concise answers. Check whether the reference is too terse.</td></tr>
+<tr><td>Relevancy ↓, others fine</td><td>Answer hedges or wanders</td><td>Prompt to answer the question directly first</td></tr>
+<tr><td>Entity Recall ↓, Context Recall OK</td><td>Paraphrased chunks lose names/numbers</td><td>Keyword/BM25 leg in hybrid search; metadata filters</td></tr>
+<tr><td>Lexical ↓, LLM metrics ↑</td><td>Paraphrase or verbosity, not a defect</td><td>Usually nothing. Don't gate on ROUGE for free-text answers.</td></tr>
+<tr><td>Everything = 1.0</td><td>Saturated or trivial test set</td><td>Harder golden set (tab ④), check generator isn't extractive (🛠 C1)</td></tr>
+</table></div>
+
+<h3>Decision tree: which metrics to run</h3>
+<div class="flow v">
+  <div class="n hl"><b>Is the output structured?</b><small>label, code, yes/no</small></div><div class="a">↓ yes → Exact Match (normalized) + String Presence. Done.</div>
+  <div class="n hl"><b>Do you have ground truth?</b></div><div class="a">↓ no → Faithfulness + Answer Relevancy (live traffic, sampled)</div>
+  <div class="n hl"><b>Is retrieval in question?</b></div><div class="a">↓ yes → Context Precision + Recall (+ Entity Recall if names matter) + Hit@k/MRR</div>
+  <div class="n hl"><b>Comparing top_k / chunking / reranker?</b></div><div class="a">↓ yes → add Noise Sensitivity</div>
+  <div class="n hl"><b>Multi-claim answers?</b></div><div class="a">↓ yes → Factual Correctness (choose precision vs recall by risk)</div>
+  <div class="n good"><b>Always</b><small>one cheap deterministic metric (CHRF or Semantic Similarity) as a free per-commit smoke test</small></div>
+</div>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: averaging metrics into one "RAG score"</span>Faithfulness 0.4 + Relevancy 1.0 averages to 0.7, which looks fine and hides a hallucinating system. The additional notebook's final takeaway says it directly: metrics are diagnostic tools. Report them separately, gate on each.</div>
+</section>
+
+<section class="panel" id="t10" role="tabpanel">
+<span class="phase">Phase C, production</span>
+<h2>⑩ Judging the judge</h2>
+<p>Neither notebook asks the question every evaluation must eventually answer: how do you know the evaluator is right? An LLM judge is a model, and models need test sets. This is where tab ⓪ comes back.</p>
+
+<h3>Problem 1: is the sample big enough?</h3>
+<p>Each row's score is roughly a coin-flip-like outcome with noise. The uncertainty of an average shrinks with √n:</p>
+<div class="tbl"><table><tr><th>Golden rows (n)</th><th>Approx. 95% margin on a 0.85 average (binary-like scores)</th><th>Can you detect a 0.05 drop?</th></tr>
+<tr><td class="num">3 (notebook)</td><td class="num">± 0.40</td><td>No</td></tr>
+<tr><td class="num">30</td><td class="num">± 0.13</td><td>No</td></tr>
+<tr><td class="num">100</td><td class="num">± 0.07</td><td>Borderline</td></tr>
+<tr><td class="num">400</td><td class="num">± 0.035</td><td>Yes</td></tr></table></div>
+<p><span class="conf l">Likely</span> Computed as 1.96·√(p(1−p)/n) with p = 0.85, a worst-case approximation; continuous scores with low variance do better. The practical rule: <b>report a bootstrap confidence interval with every average</b> (Program 7), and don't call a change a regression unless the intervals separate, or a paired test on the same rows says so.</p>
+
+<h3>Problem 2: is the score stable?</h3>
+<p>Run the same rows 3–5 times. LLM-based metrics vary even at temperature 0, because claim decomposition can split sentences differently. If faithfulness on one row swings 0.67 → 1.0 between runs, single-run comparisons are noise. Track per-row standard deviation and average over repeats for decisions that matter.</p>
+
+<h3>Problem 3: does the score agree with humans?</h3>
+<div class="flow">
+  <div class="n"><b>Sample 50–100 rows</b><small>stratified: good + bad</small></div><div class="a">→</div>
+  <div class="n"><b>Humans label</b><small>faithful? correct? (binary)</small></div><div class="a">→</div>
+  <div class="n hl"><b>Compare</b><small>metric score vs human label</small></div><div class="a">→</div>
+  <div class="n"><b>ROC / AUC</b><small>does the score separate them?</small></div><div class="a">→</div>
+  <div class="n good"><b>Pick threshold</b><small>from the ROC, not by gut</small></div>
+</div>
+<div class="tbl"><table><tr><th>Measure</th><th>Use</th><th>Rough bar <span class="conf g">Guessing</span>: common practice, not a standard</th></tr>
+<tr><td>AUC of metric vs human binary label</td><td>Can the metric rank bad below good?</td><td>&gt; 0.8 usable, &gt; 0.9 strong</td></tr>
+<tr><td>Cohen's κ (judge verdict vs human)</td><td>Agreement beyond chance</td><td>&gt; 0.6 substantial</td></tr>
+<tr><td>MAE (judge 0–1 vs human 0–1)</td><td>Calibration of continuous scores</td><td>&lt; 0.1</td></tr>
+<tr><td>Precision/recall at your gate threshold</td><td>False alarms vs missed bad answers</td><td>Set by business cost</td></tr></table></div>
+<div class="callout analogy"><span class="t">Analogy: calibrating the thermometer</span>Before trusting a new thermometer, you check it in ice water (0 °C) and boiling water (100 °C). Human-labelled rows are your ice and boiling water. If the judge says "1.0" for both, it isn't measuring anything, and that is exactly the notebook's custom judge: 1.0 on all 9 scores.</div>
+
+<h3>Problem 4: does the judge drift?</h3>
+<p><code>openai/gpt-4o-mini</code> via OpenRouter is a moving target: the provider can update the model behind the name, and OpenRouter may route to different providers. Pin a dated model version where the provider offers one, record the judge model and ragas version with every result, and re-run your human-labelled calibration set whenever either changes.</p>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: comparing scores across judge versions</span>"Faithfulness dropped from 0.91 last quarter to 0.84" means nothing if the judge model or ragas version changed in between. Re-score the old system with the new judge before claiming a regression.</div>
+</section>
+<section class="panel" id="t11" role="tabpanel">
+<span class="phase">Phase C, production</span>
+<h2>⑪ Production bottlenecks &amp; fixes</h2>
+<p>The notebook's eval loop works for 3 rows. Here's what happens at 1,000, and what to do about it.</p>
+
+<h3>The cost and latency arithmetic</h3>
+<div class="formula">LLM calls per row (5 core metrics, top_k=3) ≈ 2 + 1 + 2 + 3 + 1 = 9
+1,000 rows × 9 calls = 9,000 calls
+serial, ~1.5 s/call           → ~13.5 s/row → ~3.75 hours
+16 concurrent requests        → ~14 minutes  (if rate limits allow)
+tokens ≈ 9,000 × (1,200 in + 200 out) → ~10.8M in + 1.8M out
+gpt-4o-mini at ~$0.15/M in, ~$0.60/M out → roughly $3 per full run</div>
+<p><span class="conf g">Guessing</span> on per-call latency and token counts; they depend on context length and provider load. <span class="conf l">Likely</span> on the call count and the conclusion. <b>For small judges, latency and rate limits are the bottleneck, not dollars.</b> That flips with a frontier judge (roughly 15–30× the price) or long contexts, so measure it on your own data.</p>
+
+<h3>Bottleneck table</h3>
+<div class="tbl"><table>
+<tr><th>#</th><th>Bottleneck</th><th>Where it shows in the notebook</th><th>Fix</th></tr>
+<tr><td>1</td><td>Serial awaits</td><td><code>for row in evaluation_rows: await …ascore()</code>, 5 sequential awaits per row (C13)</td><td><code>asyncio.gather</code> + <code>asyncio.Semaphore(16)</code></td></tr>
+<tr><td>2</td><td>Rate limits (HTTP 429)</td><td>No handling; one 429 kills the loop and loses all prior results</td><td>Exponential backoff with jitter, max retries, persist partial results</td></tr>
+<tr><td>3</td><td>Hung calls</td><td>No timeout</td><td><code>asyncio.wait_for(…, timeout=60)</code>; record a timeout as missing, not 0</td></tr>
+<tr><td>4</td><td>Re-paying for identical work</td><td>Every re-run re-scores everything</td><td>Cache by hash of (metric, inputs, judge model, ragas version)</td></tr>
+<tr><td>5</td><td>Run-to-run variance</td><td>Single run reported as fact</td><td>Repeat k times on critical rows; bootstrap CIs</td></tr>
+<tr><td>6</td><td>Judge/version drift</td><td><code>pip install -U</code>, unpinned model alias</td><td>Pin ragas + model; log both with results; recalibrate on change</td></tr>
+<tr><td>7</td><td>Structured-output failures</td><td>Pydantic raises; loop dies</td><td>Catch per row, retry once, mark <code>NaN</code>, alert if failure rate &gt; 2%</td></tr>
+<tr><td>8</td><td>No ground truth in production</td><td>All notebook metrics except 2 need a reference</td><td>Live: faithfulness + relevancy on a sample. Offline: golden set refreshed from real queries</td></tr>
+<tr><td>9</td><td>Stale golden set</td><td>Fixed 3 rows</td><td>Quarterly refresh from production logs + synthetic testset generation</td></tr>
+<tr><td>10</td><td>Sensitive data in eval logs</td><td>KYC-related corpus sent to a third-party judge</td><td>Redact PII before judging; check data-residency rules for the judge provider</td></tr>
+<tr><td>11</td><td>Colab event loop</td><td>Top-level <code>await</code> works in Colab only</td><td><code>asyncio.run(main())</code> in scripts and CI</td></tr>
+</table></div>
+
+<h3>Tiered evaluation</h3>
+<div class="flow">
+  <div class="n good"><b>Tier 1: every commit</b><small>Hit@k, MRR, CHRF, normalized Exact Match. Seconds, $0</small></div><div class="a">→</div>
+  <div class="n hl"><b>Tier 2: every PR to main</b><small>All LLM metrics on a 100-row core set. ~2 min, cents</small></div><div class="a">→</div>
+  <div class="n"><b>Tier 3: nightly / pre-release</b><small>Full golden set, 3 repeats, CIs, human-calibrated thresholds</small></div><div class="a">→</div>
+  <div class="n"><b>Tier 4: production</b><small>1–5% of traffic: faithfulness + relevancy, trended</small></div>
+</div>
+
+<h3>Reference architecture</h3>
+<div class="flow v">
+  <div class="n"><b>Golden set (versioned)</b><small>qid · question · reference · gold_doc_ids · tags (multi-hop, unanswerable…)</small></div><div class="a">↓</div>
+  <div class="n"><b>System under test</b><small>retriever + generator at a git SHA</small></div><div class="a">↓</div>
+  <div class="n hl"><b>Eval harness</b><small>semaphore · retry · timeout · cache · per-row error capture</small></div><div class="a">↓</div>
+  <div class="n"><b>Results store</b><small>row scores + judge model + ragas version + SHA + timestamp</small></div><div class="a">↓</div>
+  <div class="n"><b>Gate</b><small>per-metric thresholds with CI; compare vs baseline on same rows</small></div><div class="a">↓</div>
+  <div class="n good"><b>Report / dashboard</b><small>slice by tag; link to worst rows</small></div>
+</div>
+
+<div class="callout aiops"><span class="t">AIOps connection: treat eval like reliability engineering</span>
+<div class="tbl" style="margin:8px 0 0"><table><tr><th>SRE concept</th><th>RAG evaluation equivalent</th></tr>
+<tr><td>SLI</td><td>Faithfulness, answer relevancy on sampled live traffic</td></tr>
+<tr><td>SLO</td><td>"Faithfulness ≥ 0.9 on 95% of sampled answers, weekly"</td></tr>
+<tr><td>Synthetic probe</td><td>Golden-set run on a schedule against production</td></tr>
+<tr><td>Canary / release gate</td><td>Tier 2–3 eval blocks deploy on regression</td></tr>
+<tr><td>Alert fatigue</td><td>Gating on noisy single-run scores, which is why CIs matter</td></tr>
+<tr><td>Postmortem</td><td>Bad production answer → added to golden set as a regression test</td></tr></table></div></div>
+
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: <code>asyncio.gather</code> without a semaphore</span>Firing 9,000 requests at once doesn't make evaluation faster. It produces a wall of 429s, and if retries share the same schedule they all come back at once. Bound concurrency, add jitter.</div>
+<div class="callout mistake"><span class="t">⚠️ Common Mistake: treating a failed metric call as score 0</span>A timeout isn't evidence the answer was unfaithful. Store <code>NaN</code>, report the failure rate separately, and exclude NaNs from averages, otherwise infrastructure problems show up as quality regressions.</div>
+</section>
+<section class="panel" id="t12" role="tabpanel">
+<span class="phase">Phase C, production</span>
+<h2>⑫ Code: seven progressive programs</h2>
+<p>Run in order in one Google Colab notebook. Programs 2–6 rebuild your notebooks with every correction applied and labelled (<code># 🛠 C4</code> etc.). Program 7 turns them into a production harness. Variable names match the notebooks (<code>audit_data</code>, <code>golden_dataset</code>, <code>evaluation_rows</code>, <code>ragas_judge_llm</code>) so you can cross-reference. The API calls target ragas 0.4.3 <span class="conf c">Certain</span> (signatures verified); the LLM calls themselves weren't executed here because they need your OpenRouter key.</p>
+
+<details class="prog"><summary>Program 1: ML evaluation warm-up (tab ⓪)</summary><div class="body">
+<p>The full version is in tab ⓪. This compact version shows the same thing a golden set does: hold data out, grade on it, and look at more than one metric.</p>
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code>from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, roc_auc_score
+
+X, y = make_classification(n_samples=1000, weights=[0.8], random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
+clf = LogisticRegression(max_iter=1000).fit(X_train, y_train)
+
+<span class="c"># classification_report prints precision/recall/F1 per class: read the minority class row,</span>
+<span class="c"># it is the one accuracy hides</span>
+print(classification_report(y_test, clf.predict(X_test)))
+print("AUC:", roc_auc_score(y_test, clf.predict_proba(X_test)[:, 1]))</code></pre>
+</div></details>
+
+<details class="prog"><summary>Program 2: setup, corpus and retrieval with document IDs (tabs ②, ③, ⑤)</summary><div class="body">
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code><span class="c"># 🛠 C9: pin versions instead of "-U" so results are reproducible next month.</span>
+<span class="c"># If `import ragas` still fails on the VertexAI import, keep the documented fallback below.</span>
+!pip install -q "ragas==0.4.3" sentence-transformers pandas openai pydantic rouge_score rapidfuzz sacrebleu
+
+import sys, types
+try:
+    import ragas
+except ModuleNotFoundError as e:
+<span class="c">    # Fallback only: ragas 0.4.3 imports a module that newer langchain-community removed.</span>
+<span class="c">    # This stub makes the import succeed; it does NOT make Vertex AI usable.</span>
+    print("Applying VertexAI import stub because:", e)
+    stub = types.ModuleType("langchain_community.chat_models.vertexai")
+    class ChatVertexAI: pass
+    stub.ChatVertexAI = ChatVertexAI
+    sys.modules["langchain_community.chat_models.vertexai"] = stub
+    import ragas
+print("ragas", ragas.__version__)
+
+import numpy as np, pandas as pd
+from sentence_transformers import SentenceTransformer
+
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  <span class="c"> # retrieval model (same as notebook)</span>
+model = SentenceTransformer(MODEL_NAME)
+
+audit_data = [
+    'MLOps Audit Q4: European division legacy branches report a 15% OCR failure rate.',
+    "Tuesday Review confirmed the 15% spike is due to 'Legacy Scan-X' hardware and firmware v2.1.",
+    'Jaymin approved a $45,000 emergency budget to upgrade European scanners by Q1 end.',
+    'OCR failures peak on Tuesdays due to weekly bulk-batch processing of handwritten PDFs.',
+    'Tony recommends a distributed architecture for handling 500+ PDFs in legacy branches.',
+    "The 15% error rate is classified as 'Critical' for Banking and Compliance audits.",
+    "Marten's team is monitoring OCR logs 24/7 until the hardware upgrade is finished.",
+    'European legacy branches are the only units still using the v2.1 firmware.',
+    'The new firmware v3.0 has been successfully tested in the North American cluster.',
+    'Budget allocation for Q1 also includes a 10% reserve for unexpected cloud egress costs.',
+    'Anisha suggested moving OCR processing to an asynchronous queue using RabbitMQ.',
+    'Legacy Scan-X machines have a known overheating issue when processing over 100 pages.',
+    'Compliance team noted that OCR errors are leading to incorrect data in customer KYC files.',
+    "The upgrade project is codenamed 'Project Vision' and is led by the MLOps team.",
+    'The target OCR failure rate after the upgrade is below 2%.',
+    'European branches process approximately 12,000 scanned documents every week.',
+    'Project Vision includes replacing scanners, upgrading firmware, and improving monitoring.',
+    "The hardware vendor 'OptiScan' has been notified about the hardware failures.",
+    'A temporary patch was deployed on Monday to reduce memory leaks during batch processing.',
+    'Q2 Roadmap: Complete migration of all legacy branches to the centralized MLOps platform.',
+]
+
+<span class="c"># Normalize so that dot product == cosine similarity (both sides must be normalized)</span>
+document_embeddings = model.encode(audit_data, normalize_embeddings=True)
+print("Embedding shape:", document_embeddings.shape)  <span class="c"> # (20, 384)</span>
+
+TOP_K = 3  <span class="c"> # why 3: one answering sentence per single-hop question; tab ② explains the trade-off</span>
+
+def retrieve(question, top_k=TOP_K):
+    q = model.encode([question], normalize_embeddings=True)[0]
+    scores = document_embeddings @ q                     <span class="c"> # 20 cosine scores in one matmul</span>
+    top = np.argsort(scores)[::-1][:top_k]               <span class="c"> # highest first</span>
+<span class="c">    # 🛠 C3: return the document ID alongside the text, so evaluation can match on IDs</span>
+    return [{"doc_id": int(i), "text": audit_data[i], "score": float(scores[i])} for i in top]
+
+def hit_at_k(gold_ids, retrieved_ids, k=TOP_K):
+<span class="c">    # 1.0 if ANY gold doc is in the top k. For multi-hop rows also report recall below.</span>
+    return float(any(g in retrieved_ids[:k] for g in gold_ids))
+
+def mrr(gold_ids, retrieved_ids):
+<span class="c">    # Rank-aware: gold doc at rank 1 → 1.0, rank 3 → 0.33, missing → 0</span>
+    for rank, d in enumerate(retrieved_ids, start=1):
+        if d in gold_ids:
+            return 1.0 / rank
+    return 0.0
+
+def id_recall(gold_ids, retrieved_ids):
+<span class="c">    # Fraction of required gold docs retrieved: matters for multi-hop questions</span>
+    return sum(g in retrieved_ids for g in gold_ids) / len(gold_ids) if gold_ids else float("nan")
+
+for r in retrieve("Why do OCR failures peak on Tuesdays?"):
+    print(f'{r["score"]:.3f}  [{r["doc_id"]}] {r["text"]}')</code></pre>
+</div></details>
+
+<details class="prog"><summary>Program 3: expanded golden set and a real LLM generator (tab ④)</summary><div class="body">
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code>import os
+from getpass import getpass
+from openai import OpenAI, AsyncOpenAI
+
+<span class="c"># 🛠 C4: ask for the key ONCE and create two clients with DIFFERENT names.</span>
+<span class="c"># The notebook rebinds `openrouter_client` from sync to async, which breaks llm_judge on re-run.</span>
+if "OPENROUTER_API_KEY" not in os.environ:
+    os.environ["OPENROUTER_API_KEY"] = getpass("OpenRouter API key: ")
+OR_URL = "https://openrouter.ai/api/v1"
+sync_client  = OpenAI(api_key=os.environ["OPENROUTER_API_KEY"], base_url=OR_URL, timeout=60, max_retries=3)
+async_client = AsyncOpenAI(api_key=os.environ["OPENROUTER_API_KEY"], base_url=OR_URL, timeout=60, max_retries=3)
+
+GEN_MODEL   = "openai/gpt-4o-mini"     <span class="c"> # generator</span>
+JUDGE_MODEL = "openai/gpt-4o-mini"     <span class="c"> # judge: ideally a DIFFERENT family than GEN_MODEL (self-preference bias, tab ⑥)</span>
+
+<span class="c"># 🛠 C2: the notebook's 3 rows + harder case types. qid gives a stable merge key (⚠️ C7).</span>
+golden_dataset = [
+  {"qid":"q01","type":"single","question":"What is the OCR failure rate in European legacy branches?",
+   "ground_truth":"The OCR failure rate is 15%.","gold_ids":[0]},
+  {"qid":"q02","type":"single","question":"Why do OCR failures peak on Tuesdays?",
+   "ground_truth":"OCR failures peak because of weekly bulk-batch processing of handwritten PDFs.","gold_ids":[3]},
+  {"qid":"q03","type":"single","question":"What is the codename for the upgrade project?",
+   "ground_truth":"The upgrade project is codenamed Project Vision.","gold_ids":[13]},
+  {"qid":"q04","type":"two_fact","question":"Who approved the scanner upgrade budget, and how much was it?",
+   "ground_truth":"Jaymin approved a $45,000 emergency budget.","gold_ids":[2]},
+  {"qid":"q05","type":"cross_doc","question":"Why are only European legacy branches affected by the 15% failure spike?",
+   "ground_truth":"They are the only units still on firmware v2.1, and the spike is due to Legacy Scan-X hardware and firmware v2.1.",
+   "gold_ids":[1,7]},
+  {"qid":"q06","type":"distractor","question":"Which firmware version do European legacy branches use?",
+   "ground_truth":"European legacy branches use firmware v2.1.","gold_ids":[7]},
+  {"qid":"q07","type":"unanswerable","question":"What is the OCR failure rate in the Asian branches?",
+   "ground_truth":"The documents do not contain this information.","gold_ids":[]},
+  {"qid":"q08","type":"paraphrase","question":"How often do scans break in Europe's older offices?",
+   "ground_truth":"About 15% of OCR scans fail.","gold_ids":[0]},
+  {"qid":"q09","type":"single","question":"What failure rate is the upgrade targeting?",
+   "ground_truth":"The target OCR failure rate after the upgrade is below 2%.","gold_ids":[14]},
+  {"qid":"q10","type":"multi_hop","question":"Who is monitoring the OCR logs and which vendor was notified?",
+   "ground_truth":"Marten's team is monitoring OCR logs 24/7, and the vendor OptiScan was notified.","gold_ids":[6,17]},
+]
+<span class="c"># Still far below the ~30+ rows tab ⑩ recommends: extend it in Assignment 1.</span>
+
+def generate_answer_extractive(question):
+    """Notebook baseline: returns retrieved chunk #1 verbatim (faithfulness is 1.0 by construction, 🛠 C1)."""
+    hits = retrieve(question)
+    return hits[0]["text"], hits
+
+GEN_SYSTEM = ("Answer the question using ONLY the numbered context. Be concise (1-2 sentences). "
+              "If the context does not contain the answer, reply exactly: Not found in the documents.")
+
+def generate_answer_llm(question):
+    """🛠 C1 fix: a real generator, so faithfulness can actually detect hallucination."""
+    hits = retrieve(question)
+    ctx = "\n".join(f"{i}. {h['text']}" for i, h in enumerate(hits, 1))
+    resp = sync_client.chat.completions.create(
+        model=GEN_MODEL, temperature=0,
+        messages=[{"role":"system","content":GEN_SYSTEM},
+                  {"role":"user","content":f"Context:\n{ctx}\n\nQuestion: {question}"}])
+    return resp.choices[0].message.content.strip(), hits
+
+def build_rows(generator):
+    rows = []
+    for g in golden_dataset:
+        answer, hits = generator(g["question"])
+        ids = [h["doc_id"] for h in hits]
+        rows.append({**g, "answer": answer, "contexts": [h["text"] for h in hits], "retrieved_ids": ids,
+                     "hit@3": hit_at_k(g["gold_ids"], ids) if g["gold_ids"] else float("nan"),
+                     "mrr": mrr(g["gold_ids"], ids) if g["gold_ids"] else float("nan"),
+                     "id_recall": id_recall(g["gold_ids"], ids)})
+    return rows
+
+evaluation_rows_extractive = build_rows(generate_answer_extractive)
+evaluation_rows = build_rows(generate_answer_llm)       <span class="c"> # the rows we evaluate from here on</span>
+display(pd.DataFrame(evaluation_rows)[["qid","type","answer","hit@3","mrr","id_recall"]])</code></pre>
+</div></details>
+
+<details class="prog"><summary>Program 4: all eight non-LLM metrics, normalized (tab ⑤)</summary><div class="body">
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code>import re
+from ragas.embeddings import HuggingFaceEmbeddings
+from ragas.metrics.collections import (SemanticSimilarity, RougeScore, NonLLMStringSimilarity, DistanceMeasure,
+                                       BleuScore, CHRFScore, ExactMatch, StringPresence)
+
+<span class="c"># ⚠️ C10: evaluate with a different embedding model than the retriever, so their blind spots don't overlap</span>
+EVAL_EMBED_MODEL = "BAAI/bge-small-en-v1.5"
+ragas_embeddings = HuggingFaceEmbeddings(model=EVAL_EMBED_MODEL, normalize_embeddings=True)
+
+def norm(s: str) -&gt; str:
+<span class="c">    # ⚠️ C12: ExactMatch/StringPresence are case- and punctuation-sensitive ("Approved" != "approved")</span>
+    s = s.strip().lower()
+    s = re.sub(r"[\"'`]", "", s)
+    s = re.sub(r"\s+", " ", s)
+    return s.rstrip(".")
+
+lexical = {
+    "semantic": SemanticSimilarity(embeddings=ragas_embeddings),
+    "rouge_l":  RougeScore(),                      <span class="c"> # rougeL F-measure by default</span>
+    "leven":    NonLLMStringSimilarity(distance_measure=DistanceMeasure.LEVENSHTEIN),
+    "bleu":     BleuScore(),                       <span class="c"> # unreliable on short answers (collapses to 0)</span>
+    "chrf":     CHRFScore(),
+}
+
+nonllm_rows = []
+for row in evaluation_rows:
+    out = {"qid": row["qid"], "type": row["type"]}
+    for name, metric in lexical.items():
+        out[name] = (await metric.ascore(reference=row["ground_truth"], response=row["answer"])).value
+    out["exact_norm"] = float(norm(row["answer"]) == norm(row["ground_truth"]))
+    out["hit@3"], out["mrr"] = row["hit@3"], row["mrr"]
+    nonllm_rows.append(out)
+
+nonllm_df = pd.DataFrame(nonllm_rows)       <span class="c"> # ⚠️ C6: distinct name, never reused</span>
+display(nonllm_df.round(3))
+display(nonllm_df.groupby("type").mean(numeric_only=True).round(3))  <span class="c"> # slice by case type, not just a grand mean</span>
+
+<span class="c"># The tab ⑤ demonstration: wrong answers can out-score right ones on lexical metrics</span>
+demo = [("OCR failure rate is 15%.", "OCR failure rate is 16%."),
+        ("The OCR failure rate is 15%.", "Fifteen percent of the OCR scans fail.")]
+for ref, resp in demo:
+    print(resp, {n: round((await m.ascore(reference=ref, response=resp)).value, 3) for n, m in lexical.items()})</code></pre>
+</div></details>
+<details class="prog"><summary>Program 5: custom LLM judge, corrected (tab ⑥)</summary><div class="body">
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code>from pydantic import BaseModel, Field, ConfigDict
+
+class Verdict(BaseModel):
+    model_config = ConfigDict(extra="forbid")         <span class="c"> # reject unexpected fields</span>
+    score: float = Field(ge=0, le=1)
+    reason: str
+
+<span class="c"># 🛠 C5: one prompt PER criterion, each seeing only what its definition needs.</span>
+<span class="c"># Faithfulness never sees the ground truth, so "it's correct" can't leak into "it's supported".</span>
+CRITERIA = {
+  "faithfulness": ("Score 1 if every claim in the ANSWER is supported by the CONTEXT, 0 if none are; "
+                   "use the fraction of supported claims otherwise.", ["answer", "context"]),
+  "relevance":    ("Score how directly the ANSWER addresses the QUESTION. Ignore whether it is true.",
+                   ["question", "answer"]),
+  "correctness":  ("Score agreement of the ANSWER with the REFERENCE. Penalize wrong facts more than omissions.",
+                   ["answer", "reference"]),
+}
+
+def judge_one(criterion, **fields):
+    rubric, needed = CRITERIA[criterion]
+    body = "\n\n".join(f"{k.upper()}:\n{fields[k]}" for k in needed)
+    resp = sync_client.chat.completions.create(      <span class="c"> # 🛠 C4: explicit sync client, never rebound</span>
+        model=JUDGE_MODEL, temperature=0,
+        messages=[{"role": "system", "content": "You are a strict evaluator. Return only JSON matching the schema."},
+                  {"role": "user", "content": f"{rubric}\n\n{body}"}],
+        response_format={"type": "json_schema",
+                         "json_schema": {"name": "verdict", "strict": True, "schema": Verdict.model_json_schema()}})
+    return Verdict.model_validate_json(resp.choices[0].message.content)
+
+judge_rows = []
+for row in evaluation_rows:
+    ctx = "\n".join(f"{i}. {c}" for i, c in enumerate(row["contexts"], 1))
+    rec = {"qid": row["qid"]}
+    for crit in CRITERIA:
+        try:
+            v = judge_one(crit, question=row["question"], answer=row["answer"], context=ctx, reference=row["ground_truth"])
+            rec[f"judge_{crit}"], rec[f"judge_{crit}_reason"] = v.score, v.reason
+        except Exception as e:                       <span class="c"> # one bad row must not kill the run</span>
+            rec[f"judge_{crit}"], rec[f"judge_{crit}_reason"] = float("nan"), f"ERROR: {e}"
+    judge_rows.append(rec)
+
+judge_df = pd.DataFrame(judge_rows)
+<span class="c"># ⚠️ C7 + 🛠 C8: merge on qid, validate 1:1, and the comment says what is actually being joined</span>
+combined_df = nonllm_df.merge(judge_df, on="qid", how="left", validate="one_to_one")  <span class="c"> # non-LLM + custom judge only</span>
+display(combined_df[["qid", "type", "judge_faithfulness", "judge_relevance", "judge_correctness"]].round(2))</code></pre>
+</div></details>
+
+<details class="prog"><summary>Program 6: Ragas LLM metrics, the 5 core + 3 additional, concurrent (tabs ⑦, ⑧)</summary><div class="body">
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code>import asyncio
+from ragas.llms import llm_factory
+from ragas.metrics.collections import (Faithfulness, AnswerRelevancy, AnswerCorrectness, ContextPrecision,
+                                       ContextRecall, ContextEntityRecall, NoiseSensitivity, FactualCorrectness)
+
+<span class="c"># 🛠 C4: Ragas gets the ASYNC client; the custom judge keeps the sync one</span>
+ragas_judge_llm = llm_factory(JUDGE_MODEL, provider="openai", client=async_client)
+llm = ragas_judge_llm    <span class="c"> # 🛠 C14: the name the additional-metrics notebook expects but never defines</span>
+
+<span class="c"># name -&gt; (metric object, function mapping a row to the exact ascore() kwargs it accepts)</span>
+METRICS = {
+  "faithfulness":        (Faithfulness(llm=llm),
+                          lambda r: dict(user_input=r["question"], response=r["answer"], retrieved_contexts=r["contexts"])),
+  "answer_relevancy":    (AnswerRelevancy(llm=llm, embeddings=ragas_embeddings),
+                          lambda r: dict(user_input=r["question"], response=r["answer"])),
+  "answer_correctness":  (AnswerCorrectness(llm=llm, embeddings=ragas_embeddings),  <span class="c"> # 0.75 factual + 0.25 semantic</span>
+                          lambda r: dict(user_input=r["question"], response=r["answer"], reference=r["ground_truth"])),
+  "context_precision":   (ContextPrecision(llm=llm),
+                          lambda r: dict(user_input=r["question"], reference=r["ground_truth"], retrieved_contexts=r["contexts"])),
+  "context_recall":      (ContextRecall(llm=llm),
+                          lambda r: dict(user_input=r["question"], reference=r["ground_truth"], retrieved_contexts=r["contexts"])),
+  "entity_recall":       (ContextEntityRecall(llm=llm),
+                          lambda r: dict(reference=r["ground_truth"], retrieved_contexts=r["contexts"])),
+  "noise_irrelevant":    (NoiseSensitivity(llm=llm, mode="irrelevant"),    <span class="c"> # LOWER is better</span>
+                          lambda r: dict(user_input=r["question"], response=r["answer"], reference=r["ground_truth"],
+                                         retrieved_contexts=r["contexts"])),
+  "factual_f1":          (FactualCorrectness(llm=llm, mode="f1"),
+                          lambda r: dict(response=r["answer"], reference=r["ground_truth"])),
+}
+
+sem = asyncio.Semaphore(8)     <span class="c"> # bound concurrency: protects you from 429 storms (tab ⑪)</span>
+
+async def run_metric(name, metric, kwargs):
+    async with sem:
+        try:
+            return name, (await asyncio.wait_for(metric.ascore(**kwargs), timeout=120)).value
+        except Exception as e:
+            print(f"{name} failed: {type(e).__name__}: {e}")
+            return name, float("nan")                <span class="c"> # failure is missing data, NOT a score of 0</span>
+
+async def score_row(row):
+    results = await asyncio.gather(*(run_metric(n, m, f(row)) for n, (m, f) in METRICS.items()))
+    return {"qid": row["qid"], **dict(results)}
+
+ragas_llm_df = pd.DataFrame(await asyncio.gather(*(score_row(r) for r in evaluation_rows)))
+final_df = combined_df.merge(ragas_llm_df, on="qid", how="left", validate="one_to_one")  <span class="c"> # ⚠️ C6: new name</span>
+display(ragas_llm_df.round(3))
+display(final_df.groupby("type")[list(METRICS)].mean().round(3))
+
+<span class="c"># Compare against the notebook's extractive generator: faithfulness should be ~1.0 there BY CONSTRUCTION (🛠 C1)</span>
+f_metric, f_args = METRICS["faithfulness"]
+ext = [ (await f_metric.ascore(**f_args(r))).value for r in evaluation_rows_extractive ]
+print("Extractive faithfulness:", np.round(ext, 2))
+
+<span class="c"># 🛠 C11: notebook example vs corrected example for Noise Sensitivity (irrelevant mode)</span>
+ns = METRICS["noise_irrelevant"][0]
+ctxs = ["Paris is the capital of France.", "Berlin is the capital of Germany."]
+for resp in ["Paris is the capital of France and Germany.",                        <span class="c"> # notebook: expect ~0</span>
+             "Paris is the capital of France. Berlin is the capital of Germany."]: <span class="c"> # corrected: expect ~0.5</span>
+    r = await ns.ascore(user_input="What is the capital of France?", response=resp,
+                        reference="Paris is the capital of France.", retrieved_contexts=ctxs)
+    print(f"{r.value:.2f}  {resp}")</code></pre>
+</div></details>
+<details class="prog"><summary>Program 7: production evaluation harness (tabs ⑩, ⑪)</summary><div class="body">
+<p>Adds what the notebooks leave out: caching, retries with backoff, per-row failure capture, bootstrap confidence intervals, regression gates against a baseline, and a versioned report. Comments are sparse here on purpose (Phase C).</p>
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code>import asyncio, hashlib, json, random, time, datetime as dt
+
+CACHE_PATH = "ragas_cache.json"
+try:
+    CACHE = json.load(open(CACHE_PATH))
+except FileNotFoundError:
+    CACHE = {}
+
+RUN_META = {"ragas": ragas.__version__, "judge": JUDGE_MODEL, "generator": GEN_MODEL,
+            "eval_embed": EVAL_EMBED_MODEL, "top_k": TOP_K,
+            "started": dt.datetime.utcnow().isoformat() + "Z"}
+
+def cache_key(metric_name, kwargs):
+<span class="c">    # Judge model and ragas version are part of the key: a new judge must never reuse old scores</span>
+    blob = json.dumps({"m": metric_name, "k": kwargs, "j": RUN_META["judge"], "v": RUN_META["ragas"]},
+                      sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode()).hexdigest()
+
+SEM = asyncio.Semaphore(16)
+STATS = {"calls": 0, "cache_hits": 0, "failures": 0}
+
+async def score_cached(name, metric, kwargs, retries=4, timeout=120):
+    key = cache_key(name, kwargs)
+    if key in CACHE:
+        STATS["cache_hits"] += 1
+        return CACHE[key]
+    for attempt in range(retries):
+        try:
+            async with SEM:
+                STATS["calls"] += 1
+                value = (await asyncio.wait_for(metric.ascore(**kwargs), timeout=timeout)).value
+            CACHE[key] = value
+            return value
+        except Exception as e:
+            if attempt == retries - 1:
+                STATS["failures"] += 1
+                return float("nan")
+            await asyncio.sleep(min(30, 2 ** attempt) + random.random())  <span class="c"> # backoff + jitter</span>
+
+async def evaluate(rows, metrics=METRICS, repeats=1):
+    async def one(row, rep):
+        names = list(metrics)
+        vals = await asyncio.gather(*(score_cached(f"{n}#r{rep}", metrics[n][0], metrics[n][1](row)) for n in names))
+        return {"qid": row["qid"], "type": row["type"], "rep": rep, **dict(zip(names, vals))}
+    t0 = time.time()
+    out = await asyncio.gather(*(one(r, k) for r in rows for k in range(repeats)))
+    json.dump(CACHE, open(CACHE_PATH, "w"))
+    print(f"{len(out)} row-runs in {time.time()-t0:.1f}s · {STATS}")
+    return pd.DataFrame(out)
+
+def bootstrap_ci(values, n_boot=2000, alpha=0.05, seed=0):
+    v = np.asarray([x for x in values if not np.isnan(x)])
+    if len(v) == 0:
+        return (np.nan, np.nan, np.nan)
+    rng = np.random.default_rng(seed)
+    means = rng.choice(v, size=(n_boot, len(v)), replace=True).mean(axis=1)
+    return (v.mean(), np.quantile(means, alpha / 2), np.quantile(means, 1 - alpha / 2))
+
+<span class="c"># Thresholds should come from human calibration (tab ⑩); these are placeholders.</span>
+GATES = {"faithfulness": 0.85, "answer_relevancy": 0.80, "context_recall": 0.80,
+         "factual_f1": 0.70, "noise_irrelevant": 0.15}           <span class="c"> # noise: lower is better</span>
+LOWER_IS_BETTER = {"noise_irrelevant"}
+
+def summarize(df):
+    per_row = df.groupby("qid").mean(numeric_only=True)         <span class="c"> # average repeats first</span>
+    rows = []
+    for m in METRICS:
+        mean, lo, hi = bootstrap_ci(per_row[m].values)
+        rows.append({"metric": m, "mean": mean, "ci_low": lo, "ci_high": hi,
+                     "nan_rate": per_row[m].isna().mean(),
+                     "run_std": df.groupby("qid")[m].std().mean()})  <span class="c"> # instability across repeats</span>
+    return pd.DataFrame(rows).set_index("metric")
+
+def gate(summary, baseline=None, max_drop=0.05):
+    failures = []
+    for m, thr in GATES.items():
+        s = summary.loc[m]
+        bad = s["ci_low"] &gt; thr if m in LOWER_IS_BETTER else s["ci_high"] &lt; thr  <span class="c"> # clearly beyond threshold</span>
+        if bad:
+            failures.append(f"{m}: mean {s['mean']:.3f} (CI {s['ci_low']:.3f}-{s['ci_high']:.3f}) vs gate {thr}")
+        if baseline is not None and m in baseline.index:
+            delta = s["mean"] - baseline.loc[m, "mean"]
+            worse = delta &gt; max_drop if m in LOWER_IS_BETTER else delta &lt; -max_drop
+            if worse:
+                failures.append(f"{m}: regressed {delta:+.3f} vs baseline")
+        if s["nan_rate"] &gt; 0.02:
+            failures.append(f"{m}: {s['nan_rate']:.0%} of scores missing (infrastructure, not quality)")
+    return failures
+
+results = await evaluate(evaluation_rows, repeats=2)         <span class="c"> # in a script: asyncio.run(evaluate(...))</span>
+summary = summarize(results)
+display(summary.round(3))
+display(results.groupby("type").mean(numeric_only=True).drop(columns="rep").round(3))  <span class="c"> # always slice</span>
+
+problems = gate(summary)           <span class="c"> # pass baseline=previous_summary in CI</span>
+report = {"meta": RUN_META, "stats": STATS, "summary": summary.reset_index().to_dict("records"),
+          "gate_failures": problems, "worst_rows": results.sort_values("faithfulness").head(5)
+                                                            [["qid", "faithfulness", "factual_f1"]].to_dict("records")}
+json.dump(report, open("eval_report.json", "w"), indent=2, default=float)
+print("GATE:", "PASS" if not problems else "FAIL"); print(*problems, sep="\n")</code></pre>
+<div class="callout enh"><span class="t">⚠️ Notebook Enhancement: what changed vs the notebooks</span>Concurrency instead of serial awaits (C13); retries with backoff and timeouts; NaN instead of a crash or a fake 0; cache keyed on judge and version; repeats to expose variance; CIs instead of bare means; slice-by-type; gates that read CIs, not point estimates; and a report that records the exact judge/ragas/embedding versions.</div>
+</div></details>
+</section>
+<section class="panel" id="t13" role="tabpanel">
+<h2>⑬ Practice: one evolving project</h2>
+<p>Project: <b>an evaluation suite for the OCR-audit assistant</b>, built on <code>audit_data</code>. Each assignment extends the previous one. Starter code is a scaffold; fill the TODOs without copying from tab ⑫. Peek only to check yourself.</p>
+
+<h3>Assignment 1: foundation build</h3>
+<p><b>Covers:</b> tabs ⓪ ② ③ ④ ⑤ · train/test thinking, embeddings, cosine, retrieval, golden datasets, all non-LLM metrics, Corrections C2, C3, C6, C9, C10, C12.</p>
+<p><b>Goal:</b> rebuild the notebook's retrieval and non-LLM evaluation from scratch, with a 30-row golden set split into a 20-row <code>dev</code> set (you may look at it while tuning) and a 10-row <code>test</code> set (you don't touch it until Assignment 3).</p>
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code><span class="c"># Starter scaffold: Assignment 1</span>
+import numpy as np, pandas as pd
+from sentence_transformers import SentenceTransformer
+<span class="c"># TODO 1: pin ragas and import it (handle the VertexAI import failure, document why)</span>
+
+audit_data = [...]         <span class="c"> # paste the 20 sentences from the notebook</span>
+
+<span class="c"># TODO 2: encode audit_data so that a dot product equals cosine similarity</span>
+document_embeddings = ...
+
+def retrieve(question, top_k=3):
+<span class="c">    # TODO 3: return a list of {"doc_id", "text", "score"} sorted best-first</span>
+    ...
+
+golden = [
+<span class="c">    # TODO 4: 30 rows with keys qid, type, question, ground_truth, gold_ids</span>
+<span class="c">    # at least: 4 two_fact/multi_hop, 3 unanswerable, 3 distractor, 4 paraphrase</span>
+]
+dev, test = ..., ...        <span class="c"> # TODO 5: stratified by type; freeze `test`</span>
+
+def hit_at_k(gold_ids, ids, k): ...     <span class="c"> # TODO 6</span>
+def mrr(gold_ids, ids): ...             <span class="c"> # TODO 7</span>
+
+<span class="c"># TODO 8: generator = extractive baseline (top chunk) for now</span>
+<span class="c"># TODO 9: score dev with Semantic (different embed model than retrieval), ROUGE-L, CHRF,</span>
+<span class="c">#         Levenshtein, normalized Exact Match. Store in `nonllm_df` (one name, one meaning).</span>
+<span class="c"># TODO 10: print mean per metric AND per type</span></code></pre>
+<p><b>Verify checklist</b></p>
+<ul class="check"><li>☐ <code>document_embeddings.shape == (20, 384)</code></li><li>☐ Hit@3 and MRR computed from IDs, not text</li><li>☐ Per-type table shows at least one type where lexical metrics disagree with your own judgment</li><li>☐ You can explain, with numbers, why one correct answer scored below 0.4 ROUGE-L</li></ul>
+<p><b>Self-check (yes/no)</b></p>
+<ol><li>Would normalizing only the query break ranking for that single query?</li><li>Does your unanswerable row have an empty <code>gold_ids</code> list and NaN Hit@k rather than 0?</li><li>Does "approved" vs "Approved." score 1 under your normalized Exact Match?</li><li>Have you avoided looking at <code>test</code> scores?</li></ol>
+<details><summary>Answers</summary><div class="body"><p>1 No: ranking for a single query is unchanged by query scaling, but thresholds across queries break. 2 Should be yes: there's no gold doc to hit. 3 Yes, if your <code>norm()</code> strips trailing punctuation and lowercases. 4 Must be yes.</p></div></details>
+
+<h3>Assignment 2: integration challenge</h3>
+<p><b>Covers:</b> tabs ⑥ ⑦ ⑧ ⑨ · LLM generator, custom judge, all 8 Ragas LLM metrics, diagnosis. Corrections C1, C4, C5, C7, C8, C11, C14.</p>
+<p><b>Goal:</b> replace the extractive generator with an LLM, then answer a design question the notebook answered for you: <b>what top_k should this system use?</b> Run top_k ∈ {1, 3, 5, 10} on <code>dev</code> and justify one value with metric evidence.</p>
+<pre class="code" data-lang="py"><button class="copy" type="button">Copy</button><code><span class="c"># Starter scaffold: Assignment 2 (extends Assignment 1)</span>
+from openai import OpenAI, AsyncOpenAI
+from ragas.llms import llm_factory
+from ragas.metrics.collections import (Faithfulness, AnswerRelevancy, AnswerCorrectness, ContextPrecision,
+                                       ContextRecall, ContextEntityRecall, NoiseSensitivity, FactualCorrectness)
+
+<span class="c"># TODO 1: one key prompt, two clients with different names (why? see C4)</span>
+<span class="c"># TODO 2: generate_answer_llm(question, top_k) with a "context only / say not found" prompt</span>
+<span class="c"># TODO 3: custom judge, one call per criterion; faithfulness must NOT receive ground_truth</span>
+<span class="c"># TODO 4: METRICS dict name -&gt; (metric, row -&gt; kwargs) for all 8 Ragas LLM metrics</span>
+<span class="c"># TODO 5: async scoring with a Semaphore; failures become NaN</span>
+<span class="c"># TODO 6: loop top_k in [1, 3, 5, 10] -&gt; one results table per k (merge on qid, validate 1:1)</span>
+<span class="c"># TODO 7: write a 5-sentence diagnosis using the tab ⑨ table: which k, and which metric drove it?</span></code></pre>
+<details><summary>💡 Hints</summary><div class="body"><ul>
+<li>Expect context recall to rise and context precision to stay flat or fall as k grows. Noise sensitivity is the tie-breaker.</li>
+<li>Your multi-hop rows decide the minimum k; your distractor rows decide the maximum.</li>
+<li>Compare extractive vs LLM faithfulness on the same rows. If the extractive one isn't ~1.0, check your kwargs mapping.</li>
+<li>Run the C11 noise examples first, to confirm you understand what the metric counts before trusting it on your data.</li>
+<li>Answer correctness for verbose answers will dip from FP claims; check factual recall before calling it a regression.</li></ul></div></details>
+<p><b>Evaluation criteria:</b> correct client separation · no ground-truth leakage in the faithfulness judge · all 8 metrics run with NaN handling · top_k choice backed by at least two metrics and the per-type breakdown.</p>
+<p><b>Self-check (yes/no)</b></p>
+<ol><li>Can you re-run your judge cell after the Ragas cell without errors?</li><li>Did faithfulness drop below 1.0 on at least one row once the LLM generator was in?</li><li>Did your unanswerable rows produce "Not found in the documents"?</li><li>Did you choose k using dev only?</li></ol>
+
+<h3>Assignment 3: production capstone</h3>
+<p><b>Covers:</b> tabs ⑩ ⑪ ⑫ plus everything before · judge calibration with ROC/AUC, variance, bootstrap CIs, tiered eval, caching, gates. Corrections C2 (conclusion), C13.</p>
+<p><b>Goal:</b> ship an evaluation harness that a CI job could run, with thresholds you can defend.</p>
+<ol>
+<li>Hand-label faithfulness (0/1) for all 30 rows yourself. Compute AUC of Ragas faithfulness and of your custom judge against your labels. Pick a gate threshold from the ROC.</li>
+<li>Run 3 repeats; report per-metric run-to-run std and bootstrap 95% CIs.</li>
+<li>Implement tier 1 (non-LLM, every commit) and tier 2 (LLM, PR) as two functions with a shared cache.</li>
+<li>Introduce a deliberate regression (e.g. prompt that encourages "adding helpful background"). Show your gate catches it.</li>
+<li>Finally, unfreeze <code>test</code> and report final numbers once.</li>
+</ol>
+<details><summary>💡 Architecture hints</summary><div class="body"><ul>
+<li>Shape: <code>golden.jsonl → system(sha) → harness(cache, sem, retry) → results.parquet → summarize → gate → report.json</code></li>
+<li><code>sklearn.metrics.roc_auc_score(human_labels, ragas_scores)</code> is the whole calibration step for a binary label.</li>
+<li>Gate on CI bounds, not means, or your CI will flake on noise.</li>
+<li>Put the judge model, ragas version and eval-embedding model in the cache key.</li></ul></div></details>
+<div class="tbl"><table><tr><th>Rubric</th><th>Points</th></tr>
+<tr><td>Calibration: AUC computed for both judges, threshold justified from ROC</td><td>25</td></tr>
+<tr><td>Statistics: repeats, std, bootstrap CIs, per-type slices</td><td>20</td></tr>
+<tr><td>Engineering: concurrency, retries, timeouts, NaN policy, cache</td><td>20</td></tr>
+<tr><td>Gate catches the injected regression without flagging a clean re-run</td><td>20</td></tr>
+<tr><td>Written conclusion that claims no more than n=10 test rows support</td><td>15</td></tr></table></div>
+<p><b>Stretch goals:</b> generate 50 extra rows synthetically and measure how many need human fixing · add a BM25 leg and compare entity recall · sample "live" questions and track faithfulness as an SLI over time.</p>
+<p><b>Self-check (yes/no)</b></p>
+<ol><li>Does a clean re-run with the cache cleared pass the gate?</li><li>Is your stated threshold traceable to a point on an ROC curve?</li><li>Does your report include judge and ragas versions?</li><li>Is the NaN rate reported separately from scores?</li><li>Did you look at <code>test</code> exactly once?</li></ol>
+
+<h3>Concept coverage map</h3>
+<div class="tbl"><table><tr><th>Concept</th><th>A1</th><th>A2</th><th>A3</th></tr>
+<tr><td>Train/test split, leakage</td><td>✓ dev/test</td><td>✓ k on dev</td><td>✓ test once</td></tr>
+<tr><td>Precision/recall/F1</td><td></td><td>✓ factual P/R</td><td>✓ gate errors</td></tr>
+<tr><td>ROC/AUC, MAE</td><td></td><td></td><td>✓ calibration</td></tr>
+<tr><td>Embeddings, cosine, normalization</td><td>✓</td><td></td><td></td></tr>
+<tr><td>Ragas architecture / APIs / pinning</td><td>✓</td><td>✓</td><td>✓ versions in report</td></tr>
+<tr><td>Golden set design</td><td>✓</td><td>✓ per-type</td><td>✓</td></tr>
+<tr><td>Semantic, ROUGE, Levenshtein, BLEU, CHRF</td><td>✓</td><td></td><td>✓ tier 1</td></tr>
+<tr><td>Exact Match, String Presence, normalization</td><td>✓</td><td></td><td>✓ tier 1</td></tr>
+<tr><td>Context Hit → Hit@k, MRR</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Custom LLM judge, structured output, leakage</td><td></td><td>✓</td><td>✓ AUC</td></tr>
+<tr><td>Faithfulness, Relevancy, Correctness</td><td></td><td>✓</td><td>✓</td></tr>
+<tr><td>Context Precision / Recall / Entity Recall</td><td></td><td>✓ top_k study</td><td></td></tr>
+<tr><td>Noise Sensitivity</td><td></td><td>✓</td><td>✓ gate</td></tr>
+<tr><td>Diagnosis table</td><td></td><td>✓</td><td>✓ regression</td></tr>
+<tr><td>Variance, CIs, saturation</td><td></td><td></td><td>✓</td></tr>
+<tr><td>Concurrency, retries, caching, tiers, gates</td><td></td><td>✓ semaphore</td><td>✓</td></tr></table></div>
+</section>
+<section class="panel" id="t14" role="tabpanel">
+<h2>⑭ Interview prep: 25 questions</h2>
+<p>Questions 1–8 are conceptual (entry level), 9–16 scenario-based (mid), 17–21 debugging (mid–senior), and 22–25 system design (senior). Try answering aloud before opening the model answer.</p>
+<div class="qa"><p class="qn">1. Your manager asks for a single "RAG quality score" to put on a dashboard. Why is that a bad idea, and what would you show instead?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Two stages fail independently</li><li>Averaging hides offsetting failures</li><li>Different metrics answer different questions</li><li>Propose a small set, gated separately</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>A single score averages things that fail for different reasons and need different fixes. Faithfulness of 0.4 and relevancy of 1.0 average to 0.7, which looks acceptable while the system hallucinates on most answers. RAG has a retrieval stage and a generation stage, and a low end-to-end score doesn't tell you which one to fix. I'd show a small panel instead: context recall and precision for retrieval, faithfulness and answer correctness for generation, noise sensitivity for robustness. Each gets its own threshold, a confidence interval, and a per-question-type slice. If leadership needs one signal, I'd make it a gate: "all metrics within thresholds", which is pass/fail rather than an average.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Understanding that evaluation is diagnostic, not a leaderboard.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Proposing a weighted average as the answer</li><li>Treating Answer Correctness alone as sufficient because it's "end-to-end"</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ③ ⑨</p></div>
+<div class="qa"><p class="qn">2. Give one example where an answer is faithful but incorrect, and one where it is correct but unfaithful. What does each tell you to fix?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Faithfulness compares answer with retrieved context</li><li>Correctness compares answer with ground truth</li><li>Stale or wrong documents</li><li>Model's parametric knowledge</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Faithful but incorrect: the index holds an outdated audit saying the failure rate is 12%, and the model answers 12%. Every claim is supported by the context, so faithfulness is 1.0, but it contradicts the 15% ground truth. The fix is in the corpus or retrieval, not the model. Correct but unfaithful: retrieval misses the right chunk, yet the model answers correctly from its own training knowledge. Correctness is high but faithfulness is low. That is risky, because the system is right by luck and can't be audited. The fix is retrieval (so the support exists) plus a stricter context-only prompt.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Whether the candidate can separate grounding from truth and map each to the right component.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>"Faithful means correct"</li><li>Saying correct-but-unfaithful is fine because the user got the right answer</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑦</p></div>
+<div class="qa"><p class="qn">3. Why does Ragas Answer Relevancy generate questions from the answer instead of embedding the answer and the question directly?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Asymmetry between question and answer text</li><li>Generated questions vs original via cosine</li><li>strictness=3 averaging</li><li>Noncommittal answers scored 0</li><li>Doesn't check truth</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>A question and its answer are different kinds of text. "Why do failures peak on Tuesdays?" and "Due to weekly bulk-batch processing of handwritten PDFs" share little vocabulary and structure, so direct cosine similarity is a weak signal. Ragas asks the LLM to write three questions the answer would respond to, embeds them, and averages their cosine similarity to the original question. That compares question to question. Evasive answers are flagged noncommittal and scored 0. The metric never checks factual truth, so a confident wrong on-topic answer still scores high.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Understanding of the metric's mechanism and its blind spot.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Saying it checks whether the answer is correct</li><li>Not knowing it uses embeddings at all</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑦ ②</p></div>
+<div class="qa"><p class="qn">4. Map precision, recall and F1 from classification onto Ragas metrics. Which Ragas metric is literally an F1?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Faithfulness as claim precision</li><li>Context recall as recall over reference claims</li><li>Context precision as average precision</li><li>Factual Correctness modes</li><li>Answer Correctness factual component</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Faithfulness is a precision: of the claims the answer makes, how many are supported by the retrieved context. Context recall is a recall: of the claims in the reference, how many are found in the retrieved context. Context entity recall is recall over entities. Context precision is rank-weighted average precision over useful chunks, borrowed from information retrieval. Factual Correctness is literally precision, recall or F1 over claims, chosen by its mode parameter. Answer Correctness takes that F1 and blends it 0.75/0.25 with semantic similarity.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Ability to transfer classical evaluation concepts to the new domain.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Calling context precision "the fraction of chunks that are relevant"</li><li>Not knowing Factual Correctness has modes</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⓪ ⑦ ⑧</p></div>
+<div class="qa"><p class="qn">5. In the notebook, a correct answer scored ROUGE-L 0.32 and Levenshtein 0.19. Why, and should you gate releases on ROUGE?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Verbose extractive answer vs short reference</li><li>LCS precision penalized by length</li><li>Levenshtein is character edits</li><li>Lexical ≠ semantic</li><li>Gate on meaning-aware metrics for free text</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>The answer was the whole audit sentence (13 tokens) against a 6-token reference. ROUGE-L uses the longest common subsequence, which here is "ocr failure rate" (3 tokens), so precision is 3/13 and recall 3/6, giving F about 0.32. Levenshtein needs many character edits to turn one string into the other, so it's low too. Neither metric reads meaning: semantic similarity was 0.67 and Ragas answer correctness 0.92 on the same row. Lexical metrics also reward wrong answers that share wording ("15%" vs "16%" scores 0.96 Levenshtein). So I wouldn't gate free-text answers on ROUGE. I'd use it as a cheap per-commit drift signal and gate on factual or LLM metrics.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Understanding what lexical metrics measure and their place in a pipeline.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>"The answer must be wrong"</li><li>Recommending BLEU instead (worse on short text)</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑤ ④</p></div>
+<div class="qa"><p class="qn">6. The notebook encodes with normalize_embeddings=True and uses a dot product. Why, and what breaks if only the documents are normalized?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Unit vectors: dot = cosine</li><li>Efficient single matmul</li><li>Single-query ranking unaffected by query scale</li><li>Thresholds across queries break</li><li>Must be consistent for eval embeddings too</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>When both vectors have length 1, the dot product equals cosine similarity, so <code>document_embeddings @ q</code> scores all documents in one matrix multiply with a meaningful scale. If only the documents are normalized, every score for a given query is multiplied by that query's norm. The ranking for that query doesn't change, but absolute scores vary from query to query. Any similarity cutoff ("drop chunks below 0.4") or score-based monitoring becomes inconsistent. The same care applies to evaluation embeddings, which is why the notebook passes normalize_embeddings=True to Ragas's HuggingFaceEmbeddings.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Precise understanding of vector math behind retrieval.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>"Normalization makes retrieval more accurate" with no mechanism</li><li>Claiming ranking changes for a single query</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ②</p></div>
+<div class="qa"><p class="qn">7. What's the difference between reference-free and reference-based Ragas metrics, and why does it matter after launch?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Which metrics need ground truth</li><li>Live traffic has no references</li><li>Offline golden set vs online sampling</li><li>Faithfulness + relevancy online</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Reference-based metrics compare against a ground-truth answer or context: answer correctness, factual correctness, context precision and recall, entity recall, noise sensitivity, and the lexical metrics. Reference-free metrics only need the question, answer and retrieved context: faithfulness and answer relevancy. After launch, real user questions don't come with ground truth, so only the reference-free ones can run on live traffic. The strategy splits in two: a versioned golden set runs offline in CI with the full metric suite, and a 1–5% sample of production traffic is scored for faithfulness and relevancy as quality SLIs. Bad production cases are then added to the golden set with references.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Whether the candidate can design evaluation beyond a notebook.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Planning to label all production traffic</li><li>Thinking context precision can run without a reference in this API</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑦ ⑨ ⑪</p></div>
+<div class="qa"><p class="qn">8. Noise Sensitivity is "lower is better". What exactly does it count, and how is that different from what Faithfulness catches?<span class="lvl">Conceptual</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Response claims incorrect vs reference</li><li>Supported by an irrelevant chunk</li><li>Not supported by relevant chunks</li><li>Invented claims are a faithfulness issue</li><li>relevant vs irrelevant mode</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>In irrelevant mode it counts the share of response statements that are wrong relative to the reference <em>and</em> supported by a retrieved chunk that is irrelevant to the reference, excluding anything a relevant chunk also supports. It isolates one failure: the generator copied from a distractor. Faithfulness catches a different one: statements no retrieved chunk supports at all, meaning the model invented them. So if the model says "Paris is the capital of Germany" next to a Berlin chunk, that's a faithfulness problem, not noise sensitivity, because no chunk supports it. Noise sensitivity is the metric to watch when you raise top_k or change chunking.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Precise understanding of a subtle metric definition.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>"It measures how much irrelevant context was retrieved" (that's closer to context precision)</li><li>Thinking higher is better</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑧</p></div>
+<div class="qa"><p class="qn">9. Your eval shows Context Recall 0.95, Context Precision 0.55, Noise Sensitivity 0.30 and Answer Correctness 0.70 for an internal HR-policy assistant at top_k=10. What do you change, in what order, and how do you prove it worked?<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Retrieval finds facts but ranks junk high</li><li>Noise leaks into answers</li><li>Reranker / lower k / cutoff</li><li>Re-measure same rows, CIs</li><li>Watch recall doesn't fall</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Recall is high, so the facts are being retrieved. Low precision says they're mixed with poorly ranked irrelevant chunks, and the noise score says those chunks are leaking into answers. That points to the chain of more irrelevant chunks reaching the LLM, more copied distractor claims, and lower correctness. First I'd add a cross-encoder reranker on the top 10 and pass only the top 3–4, because it raises precision without losing recall. Second, if a reranker isn't available, I'd sweep k ∈ {3, 5, 7} and add a similarity cutoff. Third, I'd tighten the generator prompt to cite only chunks that answer the question. To prove it, I'd re-run the same golden rows with repeats and compare paired per-row deltas with bootstrap CIs. I'd require context precision and noise sensitivity to improve, answer correctness to rise, and context recall to stay within its CI. I'd check the multi-hop slice especially, since cutting k hurts those first.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Metric-driven diagnosis and experiment design (transfer of the notebook's diagnosis to a new domain).</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Raising top_k further</li><li>Retraining the embedding model as a first step</li><li>Declaring success on the mean of a single run</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑨ ⑦ ⑧ ②</p></div>
+<div class="qa"><p class="qn">10. A compliance RAG tool must classify KYC documents as "Approved", "Rejected" or "Needs review" with a one-line justification. Which metrics do you use for each part of the output?<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Split structured label from free text</li><li>Exact Match with normalization for label</li><li>Precision/recall per class</li><li>Faithfulness on justification</li><li>Don't use BLEU/ROUGE for the label</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>I'd treat it as two outputs. The label is a classification: parse it out, normalize case and punctuation (Ragas ExactMatch is case-sensitive, so "approved" vs "Approved" scores 0), then report accuracy plus per-class precision and recall from a confusion matrix. Recall on "Rejected" and "Needs review" matters most, because missing a bad document is the costly error. The justification is free text, so I'd use faithfulness against the retrieved policy chunks, plus String Presence for any mandatory regulatory phrase. Factual correctness in precision mode fits if references exist, since a false statement in a compliance note is worse than an omission. Lexical similarity metrics add nothing here.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Choosing metrics by output type and business risk.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Running answer relevancy on the label</li><li>Using semantic similarity for the label</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑤ ⓪ ⑨</p></div>
+<div class="qa"><p class="qn">11. You need to run the full Ragas suite nightly on 5,000 rows with gpt-4o-mini as judge. Estimate the cost and runtime, and design it so the job finishes reliably.<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>~9 LLM calls/row for 5 core metrics at k=3</li><li>Serial vs concurrent runtime</li><li>Rate limits, retries, timeouts</li><li>Cache, tiering, sampling</li><li>NaN policy</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Roughly 9 judge calls per row for the five core metrics at top_k=3, so about 45,000 calls a night. At around 1,400 tokens per call that's about 63M tokens, on the order of $10–15 at gpt-4o-mini prices, so cost is manageable. Runtime is the real problem: at ~1.5 s per call, serial execution takes about 19 hours. With a bounded semaphore of 16–32 concurrent calls it drops to roughly 40–80 minutes, if the provider's rate limits allow. To make it reliable I'd use exponential backoff with jitter on 429s, a per-call timeout, failures recorded as NaN with a separate failure-rate alert, and results flushed incrementally so a crash doesn't lose the run. I'd also cache on a hash of inputs, metric, judge model and ragas version, so unchanged rows aren't re-scored. Finally I'd tier it: nightly runs all metrics only on rows whose system output changed, plus a fixed 500-row sentinel set for trend continuity.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Production cost/latency reasoning with concrete numbers.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Assuming dollars are the bottleneck without computing latency</li><li>Unbounded asyncio.gather</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑪ ⑫</p></div>
+<div class="qa"><p class="qn">12. A teammate proposes deleting Ragas and using one custom GPT judge prompt that returns correctness, relevance and faithfulness, "like the notebook does". Argue for or against.<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Single prompt = criterion leakage</li><li>LLM emits float → saturation</li><li>Comparability over time</li><li>Custom judge good for business rules</li><li>Validate both against humans</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>I disagree with replacing Ragas wholesale. The notebook's judge shows the risks. Asking for three criteria in one prompt that includes the ground truth lets correctness bleed into faithfulness. Asking the LLM to emit a float produces saturated scores (it gave 1.0 to all nine). Small prompt edits silently change the scale, so last month's numbers stop being comparable. Ragas decomposes answers into claims, gets binary verdicts, and computes the score in code, which gives more granular and stable scores with published definitions. The custom judge does have a place: business rules Ragas can't express, like "must cite the audit ID" or tone requirements. So I'd keep Ragas for the standard dimensions, add custom per-criterion judges for domain rules, and validate both against a human-labelled set using AUC before trusting either.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Trade-off judgment between framework and bespoke tooling.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>"Ragas is always better" with no use for custom judges</li><li>Ignoring cost differences (~9 calls vs 1)</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑥ ⑦ ⑩</p></div>
+<div class="qa"><p class="qn">13. You're asked to pick top_k for a new runbook-search assistant. Design the experiment using Ragas metrics.<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Sweep k values</li><li>Recall vs precision vs noise</li><li>Slice by question type</li><li>Fixed golden set + repeats</li><li>Cost/latency as a constraint</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>I'd build a golden set of 50–100 real on-call questions tagged by type (single-fact, multi-step procedure, distractor-heavy), with gold chunk IDs and references. Then I'd sweep k ∈ {1, 3, 5, 8, 12}, holding the generator, prompt and judge fixed, with two repeats per configuration. For each k I'd record Hit@k and MRR by ID, context recall and precision, entity recall (runbooks are full of hostnames and service names), noise sensitivity, faithfulness, factual correctness, and prompt token count. The expected shape is recall rising and plateauing, precision falling, and noise rising after some point. I'd pick the smallest k where multi-step recall reaches its plateau and noise sensitivity hasn't risen beyond the CI of the best configuration, then confirm on a held-out set.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Experimental design using retrieval and robustness metrics (transfer of the notebook's top_k discussion).</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Choosing the k with highest recall</li><li>Using only one metric</li><li>Tuning and reporting on the same rows</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ② ⑧ ⑨ ⑩</p></div>
+<div class="qa"><p class="qn">14. Your product has no ground-truth answers and 50,000 questions a day. How do you evaluate quality continuously?<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Reference-free metrics on a sample</li><li>Sampling rate & stratification</li><li>SLIs/SLOs and alerting</li><li>Human review of low scores</li><li>Feed failures back into golden set</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>I'd sample 1–2% of traffic, stratified by intent and user segment, and score it asynchronously off the request path with faithfulness and answer relevancy, which need no reference. Those become SLIs, for example "weekly share of sampled answers with faithfulness ≥ 0.85", with an SLO and alerting on burn rate rather than on single bad answers. Low-scoring answers go to a human review queue. Confirmed failures get a reference written and are added to the offline golden set, where the full reference-based suite runs in CI. I'd also track retrieval health signals that need no judge: empty retrievals, top-1 similarity distribution, and the rate of "not found" answers. I'd monitor judge drift by re-scoring a fixed calibration set weekly.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Online evaluation design and SRE-style thinking.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Labelling everything</li><li>Running answer correctness online without references</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑦ ⑪ ⑩</p></div>
+<div class="qa"><p class="qn">15. A stakeholder sees the notebook results (faithfulness, context precision, context recall and the custom judge all at 1.0) and wants to ship. What do you say?<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>n=3, saturation</li><li>Extractive generator → faithfulness by construction</li><li>Easy single-hop questions</li><li>Need harder set + human check</li><li>What can actually be claimed</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>I'd say the evidence supports a much narrower claim: the system answers these three single-fact lookups correctly. Three rows give a margin of about ±0.4 on an average. The generator copies the top retrieved chunk, so faithfulness is 1.0 by construction; it can't hallucinate because no LLM generates the answer. Every question has one answering sentence that shares keywords with the question, so context precision and recall are near-guaranteed. Perfect scores across the board mean the test is too easy to separate good from bad. Before shipping I'd want the real LLM generator in the loop, a golden set of at least 30–100 rows including multi-hop, unanswerable and distractor cases, repeats with confidence intervals, and a small human-labelled sample to confirm the judge agrees with people.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Critical reading of evaluation evidence.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Agreeing because the numbers are high</li><li>Dismissing Ragas entirely</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ④ ⑩ ⑦</p></div>
+<div class="qa"><p class="qn">16. After changing chunk size, mean answer correctness on a 50-question set moved from 0.88 to 0.82. Is it a regression?<span class="lvl">Scenario</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Paired comparison on same rows</li><li>Run-to-run variance</li><li>Bootstrap CI / paired test</li><li>Slice by type</li><li>Check FP vs FN via factual modes</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Not yet known. Fifty rows plus LLM-judge variance can easily produce a 0.06 swing. I'd first re-run both configurations with two or three repeats to measure per-row variability. Then I'd compute paired per-row differences, since both configurations answered the same questions, and bootstrap a confidence interval on the mean difference. If that interval excludes zero, it's real. Next I'd slice by question type, because chunking changes often hurt multi-hop questions while leaving single-fact ones unchanged. Finally I'd split correctness into factual precision and recall: if precision dropped, answers gained wrong or extra claims; if recall dropped, the new chunks split facts apart. That points to the fix (overlap or chunk size).</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Statistical reasoning about metric changes.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Yes, 0.06 is big</li><li>Comparing unpaired means only</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑩ ⑦ ⑧</p></div>
+<div class="qa"><p class="qn">17. After running the Ragas cells, you re-run the custom judge and get AttributeError: 'coroutine' object has no attribute 'choices'. Find the cause and fix it.<span class="lvl">Debugging</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Same variable name rebound</li><li>Late binding inside function</li><li>AsyncOpenAI returns coroutine</li><li>Two named clients</li><li>Notebook cell-order fragility</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>The judge function references the global <code>openrouter_client</code> at call time. The first setup cell bound it to a synchronous OpenAI client, but the Ragas setup cell rebound the same name to an AsyncOpenAI client. After that, <code>.chat.completions.create()</code> inside the judge returns a coroutine instead of a response, so <code>.choices</code> fails. The fix is to create both clients once with distinct names (<code>sync_client</code> for the custom judge, <code>async_client</code> for <code>llm_factory</code>), from a single key prompt. Ideally, pass the client into the judge function as a parameter rather than relying on a global. The broader lesson is to avoid name reuse in notebooks, because cells get re-run out of order.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Debugging Python/async state issues in notebooks.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Adding await everywhere</li><li>Restarting the runtime as the fix</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑥ ⑫</p></div>
+<div class="qa"><p class="qn">18. Every row scores Faithfulness 1.0, including answers you know are wrong. What could be happening?<span class="lvl">Debugging</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Extractive generator</li><li>Wrong field mapping</li><li>Context contains wrong fact</li><li>Saturated easy set</li><li>Inspect per-claim verdicts</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Several causes are possible. Most likely the generator is extractive, as in the notebook: the answer is copied from a retrieved chunk, so it's always supported. Faithfulness checks support, not truth, so a wrong answer copied from a wrong or stale chunk still scores 1.0. Next I'd check the kwargs mapping: if <code>retrieved_contexts</code> accidentally receives the answer itself, or every document, everything becomes supported. I'd also check whether the golden set is so easy that answers are near-verbatim chunk text. To debug, I'd log the decomposed statements and verdicts for a few rows, run one deliberately hallucinated answer as a negative control (it must score below 1), and add answer correctness or factual correctness to catch wrong-but-grounded answers.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Systematic debugging and understanding of what faithfulness can't see.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Concluding the system is perfect</li><li>Blaming the judge model first without controls</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑦ ④</p></div>
+<div class="qa"><p class="qn">19. A label-classification eval shows Exact Match 0.12, but spot checks say most outputs are right. Diagnose it.<span class="lvl">Debugging</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Case/punctuation/whitespace</li><li>Extra words around label</li><li>Normalize or parse</li><li>Exact vs String Presence</li><li>Re-check with confusion matrix</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Ragas ExactMatch compares raw strings, and it's case- and punctuation-sensitive: I verified "Approved" vs "approved" and "Approved" vs "Approved." both score 0. The model is probably emitting "approved", "Approved.", or "The decision is Approved". The fix is to constrain the output with structured output or an enum, or to parse the label and normalize both sides (lowercase, strip punctuation and whitespace) before comparing. String Presence helps when extra text is expected, but it's also case-sensitive. After fixing, I'd report accuracy plus a confusion matrix, so errors that remain are real label confusions and not formatting.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Attention to metric implementation details.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Switching to semantic similarity for labels</li><li>Assuming the model is wrong</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑤ ⓪</p></div>
+<div class="qa"><p class="qn">20. Ragas scores for the same rows vary by about ±0.08 between runs, and some runs fail with 429 errors midway, losing everything. Fix both problems.<span class="lvl">Debugging</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Stochastic decomposition/verdicts</li><li>Repeats and averaging, CIs</li><li>Bounded concurrency</li><li>Backoff + jitter, timeouts</li><li>Incremental persistence + cache, NaN policy</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Variance comes from the LLM judge. Even at temperature 0, claim decomposition and verdicts differ between calls, and providers may route to different backends. I'd pin the judge model version, run two or three repeats for decisions that matter, average per row, and report bootstrap CIs and per-row standard deviation, so I stop treating a ±0.08 swing as signal. For the 429s, the loop is either fully serial with no retry or unbounded concurrent. I'd use an <code>asyncio.Semaphore</code> sized to the rate limit, exponential backoff with jitter on 429 and timeouts, and <code>asyncio.wait_for</code> on every call. A call that still fails becomes NaN rather than crashing the run. Results get written incrementally to a cache keyed on inputs, metric, judge and version, so a restart resumes instead of starting over, and the NaN rate is reported as its own health metric.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Operational robustness and statistical hygiene.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Setting temperature=0 and assuming determinism</li><li>Treating failures as 0 scores</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑪ ⑩ ⑫</p></div>
+<div class="qa"><p class="qn">21. A row has Context Hit = 0 but Context Recall = 1.0, and the answer is correct. Which do you trust, and what's wrong?<span class="lvl">Debugging</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Exact string membership</li><li>Chunking differences</li><li>IDs instead of text</li><li>Recall checks claims, not strings</li><li>Both have roles</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>I'd trust context recall here and fix context hit. The notebook's context hit is <code>ground_truth_context in contexts</code>, which is exact string equality against list items. If the corpus was re-chunked, whitespace changed, or the retrieved chunk contains the gold sentence plus neighbouring text, the check fails even though the information was retrieved. Context recall checks whether the reference's claims are supported by the retrieved text, so it's robust to formatting. The fix is to track document or chunk IDs and compute Hit@k and MRR on IDs. When chunk boundaries change, map gold sentences to the new chunk IDs by containment rather than equality. ID-based hit metrics are still worth keeping, because they're free, deterministic and rank-aware.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Recognizing brittle hand-written metrics.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Trusting the deterministic metric because it's deterministic</li><li>Dropping retrieval metrics altogether</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑤ ⑦</p></div>
+<div class="qa"><p class="qn">22. Design a CI evaluation system for a RAG assistant used by 2,000 employees, deployed several times a week. Cover data, metrics, gating, statistics and operations.<span class="lvl">System design</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Versioned golden set with types</li><li>Tiered metrics by cost</li><li>Gates on CIs and baseline deltas</li><li>Concurrency, caching, NaN policy</li><li>Calibration and versions in report</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Data: a versioned golden set in git (JSONL) with a stable qid, question, reference, gold chunk IDs and a type tag (single, multi-hop, unanswerable, distractor, paraphrase), about 300 rows sampled from real queries and refreshed quarterly. A frozen 100-row holdout is used only for release sign-off. Every production incident adds a regression row. Tier 1 runs on every commit: deterministic checks (Hit@k and MRR by ID, CHRF, normalized Exact Match for structured fields), seconds and no cost. Tier 2 runs on every PR to main: the Ragas LLM suite (faithfulness, answer relevancy, factual correctness, context precision and recall, noise sensitivity) on a 100-row core set, with a judge from a different model family than the generator. Tier 3 runs nightly or pre-release: the full set with 3 repeats. The harness uses bounded concurrency, retries with jitter, timeouts and a cache keyed on inputs, metric, judge and ragas version. Failures become NaN with a separate failure-rate check. Gating: thresholds come from a human-calibrated sample (ROC on 100 labelled rows) and are applied to bootstrap CI bounds, not means. A second rule blocks a paired drop larger than X versus the main-branch baseline on the same rows. Reporting: per-metric mean and CI, per-type slices, worst-row drill-down, and exact versions of the judge, ragas, embeddings and code SHA. Judge or ragas upgrades trigger a re-baseline instead of a false regression.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>End-to-end eval system design combining golden data, metrics, statistics and engineering.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Single average gate</li><li>No holdout</li><li>Running full LLM suite on every commit</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ④ ⑦ ⑩ ⑪ ⑫</p></div>
+<div class="qa"><p class="qn">23. Design online quality monitoring for a production RAG service, using SRE practices.<span class="lvl">System design</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Async sampled scoring off request path</li><li>Reference-free SLIs</li><li>SLOs, burn-rate alerts</li><li>Human review loop</li><li>Drift detection for judge and data</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Each request logs question, retrieved chunk IDs and scores, answer, model versions and latency to an event stream, with PII redacted before anything goes to a third-party judge. A consumer samples 1–2%, stratified by intent and tenant, and scores asynchronously with faithfulness and answer relevancy, the reference-free metrics. Cheap signals are computed on 100% of traffic: empty-retrieval rate, top-1 similarity distribution, "not found" rate, and answer length. SLIs: share of sampled answers with faithfulness ≥ 0.85, with the threshold taken from human calibration, and mean relevancy. SLOs are set weekly, for example 95%, with multi-window burn-rate alerts, so a single bad answer doesn't page anyone. Dashboards slice by intent, corpus source and model version. A drop in top-1 similarity without a judge-score change suggests a query-distribution shift; a faithfulness drop right after a deploy suggests a prompt or model regression, so roll back like any failed canary. Low-scoring answers go to a review queue; confirmed failures get references and join the CI golden set. A fixed calibration set is re-scored weekly to detect judge drift. This mirrors synthetic monitoring: the golden-set run against production is a probe, and live scoring is the SLI.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Translating offline metrics into an observable, alertable production system.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Scoring every request synchronously</li><li>Alerting on individual scores</li><li>No PII handling</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑪ ⑦ ⑨ ⑩</p></div>
+<div class="qa"><p class="qn">24. Design a program to validate and maintain trust in your LLM judges (Ragas and custom) over time.<span class="lvl">System design</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Human-labelled calibration set</li><li>AUC, κ, MAE</li><li>Threshold from ROC</li><li>Re-validate on version change</li><li>Bias checks</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>I'd build a calibration set of 200 rows, stratified to include clear passes, clear failures and borderline cases, deliberately including hallucinations and distractor-copied answers. Two humans label each row per criterion (faithful 0/1, correct 0/1) with an adjudication step, and I measure inter-annotator κ first, because if humans don't agree, no judge can. For each metric I compute AUC against the human binary label, Cohen's κ at the chosen threshold, and MAE where humans gave graded scores. Thresholds come from the ROC operating point that matches the business cost of false passes versus false fails. Bias probes: swap answer order for pairwise judgments, pad correct answers with irrelevant text to test verbosity bias, and score generator-family outputs with same-family and different-family judges to test self-preference. Governance: judge model, prompt and ragas version are pinned and recorded with every score. Any change re-runs the calibration set, and a judge that drops below the AUC bar can't gate releases. The calibration set gets 20–30 new rows a quarter from production failures, so it tracks the real distribution.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Meta-evaluation rigor (ROC/AUC transfer from classical ML).</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Trusting the judge because temperature=0</li><li>Using the judge's own reasons as validation</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑩ ⓪ ⑥ ⑦</p></div>
+<div class="qa"><p class="qn">25. Design the evaluation for a multi-hop RAG agent that answers incident questions ("Which service changed before the checkout errors, and who owns it?") from runbooks, deploy logs and an ownership directory.<span class="lvl">System design</span></p>
+<details><summary>💡 Hint</summary><div class="body"><ul><li>Retrieval per source, entity-heavy</li><li>Multi-hop golden set with gold IDs per hop</li><li>Factual P vs R by risk</li><li>Noise sensitivity on noisy logs</li><li>Online SLIs + incident feedback</li></ul></div></details>
+<details><summary>✅ Model answer</summary><div class="body"><p>Golden set: about 150 incident questions built from past postmortems, each with a reference answer, gold record IDs per hop (deploy log entry, runbook section, ownership record) and tags for hop count and source mix. Unanswerable and stale-data cases are included, for example an owner who has changed. Retrieval: Hit@k and per-hop ID recall per source, so you can see which index fails. Context entity recall matters because answers hinge on service names, versions, timestamps and people. Context precision shows whether noisy log lines crowd out the useful ones. Robustness: noise sensitivity in irrelevant mode, since deploy logs are dense with plausible distractors (other services' deploys in the same window), which is exactly the copy-from-distractor failure this metric isolates. Generation: faithfulness, because claims must be traceable for an incident commander; factual correctness in precision mode as the gate, because a wrong owner or service is worse than an incomplete answer, with recall tracked as a secondary metric; answer relevancy to catch rambling. If the agent calls tools, evaluate tool-call correctness separately (right query, right time window) so retrieval failures aren't blamed on generation. Statistics and ops: repeats, CIs, slices by hop count; tiered CI as in Q22; online, sampled faithfulness as an SLI during incidents, and every incident retro adds rows. Human calibration on 100 rows sets the gates.</p></div></details>
+<details><summary>🎯 What's being tested</summary><div class="body"><p>Composing many concepts for a realistic agentic AIOps system.</p></div></details>
+<details><summary>🚩 Red flags</summary><div class="body"><ul><li>Only end-to-end correctness</li><li>Ignoring entity metrics in a name-heavy domain</li><li>Recall-mode gating where false claims are dangerous</li></ul></div></details>
+<p class="ref">📖 Guide reference: tabs ⑧ ⑨ ⑦ ⑩ ⑪</p></div>
+<h3>Coverage check</h3><div class="tbl"><table><tr><th>Tab</th><th>Questions</th></tr>
+<tr><td>⓪ ML foundations</td><td>4, 10, 19, 24</td></tr><tr><td>② Embeddings</td><td>3, 6, 9, 13</td></tr>
+<tr><td>③ RAG &amp; Ragas</td><td>1</td></tr><tr><td>④ Notebook pipeline</td><td>5, 15, 18, 22</td></tr>
+<tr><td>⑤ Non-LLM</td><td>5, 10, 19, 21</td></tr><tr><td>⑥ Custom judge</td><td>12, 17, 24</td></tr>
+<tr><td>⑦ Core Ragas</td><td>2, 3, 4, 7, 9, 14, 15, 16, 18, 21, 22, 23, 24, 25</td></tr><tr><td>⑧ Additional</td><td>4, 8, 9, 13, 16, 25</td></tr>
+<tr><td>⑨ Diagnosis</td><td>1, 7, 9, 10, 13, 23, 25</td></tr><tr><td>⑩ Judging the judge</td><td>12, 13, 14, 15, 16, 20, 22, 23, 24, 25</td></tr>
+<tr><td>⑪ Production</td><td>7, 11, 14, 20, 22, 23, 25</td></tr><tr><td>⑫ Code</td><td>11, 17, 20, 22</td></tr></table></div>
+<p>Comparison/choice questions: 2, 10, 12, 13, 21. Trade-off questions: 11, 12, 25. Transfer of a notebook technique to a new context: 9 (diagnosis → HR policy), 13 (top_k → runbooks), 10 (Exact Match → KYC labels).</p>
+</section><div class="pager" id="pager"><button type="button" id="prev">Previous section</button><button type="button" id="next">Next section</button></div>
+</main>
+<footer><div class="wrap">Built from <em>RAGAS_LLM_Metric_Definition.ipynb</em> and <em>Copy_of_RAGAS_Additional_Metrics.ipynb</em>. Metric signatures, defaults and deterministic scores verified against ragas 0.4.3. LLM-metric outputs depend on your judge model and will vary run to run.</div></footer>
+<script>
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('nav.tabs button[data-t]'));
+  var ids=tabs.map(function(b){return b.dataset.t;});
+  function show(id, scroll){
+    if(ids.indexOf(id)<0) id=ids[0];
+    document.querySelectorAll('section.panel').forEach(function(p){p.classList.toggle('active',p.id===id);});
+    tabs.forEach(function(b){var on=b.dataset.t===id;b.setAttribute('aria-selected',on);if(on){var sc=b.parentNode;sc.scrollLeft=b.offsetLeft-sc.clientWidth/2+b.clientWidth/2;}});
+    var i=ids.indexOf(id);
+    document.getElementById('prev').disabled=i===0;
+    document.getElementById('next').disabled=i===ids.length-1;
+    document.getElementById('prev').textContent=i>0?'← '+tabs[i-1].textContent:'Start';
+    document.getElementById('next').textContent=i<ids.length-1?tabs[i+1].textContent+' →':'End';
+    if(scroll){try{history.replaceState(null,'','#'+id);}catch(e){}}
+    try{localStorage.setItem('ragas-guide-tab',id);}catch(e){}
+    if(scroll){var n=document.querySelector('nav.tabs');window.scrollTo({top:n.offsetTop,behavior:'auto'});}
+  }
+  tabs.forEach(function(b){b.addEventListener('click',function(){show(b.dataset.t,true);});});
+  document.getElementById('prev').addEventListener('click',function(){var i=ids.indexOf(document.querySelector('section.panel.active').id);if(i>0)show(ids[i-1],true);});
+  document.getElementById('next').addEventListener('click',function(){var i=ids.indexOf(document.querySelector('section.panel.active').id);if(i<ids.length-1)show(ids[i+1],true);});
+  document.querySelectorAll('.copy').forEach(function(btn){btn.addEventListener('click',function(){
+    var t=btn.parentNode.querySelector('code').innerText;
+    var done=function(){btn.textContent='Copied';setTimeout(function(){btn.textContent='Copy';},1400);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){});}
+  });});
+  var start=(location.hash||'').slice(1);
+  if(!start){try{start=localStorage.getItem('ragas-guide-tab')||'';}catch(e){}}
+  show(start||'t0',false);
+})();
+</script>
+</body>
+</html>
