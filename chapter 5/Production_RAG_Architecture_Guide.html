@@ -1,0 +1,1263 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Production RAG Architecture</title>
+<style>
+/* ============ DESIGN TOKENS ============
+   Layout concept: a "control room" — a persistent left-aligned stage number rail,
+   a document-like reading column, and instrument-panel code/diagram blocks.
+   Palette: deep slate ground with a signal-amber accent (retrieval/alert color),
+   a cool cyan for "tool/production" accents, desaturated enough to sit calmly
+   under long reading sessions. */
+:root{
+  --bg:#f7f5f1; --bg-raised:#ffffff; --bg-sunken:#ece8e0;
+  --fg:#1c1a16; --fg-dim:#5b564c; --border:#d8d2c5;
+  --accent:#b5541a; --accent-fg:#ffffff;
+  --cyan:#0f6b72; --cyan-bg:#e1f0ef;
+  --green:#2f6b3a; --green-bg:#e4efe0;
+  --red:#a8311f; --red-bg:#f6e4df;
+  --purple:#5a4a9e; --purple-bg:#e9e5f6;
+  --code-bg:#1c1a16; --code-fg:#eae6da;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --serif:'Source Serif 4',Georgia,serif;
+  --sans:'Inter',system-ui,sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15130f; --bg-raised:#1e1c17; --bg-sunken:#0f0d0a;
+    --fg:#eae6da; --fg-dim:#a39c8c; --border:#3a362c;
+    --accent:#e08a4f; --accent-fg:#1c1a16;
+    --cyan:#5fd0d6; --cyan-bg:#15302f;
+    --green:#8fcf98; --green-bg:#17301b;
+    --red:#e8897a; --red-bg:#35201b;
+    --purple:#b6a6f0; --purple-bg:#271f42;
+    --code-bg:#0f0d0a; --code-fg:#eae6da;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15130f; --bg-raised:#1e1c17; --bg-sunken:#0f0d0a;
+  --fg:#eae6da; --fg-dim:#a39c8c; --border:#3a362c;
+  --accent:#e08a4f; --accent-fg:#1c1a16;
+  --cyan:#5fd0d6; --cyan-bg:#15302f;
+  --green:#8fcf98; --green-bg:#17301b;
+  --red:#e8897a; --red-bg:#35201b;
+  --purple:#b6a6f0; --purple-bg:#271f42;
+  --code-bg:#0f0d0a; --code-fg:#eae6da;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--sans);
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  line-height:1.55;
+}
+h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; font-weight:600}
+code,pre,.mono{font-family:var(--mono)}
+.wrap{max-width:980px;margin:0 auto;padding-block:20px 60px}
+header.top{display:flex;flex-direction:column;gap:4px;margin-bottom:18px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:10;padding-top:env(safe-area-inset-top,0px)}
+header.top h1{margin:0;font-size:1.6rem}
+header.top .sub{color:var(--fg-dim);font-size:.92rem}
+nav.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:0}
+nav.tabs button{
+  font-family:var(--mono); font-size:.78rem; border:1px solid var(--border);
+  background:var(--bg-raised); color:var(--fg-dim); padding:6px 10px; border-radius:7px;
+  cursor:pointer; white-space:nowrap;
+}
+nav.tabs button.active{background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-weight:600}
+nav.tabs button:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+.panel{display:none; padding-top:22px}
+.panel.active{display:block; animation: fade .25s ease}
+@media (prefers-reduced-motion: reduce){.panel.active{animation:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.tag{display:inline-block; font-family:var(--mono); font-size:.68rem; letter-spacing:.03em; text-transform:uppercase; padding:2px 7px; border-radius:5px; margin-right:4px}
+.tag.concept{background:var(--purple-bg); color:var(--purple)}
+.tag.tool{background:var(--cyan-bg); color:var(--cyan)}
+.tag.technique{background:var(--green-bg); color:var(--green)}
+.tag.variant{background:#f0e6c8; color:#8a6a10}
+.tag.failure{background:var(--red-bg); color:var(--red)}
+.tag.production{background:var(--bg-sunken); color:var(--fg-dim); border:1px solid var(--border)}
+.tag.decision{background:#fce8ea; color:#a1305a}
+:root[data-theme="dark"] .tag.decision, @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag.decision{background:#3b1f28;color:#f2a9bd}}
+:root[data-theme="dark"] .tag.variant{background:#332c10;color:#e0c25a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag.variant{background:#332c10;color:#e0c25a}}
+.callout{border:1px solid var(--border); border-left:4px solid var(--accent); background:var(--bg-raised); padding:12px 14px; border-radius:0 8px 8px 0; margin:14px 0}
+.callout.mistake{border-left-color:var(--red)}
+.callout.mistake .ctitle{color:var(--red)}
+.callout .ctitle{font-weight:700; margin-bottom:4px; font-family:var(--sans)}
+.analogy{background:var(--cyan-bg); border-radius:8px; padding:10px 14px; margin:12px 0; font-size:.95rem}
+.analogy b{color:var(--cyan)}
+table{width:100%; border-collapse:collapse; margin:14px 0; font-size:.88rem}
+table.scroll-wrap{display:block; overflow-x:auto}
+th,td{border:1px solid var(--border); padding:7px 9px; text-align:left; vertical-align:top}
+th{background:var(--bg-sunken); font-family:var(--mono); font-size:.75rem; text-transform:uppercase; letter-spacing:.02em}
+tr:nth-child(even) td{background:var(--bg-raised)}
+.scrollx{overflow-x:auto}
+pre.code{background:var(--code-bg); color:var(--code-fg); padding:14px; border-radius:8px; overflow-x:auto; font-size:.82rem; line-height:1.5}
+pre.code .c{color:#8a9; opacity:.85}
+details.codebox{border:1px solid var(--border); border-radius:8px; margin:12px 0; background:var(--bg-raised)}
+details.codebox summary{cursor:pointer; padding:10px 14px; font-family:var(--mono); font-weight:600; font-size:.85rem; list-style:none}
+details.codebox summary::-webkit-details-marker{display:none}
+details.codebox summary::before{content:"▸ "; color:var(--accent)}
+details.codebox[open] summary::before{content:"▾ "}
+details.codebox .inner{padding:0 14px 14px}
+.pipeline{display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-family:var(--mono); font-size:.8rem; margin:14px 0}
+.pipeline .step{background:var(--bg-sunken); border:1px solid var(--border); border-radius:6px; padding:6px 10px}
+.pipeline .arrow{color:var(--fg-dim)}
+.flow-branch{display:flex; gap:14px; flex-wrap:wrap; margin:8px 0 8px 22px}
+.flow-branch .b{background:var(--bg-sunken); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-family:var(--mono); font-size:.78rem}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+@media (max-width:700px){.grid2{grid-template-columns:1fr}}
+.card{border:1px solid var(--border); border-radius:8px; padding:12px 14px; background:var(--bg-raised); min-width:0}
+.card h4{margin:0 0 6px}
+.qa details{border:1px solid var(--border); border-radius:6px; margin:6px 0; background:var(--bg-sunken)}
+.qa details summary{cursor:pointer; padding:8px 12px; font-size:.85rem; font-weight:600; list-style:none}
+.qa details summary::-webkit-details-marker{display:none}
+.qa .refline{font-family:var(--mono); font-size:.78rem; color:var(--cyan); margin-top:6px}
+/* mindmap */
+.mm ul{list-style:none; margin:0; padding-left:20px; border-left:1px dashed var(--border)}
+.mm > ul{padding-left:0; border-left:none}
+.mm li{margin:3px 0}
+.mm .node{display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:3px 8px; border-radius:6px; font-size:.88rem}
+.mm .node:hover{background:var(--bg-sunken)}
+.mm .node .arr{font-family:var(--mono); color:var(--fg-dim); width:1em; display:inline-block}
+.mm li.leaf > .node .arr{visibility:hidden}
+.mm ul.children{display:none}
+.mm li.open > ul.children{display:block}
+/* interview question numbering */
+.qnum{display:inline-block; background:var(--accent); color:var(--accent-fg); font-family:var(--mono); font-weight:700; font-size:.78rem; padding:2px 8px; border-radius:5px; margin-right:8px}
+.qgroup-label{font-family:var(--mono); font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; color:var(--fg-dim); margin:26px 0 8px; border-top:1px solid var(--border); padding-top:14px}
+.assign{border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin:16px 0; background:var(--bg-raised)}
+.assign .diff{font-family:var(--mono); font-size:.72rem; text-transform:uppercase; padding:2px 8px; border-radius:5px}
+.diff.beg{background:var(--green-bg); color:var(--green)}
+.diff.int{background:#f0e6c8; color:#8a6a10}
+.diff.adv{background:var(--red-bg); color:var(--red)}
+ul.checklist{list-style:none; padding-left:0}
+ul.checklist li{padding-left:1.6em; position:relative; margin:4px 0}
+ul.checklist li::before{content:"☐"; position:absolute; left:0; color:var(--fg-dim)}
+.phase-marker{font-family:var(--mono); font-size:.72rem; color:var(--fg-dim); text-transform:uppercase; letter-spacing:.04em}
+hr.sep{border:none;border-top:1px solid var(--border);margin:28px 0}
+a{color:var(--cyan)}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<div class="wrap">
+<header class="top">
+  <h1>Production RAG Architecture</h1>
+  <div class="sub">Zero → Production · Qdrant + Hybrid Search + Self-RAG + CRAG + RAGAS · Level 4</div>
+  <nav class="tabs" id="tabnav"></nav>
+</header>
+
+<div id="panels">
+
+<!-- ============ TAB 0: PREREQUISITES ============ -->
+<section class="panel" id="panel-prereq" data-label="⓪ Prereqs">
+<h2>⓪ Prerequisites — what you need before Tab ①</h2>
+<p>This guide assumes you can read Python and have used an LLM API once. Everything else, it defines from zero. If any row below is unfamiliar, read its linked tab before continuing — the rest of the guide builds on it without re-explaining.</p>
+
+<table>
+<tr><th>You should already know</th><th>You do NOT need to know yet</th></tr>
+<tr><td>Basic Python: functions, dicts, lists, for-loops</td><td>Vector databases, embeddings, or any RAG-specific term</td></tr>
+<tr><td>What an API key is and how to call a REST API</td><td>LangChain, Qdrant, or Cohere specifically — covered in Tab ③/⑤</td></tr>
+<tr><td>Running cells in Google Colab (or any Jupyter notebook)</td><td>Information retrieval theory (TF-IDF math, etc.) — we'll stay practical</td></tr>
+</table>
+
+<div class="analogy"><b>The 30-second mental model:</b> A RAG system is an open-book exam taker. The LLM is a smart student who is excellent at writing coherent answers but has no idea what's actually in <em>your</em> company's handbook. Before the student answers, you hand them the 2–3 most relevant pages from the handbook. "Production RAG" is everything you build so that (a) you hand them the <em>right</em> pages, (b) you catch it when you can't find the right pages, and (c) you stop students from being tricked into revealing the staff room combination lock code.</div>
+
+<div class="callout">
+<div class="ctitle">Why "production" changes everything</div>
+A RAG demo is: embed some text, search it, stuff it in a prompt. A RAG demo breaks in production because of things a demo never encounters: a question with no good answer in the docs (the system should say so, not hallucinate); a question phrased with the wrong words for semantic search to catch (needs keyword search too); a question that needs live data no document contains (needs tool-calling); a user trying to extract secrets (needs guardrails); and a stakeholder asking "how do we know it's actually working?" (needs evaluation). This guide is built around closing each of those five gaps, in order.
+</div>
+
+<h3>Environment you'll use</h3>
+<p>Every code tab in this guide runs in Google Colab, free tier, using:</p>
+<div class="pipeline">
+<span class="step">Qdrant (in-memory)</span><span class="arrow">+</span><span class="step">sentence-transformers</span><span class="arrow">+</span><span class="step">rank_bm25</span><span class="arrow">+</span><span class="step">Cohere Rerank API</span><span class="arrow">+</span><span class="step">OpenRouter (LLM)</span><span class="arrow">+</span><span class="step">RAGAS</span>
+</div>
+<p>You'll need two free-tier API keys before Tab ④: a <b>Cohere</b> key (reranking) and an <b>OpenRouter</b> key (generation + RAGAS judge model). Embeddings run locally and cost nothing. <span class="tag production">production</span> In a real deployment you'd swap the in-memory Qdrant for a persistent Qdrant Cloud cluster — Tab ⑨ covers exactly what changes.</p>
+
+<h3>IIT Jammu Agentic AI with AIOps — where this guide fits</h3>
+<p>This guide sits squarely inside the retrieval-augmented-generation and agentic-tooling modules of an Agentic AI / AIOps curriculum: the Self-RAG and CRAG patterns (Tabs ⑦–⑧) are the standard entry point into "agentic" reasoning loops (critique → retry), and the guardrail + tool-routing pattern (Tab ⑥) is the smallest possible agent. If you're studying AIOps specifically, pay closest attention to Tab ⑨ (production hardening) and Tab ⑪ (RAGAS evaluation) — those are the operational concerns AIOps coursework tests most.</p>
+</section>
+
+<!-- ============ TAB 1: MINDMAP ============ -->
+<section class="panel" id="panel-mindmap" data-label="① Mindmap">
+<h2>① The complete topic landscape</h2>
+<p>Click any node to expand it. Color = category: <span class="tag concept">concept</span> <span class="tag tool">tool</span> <span class="tag technique">technique</span> <span class="tag variant">variant</span> <span class="tag failure">failure</span> <span class="tag production">production</span> <span class="tag decision">decision</span></p>
+<div class="mm" id="mindmap"></div>
+</section>
+
+<!-- ============ TAB 2: TAXONOMY ============ -->
+<section class="panel" id="panel-taxonomy" data-label="② Taxonomy">
+<h2>② RAG pattern taxonomy — how the variants relate</h2>
+<p>Every pattern below is a <em>superset</em> of the one before it — each adds one capability on top of the last. None of them replace each other; a production system typically ends up somewhere around "Agentic RAG" and uses all five ideas at once.</p>
+
+<table class="scroll-wrap">
+<tr><th>Pattern</th><th>Main idea</th><th>Adds on top of</th><th>Complexity</th><th>Strength</th><th>Trade-off</th><th>Ideal use case</th></tr>
+<tr><td><span class="tag variant">Standard RAG</span></td><td>Retrieve top chunks, generate an answer</td><td>— (baseline)</td><td>Low</td><td>Simple and fast</td><td>Weak retrieval directly produces a weak answer — no safety net</td><td>Small, clean knowledge bases</td></tr>
+<tr><td><span class="tag variant">Hybrid RAG</span></td><td>Combine dense semantic search + keyword (BM25) search</td><td>Standard RAG</td><td>Medium</td><td>Handles both meaning <em>and</em> exact terminology (error codes, SKUs)</td><td>Needs rank fusion (RRF) and tuning</td><td>Enterprise search with names, codes, and semantic questions mixed</td></tr>
+<tr><td><span class="tag variant">Self-RAG</span></td><td>Generate, critique the answer, retry with a rewritten query if weak</td><td>Hybrid RAG</td><td>Medium-High</td><td>Improves answer quality through self-checking</td><td>Extra LLM calls increase latency and cost per query</td><td>High-quality knowledge assistants</td></tr>
+<tr><td><span class="tag variant">CRAG</span></td><td>Judge <em>retrieval</em> quality (not just the answer) and correct weak retrieval before generating</td><td>Self-RAG</td><td>High</td><td>Does not blindly trust bad context — degrades safely instead of confidently hallucinating</td><td>Requires confidence-threshold rules and fallback logic that must be tuned per deployment</td><td>Systems where a wrong answer is costly (compliance, support, finance)</td></tr>
+<tr><td><span class="tag variant">Agentic / Tool-Augmented RAG</span></td><td>Route questions to retrieval <em>or</em> external tools/APIs based on intent</td><td>CRAG</td><td>High</td><td>Can answer questions beyond what's in any document</td><td>More orchestration, security surface, and observability needed</td><td>Enterprise assistants that mix internal documents with live external data</td></tr>
+</table>
+
+<h3>Decision tree: which pattern do you actually need?</h3>
+<div class="pipeline" style="flex-direction:column; align-items:flex-start">
+<span class="step">Do questions ever use exact codes/IDs words embeddings won't match semantically? → <b>add Hybrid (BM25+RRF)</b></span>
+<span class="step">Is a wrong-but-confident answer actually costly (support ticket, compliance)? → <b>add CRAG</b></span>
+<span class="step">Do you need higher answer quality and can afford 2x LLM calls on weak answers? → <b>add Self-RAG</b></span>
+<span class="step">Do some questions need live/external data no document contains? → <b>add tool routing (Agentic)</b></span>
+<span class="step">None of the above, documents are clean and small? → <b>Standard RAG is enough — don't over-engineer</b></span>
+</div>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Treating these five patterns as competitors to pick <em>one</em> of. In the reference notebook this guide is built from, the production function uses all five simultaneously: hybrid retrieval feeds Self-RAG, which feeds CRAG, which can fall back to a tool. They compose — they are not alternatives on a menu.
+</div>
+</section>
+
+<!-- ============ TAB 3: EMBEDDINGS / CHUNKING / DENSE RETRIEVAL ============ -->
+<section class="panel" id="panel-embed" data-label="③ Dense Retrieval">
+<p class="phase-marker">Phase A — Foundations</p>
+<h2>③ Embeddings, chunking, and dense retrieval with Qdrant</h2>
+
+<h3>What an embedding actually is</h3>
+<div class="analogy"><b>Library analogy:</b> Imagine every book in a library is placed on a shelf not alphabetically, but by <em>meaning</em> — cookbooks cluster together, and within that cluster, Italian cookbooks sit closer to each other than to baking books. An embedding model does this for text: it reads a sentence and outputs a list of numbers (a vector) that is its "shelf position" in meaning-space. Two sentences about the same topic get vectors that sit close together, even if they don't share a single word.</div>
+
+<p>Concretely: <code>all-MiniLM-L6-v2</code> (the model used throughout this guide) turns any sentence into a 384-number vector. "Employees get 24 days of leave" and "How much annual leave do staff receive?" land close together in that 384-dimensional space, even though they share almost no words.</p>
+
+<pre class="code"><span class="c"># every embedding model: text in, fixed-length vector out</span>
+embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+vector = embedding_model.encode("Employees get 24 days of leave", normalize_embeddings=True)
+<span class="c"># vector.shape == (384,) — same length no matter how long the input sentence is</span></pre>
+
+<p><b>[Certain] Why normalize?</b> With normalized (unit-length) vectors, cosine similarity reduces to a simple dot product, which is what lets a vector database compare millions of vectors fast. <code>normalize_embeddings=True</code> is why the rest of this guide can use plain cosine distance in Qdrant.</p>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Assuming embeddings understand exact strings the way a database index does. Embeddings are built for <em>meaning</em>, which means they are often weak on exact identifiers — an error code like <code>VPN-403</code> or a SKU like <code>SKU-2847</code> can embed close to lots of unrelated text, because the model has never seen that token behave like a meaningful unit. This exact gap is why Tab ④ adds keyword search back in.
+</div>
+
+<h3>Chunking: deciding what one vector represents</h3>
+<div class="analogy"><b>Kitchen analogy:</b> You wouldn't blend an entire cookbook into one smoothie and expect to taste "chapter 4." You chop it into recipes, and each recipe is one retrievable unit. Chunking is the same decision for documents: what's the smallest independently-meaningful unit you're willing to retrieve and hand to the LLM?</div>
+
+<p>The reference notebook uses the simplest possible chunking strategy: one chunk per policy document (12 short HR/IT policies, each a self-contained paragraph). That works because each document already <em>is</em> one coherent idea. In Tab ⑨ we'll cover what breaks when real documents are pages long.</p>
+
+<table>
+<tr><th>Strategy</th><th>How it splits</th><th>When it's right</th></tr>
+<tr><td>Fixed-size (e.g. 500 tokens)</td><td>Blind character/token count, often with overlap</td><td>Fast default for long, unstructured text</td></tr>
+<tr><td>Semantic / structure-aware</td><td>Splits on headings, paragraphs, or topic shifts</td><td>Structured docs (policies, manuals, specs)</td></tr>
+<tr><td>One-doc-one-chunk (this notebook)</td><td>No splitting at all</td><td>Documents that are already short and atomic</td></tr>
+</table>
+
+<h3>Storing vectors in Qdrant</h3>
+<div class="analogy"><b>Coat-check analogy:</b> Qdrant is a coat-check desk for vectors. You hand it a vector plus a ticket stub (the <code>payload</code> — title, text, doc_id). Later you hand it a <em>query</em> vector and ask "give me the 5 coats most similar to this one," and it hands back the stubs attached to those coats.</div>
+
+<pre class="code">qdrant_client = QdrantClient(":memory:")  <span class="c"># in-memory for this lab; Tab ⑨ covers persistent deployment</span>
+
+qdrant_client.create_collection(
+    collection_name="production-rag-lab",
+    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+)
+
+qdrant_client.upsert(
+    collection_name="production-rag-lab",
+    points=[PointStruct(id=i, vector=vec.tolist(), payload={"doc_id": d["id"], "title": d["title"], "text": d["text"]})
+            for i, (d, vec) in enumerate(zip(documents, embeddings))]
+)</pre>
+
+<div class="pipeline">
+<span class="step">SentenceTransformer</span><span class="arrow">→</span><span class="step">384-dim vector</span><span class="arrow">→</span><span class="step">Qdrant collection (cosine)</span><span class="arrow">→</span><span class="step">query_points(query_vector, limit=k)</span><span class="arrow">→</span><span class="step">top-k docs + score</span>
+</div>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Forgetting that a cosine-similarity collection and a dot-product collection behave identically <em>only</em> when every vector is normalized. Mixing a non-normalized query vector against normalized stored vectors silently returns wrong rankings — nothing errors, the scores just stop meaning what you think they mean.
+</div>
+
+<h3>Failure mode: when dense retrieval alone isn't enough</h3>
+<p><span class="tag failure">failure</span> Dense retrieval returns the <em>semantically closest</em> chunks — not necessarily the chunks that actually answer the question. On a small, clean 12-document set like this lab's, that rarely matters. At enterprise scale with thousands of overlapping documents, "semantically close" and "actually relevant" diverge often enough that Tab ④'s hybrid search becomes necessary, not optional.</p>
+</section>
+
+<!-- ============ TAB 4: BM25 + HYBRID + RRF ============ -->
+<section class="panel" id="panel-hybrid" data-label="④ Hybrid Search">
+<p class="phase-marker">Phase B — Building</p>
+<h2>④ Lexical search (BM25) and hybrid retrieval with RRF</h2>
+
+<h3>Why add keyword search back in</h3>
+<p>As covered in Tab ③, dense embeddings are weak on exact tokens. BM25 is the opposite: it's a decades-old statistical scoring function that rewards documents containing the <em>exact words</em> of the query, weighted by how rare and how concentrated those words are. It has no idea what a word "means" — it only counts.</p>
+
+<pre class="code">def tokenize(text):
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+bm25_corpus = [tokenize(doc["title"] + " " + doc["text"]) for doc in documents]
+bm25 = BM25Okapi(bm25_corpus)   <span class="c"># rank_bm25 library</span>
+
+def bm25_retrieve(query, top_k=5):
+    scores = bm25.get_scores(tokenize(query))
+    top_idx = np.argsort(scores)[::-1][:top_k]
+    return [{"id": documents[i]["id"], "title": documents[i]["title"],
+              "text": documents[i]["text"], "bm25_score": float(scores[i])} for i in top_idx]</pre>
+
+<h3>Combining two rankings: Reciprocal Rank Fusion</h3>
+<p>You now have two ranked lists — dense and BM25 — scored on completely different, incomparable scales (cosine similarity vs. a BM25 statistic). RRF solves this by throwing away the raw scores and using only <em>rank position</em>: a document gets <code>1 / (k + rank)</code> points from each list it appears in, and points from both lists are summed.</p>
+
+<pre class="code">def reciprocal_rank_fusion(dense_results, bm25_results, rrf_k=60, top_k=8):
+    scores = {}
+    for rank, item in enumerate(dense_results, start=1):
+        scores[item["id"]] = scores.get(item["id"], 0) + 1 / (rrf_k + rank)
+    for rank, item in enumerate(bm25_results, start=1):
+        scores[item["id"]] = scores.get(item["id"], 0) + 1 / (rrf_k + rank)
+    ranked_ids = sorted(scores, key=scores.get, reverse=True)[:top_k]
+    return [doc_by_id[doc_id] for doc_id in ranked_ids]   <span class="c"># simplified</span>
+
+def hybrid_retrieve(query, candidate_k=6, final_k=8):
+    dense = dense_retrieve(query, top_k=candidate_k)
+    lexical = bm25_retrieve(query, top_k=candidate_k)
+    return reciprocal_rank_fusion(dense, lexical, top_k=final_k)</pre>
+
+<div class="pipeline">
+<span class="step">Query</span><span class="arrow">→</span><span class="step">Dense top-6</span><span class="arrow">+</span><span class="step">BM25 top-6</span><span class="arrow">→</span><span class="step">RRF fuse by rank</span><span class="arrow">→</span><span class="step">top-8 fused candidates</span>
+</div>
+
+<div class="callout">
+<div class="ctitle">Why rank, not score, is the right thing to fuse</div>
+<span class="tag decision">decision</span> A cosine score of 0.81 and a BM25 score of 9.3 cannot be averaged meaningfully — they live on unrelated scales that change with corpus size and embedding model. Rank position ("this was the #2 result") is comparable across any two retrieval methods, which is the entire reason RRF uses it instead of normalizing and averaging raw scores.
+</div>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Treating <code>rrf_k</code> (here, 60 — a widely-used default from the original RRF paper) as a cosmetic constant. A small <code>rrf_k</code> makes rank-1 dominate overwhelmingly; a large one flattens the fusion toward a near-even blend. Teams copy the default of 60 without ever checking whether it suits their corpus size and query style — it's a real tuning knob, not boilerplate.
+</div>
+</section>
+
+<!-- ============ TAB 5: RERANK + GENERATION + MEMORY ============ -->
+<section class="panel" id="panel-rerank" data-label="⑤ Rerank + Generate">
+<p class="phase-marker">Phase B — Building</p>
+<h2>⑤ Reranking, grounded generation, and conversation memory</h2>
+
+<h3>Reranking: a second, more expensive opinion</h3>
+<p>Hybrid retrieval (Tab ④) is deliberately cheap and approximate — it has to scan the whole corpus fast. A reranker is the opposite: it's a model built specifically to score query/document <em>pairs</em> precisely, and it's too slow to run against every document, so it only ever looks at the shortlist hybrid search already narrowed down.</p>
+
+<pre class="code">co = cohere.ClientV2(api_key=os.environ["COHERE_API_KEY"])
+
+def cohere_rerank(query, candidates, top_n=3):
+    response = co.rerank(model="rerank-v3.5", query=query,
+                          documents=[c["text"] for c in candidates], top_n=top_n)
+    return [{**candidates[r.index], "rerank_score": float(r.relevance_score)} for r in response.results]</pre>
+
+<div class="pipeline">
+<span class="step">8 fused candidates</span><span class="arrow">→</span><span class="step">Cohere Rerank</span><span class="arrow">→</span><span class="step">best 3, each with relevance_score 0–1</span>
+</div>
+
+<div class="callout">
+<div class="ctitle">Retrieve cheap, rerank precise — the two-stage pattern</div>
+<span class="tag technique">technique</span> This cheap-then-precise shape (narrow with fast hybrid search, then score the shortlist with an expensive model) is the same pattern behind almost every production search system, not just RAG. Running the reranker over the full corpus instead of a shortlist would work but would be far too slow and expensive at any real scale.
+</div>
+
+<h3>Grounded generation: making the LLM stay on the page</h3>
+<p>The reranked contexts, the conversation memory, and the question all get assembled into one explicit prompt that <em>instructs</em> the model to answer only from what's given:</p>
+
+<pre class="code">def generate_rag_answer(question, contexts):
+    context_text = "\n\n".join(f"Context {i+1}: {c}" for i, c in enumerate(contexts))
+    prompt = f"""Conversation memory:\n{memory_text()}\n\nQuestion:\n{question}\n\n
+Retrieved context:\n{context_text}\n\nInstructions:
+- Answer using only the retrieved context.
+- If the answer is not supported, say that the internal documents do not provide enough information.
+- Keep the answer concise."""
+    return call_llm("You are a grounded enterprise RAG assistant.", prompt, temperature=0)</pre>
+
+<p><b>[Certain]</b> Three details here matter more than they look: <code>temperature=0</code> (deterministic, not creative, answers), an explicit instruction to say "not enough information" rather than guess, and a system prompt that frames the model's role before the data arrives.</p>
+
+<h3>Conversation memory: a sliding window, not a transcript</h3>
+<div class="analogy"><b>School analogy:</b> A teaching assistant doesn't memorize every word of every office-hours conversation all semester — they remember roughly the last few exchanges well enough to follow up ("as you asked earlier..."). The notebook's memory does exactly this, capped at 4 turns.</div>
+
+<pre class="code">conversation_memory = []
+MAX_MEMORY_TURNS = 4
+
+def add_to_memory(question, answer):
+    conversation_memory.append({"question": question, "answer": answer})
+    if len(conversation_memory) > MAX_MEMORY_TURNS:
+        conversation_memory.pop(0)</pre>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Letting memory grow unbounded "to be safe." Every turn kept in memory gets re-sent as prompt tokens on <em>every subsequent call</em> — unbounded memory is a silent, compounding cost and latency leak, and eventually blows the context window on long sessions.
+</div>
+</section>
+
+<!-- ============ TAB 6: GUARDRAILS + TOOL ROUTING ============ -->
+<section class="panel" id="panel-guardrails" data-label="⑥ Guardrails + Tools">
+<p class="phase-marker">Phase B — Building</p>
+<h2>⑥ Guardrails and tool routing — the smallest possible agent</h2>
+
+<h3>Guardrails: rejecting before you even retrieve</h3>
+<div class="analogy"><b>Doctor analogy:</b> A doctor's receptionist doesn't need medical training to recognize "can I have your colleague's prescription records" as a request to refuse before it ever reaches the doctor. A guardrail is that receptionist — a cheap check that runs <em>before</em> retrieval and generation, so a disallowed request never even gets expensive processing.</div>
+
+<pre class="code">BLOCKED_PATTERNS = [r"reveal.*password", r"show.*api key", r"give.*credential",
+                     r"bypass.*security", r"disable.*mfa"]
+
+def guardrail_check(question):
+    q = question.lower()
+    for pattern in BLOCKED_PATTERNS:
+        if re.search(pattern, q):
+            return False, "I cannot help reveal credentials or bypass security controls."
+    return True, "allowed"</pre>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Mistaking a regex blocklist (what this lab uses, for teaching clarity) for a production guardrail. <span class="tag production">production</span> Real guardrails combine policy rules, a trained classifier or moderation model, authentication, and access control — a regex list is trivially bypassed by rephrasing ("what's the password, spelled with spaces between each letter?"). Tab ⑨ returns to this gap.
+</div>
+
+<h3>Tool routing: when the answer isn't in any document</h3>
+<p>Some questions are legitimately outside the knowledge base — not because retrieval failed, but because the answer is <em>live external data</em> no internal document would ever contain ("what's the capital of Vietnam?"). The notebook routes these to an external API instead of searching internal documents at all.</p>
+
+<pre class="code">COUNTRY_TERMS = ["capital of", "currency of", "population of", "country facts", "languages of"]
+
+def should_use_country_tool(question):
+    return any(term in question.lower() for term in COUNTRY_TERMS)
+
+def country_tool(question):
+    country = extract_country(question)
+    item = requests.get(f"https://restcountries.com/v3.1/name/{country}", timeout=20).json()[0]
+    context = f"Country: {item['name']['common']}\nCapital: {', '.join(item.get('capital', []))}\n..."
+    answer = call_llm("Answer using only the supplied country facts.", f"Question: {question}\n\n{context}")
+    return {"answer": answer, "contexts": [context], "route": "TOOL", "tool_used": "REST Countries"}</pre>
+
+<div class="pipeline">
+<span class="step">Question</span><span class="arrow">→</span><span class="step">Guardrail check</span><span class="arrow">→</span><span class="step">Tool Router</span><span class="arrow">──→</span><span class="step">External Tool (if matched)</span>
+</div>
+
+<div class="callout">
+<div class="ctitle">This is agentic RAG's smallest unit</div>
+<span class="tag concept">concept</span> "Agentic" sounds like it requires a complex planning framework, but at its core an agent is just: a decision point that picks between <em>multiple possible actions</em> based on the input, rather than always doing the same thing. <code>should_use_country_tool</code> is a one-line agent. Tab ⑦ and ⑧ add more sophisticated decision points on top of this same idea.
+</div>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Keyword-matching intent detection (<code>"capital of" in question</code>) is fast and transparent but brittle — "tell me Vietnam's capital city" slips past it. <span class="tag failure">failure</span> Production systems typically route with a small classifier or the main LLM itself (function-calling / tool-use), trading a little latency for far better recall on intent.
+</div>
+</section>
+
+<!-- ============ TAB 7: SELF-RAG ============ -->
+<section class="panel" id="panel-selfrag" data-label="⑦ Self-RAG">
+<p class="phase-marker">Phase B — Building</p>
+<h2>⑦ Self-RAG — critique and retry</h2>
+
+<p>Self-RAG asks one question after generation: <b>"Is my answer good enough?"</b> If not, it rewrites the query and tries once more, using everything from Tabs ④–⑥ again on the second pass.</p>
+
+<pre class="code">def critique_answer(question, answer, contexts):
+    prompt = f"""Question: {question}\nAnswer: {answer}\nRetrieved context:\n{"".join(contexts)}
+Return exactly one label:
+PASS = the answer is directly supported by the context and answers the question.
+RETRY = the answer is weak, unsupported, or the context is insufficient."""
+    result = call_llm("You are a strict RAG quality checker. Return only PASS or RETRY.", prompt, temperature=0)
+    return "PASS" if "PASS" in result.upper() else "RETRY"
+
+def rewrite_query(question):
+    return call_llm("Rewrite the query for enterprise document retrieval. Return only the rewritten query.",
+                     f"Original query: {question}", temperature=0)
+
+def self_rag(question):
+    working_query = question
+    for attempt in range(2):                       <span class="c"># capped at one retry</span>
+        candidates = hybrid_retrieve(working_query)
+        reranked = cohere_rerank(working_query, candidates, top_n=3)
+        contexts = [item["text"] for item in reranked]
+        answer = generate_rag_answer(question, contexts)
+        critique = critique_answer(question, answer, contexts)
+        if critique == "PASS":
+            return {"answer": answer, "contexts": contexts, "self_rag_attempts": attempt + 1}
+        working_query = rewrite_query(question)
+    return {"answer": answer, "contexts": contexts, "self_rag_attempts": 2}   <span class="c"># exhausted retries</span></pre>
+
+<div class="pipeline">
+<span class="step">Hybrid Retrieve</span><span class="arrow">→</span><span class="step">Rerank</span><span class="arrow">→</span><span class="step">Generate</span><span class="arrow">→</span><span class="step">Critique</span>
+</div>
+<div class="flow-branch">
+<span class="b">PASS → return</span>
+<span class="b">RETRY → rewrite query → retrieve again → rerank again → generate again → critique again → return regardless</span>
+</div>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Assuming Self-RAG always improves the answer. Notice the final <code>return</code> statement: after the retry budget (here, 1 retry) is exhausted, the function returns whatever it has — <em>even if the second critique also said RETRY</em>. Self-RAG with a hard retry cap doesn't guarantee a good answer; it bounds the <em>cost</em> of trying, and silently gives up after that bound. A real system needs to surface low-confidence answers differently from high-confidence ones — which is exactly what CRAG (Tab ⑧) adds.
+</div>
+
+<div class="callout">
+<div class="ctitle">Cost and latency are not free here</div>
+<span class="tag failure">failure</span> Every RETRY branch doubles the LLM calls for that query: one more hybrid retrieve, one more rerank, one more generation, one more critique. At scale, a system where even 10% of queries RETRY once has its p99 latency and LLM spend dominated by that 10%. This is the trade-off row in Tab ②'s taxonomy table made concrete.
+</div>
+</section>
+
+<!-- ============ TAB 8: CRAG ============ -->
+<section class="panel" id="panel-crag" data-label="⑧ CRAG">
+<p class="phase-marker">Phase C — Production</p>
+<h2>⑧ CRAG — correcting for weak retrieval, not just weak answers</h2>
+
+<p>Where Self-RAG (Tab ⑦) asks "is my <em>answer</em> good enough?", CRAG asks a different question before trusting anything: <b>"Is my <em>retrieved evidence</em> reliable enough — and if not, what's my fallback?"</b> It uses the top rerank score as a confidence signal.</p>
+
+<pre class="code">CRAG_THRESHOLD = 0.20   <span class="c"># minimum acceptable rerank confidence — see Common Mistake below</span>
+
+def apply_crag(question, rag_result):
+    retrieval = rag_result.get("retrieval", [])
+    best_score = retrieval[0].get("rerank_score", 0.0) if retrieval else 0.0
+
+    if best_score >= CRAG_THRESHOLD:
+        return {**rag_result, "crag_action": "KEEP_RAG", "retrieval_confidence": best_score}
+
+    if should_use_country_tool(question):
+        tool_result = country_tool(question)
+        return {**tool_result, "crag_action": "USE_TOOL", "retrieval_confidence": best_score}
+
+    return {"answer": "I could not find reliable support for this question in the internal documents.",
+            "contexts": rag_result.get("contexts", []), "crag_action": "SAFE_FALLBACK",
+            "retrieval_confidence": best_score}</pre>
+
+<div class="pipeline">
+<span class="step">Self-RAG result</span><span class="arrow">→</span><span class="step">top rerank_score</span><span class="arrow">→</span><span class="step">≥ threshold?</span>
+</div>
+<div class="flow-branch">
+<span class="b">Yes → KEEP_RAG (trust the evidence)</span>
+<span class="b">No + tool matches → USE_TOOL</span>
+<span class="b">No + no tool → SAFE_FALLBACK ("I don't know")</span>
+</div>
+
+<div class="analogy"><b>Fishing analogy:</b> Self-RAG is a fisher who, after reeling in, checks "is this fish actually big enough to serve?" CRAG is the fisher checking, <em>before</em> even reeling all the way in, whether the line felt like it caught something real or just snagged on a rock — and if it was just a rock, switching to a different fishing spot (the tool) or admitting "nothing here" (safe fallback) instead of serving the rock as dinner.</div>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Treating <code>CRAG_THRESHOLD = 0.20</code> as a production-ready constant because it appears in a working notebook. [Likely] This is a pedagogical placeholder, not a tuned value — the right threshold depends entirely on your reranker, your corpus, and how costly a wrong answer is for your use case. Shipping this number unchanged is the single most common way teams carry a toy project's assumptions into production.
+</div>
+
+<div class="callout">
+<div class="ctitle">CRAG's real contribution: graceful degradation</div>
+<span class="tag concept">concept</span> The property that matters isn't the specific threshold — it's that the system has <em>three</em> distinct outcomes (trust it / redirect it / admit failure) instead of two (answer / don't answer). A system that can only say "here's an answer" or "I refuse" either over-answers on weak evidence or under-answers on borderline-fine evidence. A third, explicit "I don't know, and here's why" path is what makes a system trustworthy enough to deploy against real users.
+</div>
+</section>
+
+<!-- ============ TAB 9: FAILURE MODES & PRODUCTION HARDENING ============ -->
+<section class="panel" id="panel-failure" data-label="⑨ Production Hardening">
+<p class="phase-marker">Phase C — Production</p>
+<h2>⑨ Failure modes, scaling, security, and cost at production scale</h2>
+
+<p>Tab ⑥'s single function — <code>production_rag(question)</code> — chains every previous tab: guardrail → tool-route-or-RAG → Self-RAG → CRAG → memory → logging. This tab covers what changes when that function serves real traffic instead of a notebook.</p>
+
+<h3>Failure modes catalog</h3>
+<table class="scroll-wrap">
+<tr><th>Failure</th><th>What it looks like</th><th>Root cause</th><th>Mitigation</th></tr>
+<tr><td><span class="tag failure">Silent retrieval failure</span></td><td>Confident, fluent, wrong answer</td><td>Weak chunk matched the query's topic but not its specific question</td><td>CRAG confidence threshold (Tab ⑧) + Context Precision/Recall metrics (Tab ⑪)</td></tr>
+<tr><td><span class="tag failure">Hallucination despite good retrieval</span></td><td>Answer contains claims the context doesn't support</td><td>Grounding instruction ignored or context underused by the LLM</td><td>Faithfulness metric (Tab ⑪) + stricter prompt + Self-RAG critique (Tab ⑦)</td></tr>
+<tr><td><span class="tag failure">Guardrail bypass</span></td><td>Disallowed request phrased to dodge the regex</td><td>Pattern-matching guardrails (Tab ⑥) have no semantic understanding</td><td>Classifier-based moderation model, not regex, in production</td></tr>
+<tr><td><span class="tag failure">Tool-routing misfire</span></td><td>Internal question answered by external tool, or vice versa</td><td>Keyword-based intent detection (Tab ⑥) is brittle</td><td>LLM-based function-calling for routing instead of string matching</td></tr>
+<tr><td><span class="tag failure">Retry-loop cost blowup</span></td><td>p99 latency and spend dominated by a small fraction of queries</td><td>Self-RAG retries (Tab ⑦) multiply LLM calls on hard queries</td><td>Hard retry caps (already present), async/parallel retrieval, cost alerting per route</td></tr>
+</table>
+
+<h3>Scaling the vector database</h3>
+<p>This guide's Qdrant runs <code>:memory:</code> — fine for 12 documents, gone the moment the process restarts. <span class="tag production">production</span></p>
+<ul>
+<li><b>Persistence:</b> a real deployment points at Qdrant Cloud or a self-hosted Qdrant server with a disk-backed storage path, not <code>:memory:</code>.</li>
+<li><b>Sharding/replication:</b> collections split across nodes once document counts reach the millions, and replicated for availability.</li>
+<li><b>Payload indexing:</b> at scale, filter fields (department, access level, document date) need their own Qdrant payload indexes or every filtered query degenerates into a full scan.</li>
+</ul>
+
+<h3>Security and access control</h3>
+<p>Nothing in this guide's code checks <em>who is asking</em>. A production RAG system over internal documents needs: </p>
+<ul>
+<li>Retrieval-time filtering by the requester's permissions (never retrieve, let alone show, a document the user isn't cleared to see — filtering after generation is too late).</li>
+<li>Data classification tags on each chunk's payload, enforced at query time via Qdrant payload filters.</li>
+<li>Audit logging of every query, retrieved context, and answer — the notebook's <code>production_logs</code> list is the seed of this, but a real system persists it outside the process.</li>
+</ul>
+
+<h3>Cost and latency budgeting</h3>
+<div class="scrollx"><table>
+<tr><th>Stage</th><th>Cost driver</th><th>Typical latency</th></tr>
+<tr><td>Dense retrieval (Qdrant)</td><td>Negligible per-query compute once indexed</td><td>Single-digit ms</td></tr>
+<tr><td>BM25</td><td>CPU only, no API cost</td><td>Single-digit ms</td></tr>
+<tr><td>Cohere Rerank</td><td>Per-call API cost, scales with candidate count</td><td>~100–300ms</td></tr>
+<tr><td>LLM generation</td><td>Per-token API cost</td><td>~500ms–2s</td></tr>
+<tr><td>Self-RAG retry</td><td>Doubles rerank + generation cost for that query</td><td>Doubles the above, serially</td></tr>
+</table></div>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Benchmarking average latency and declaring the system production-ready. The retry-loop and CRAG-fallback paths mean latency is <em>bimodal</em>: most queries are fast (single pass, KEEP_RAG), and a minority are 2–3x slower (retries, tool calls). Report and alert on p95/p99, not just the mean — the mean hides exactly the queries most likely to frustrate a real user.
+</div>
+</section>
+
+<!-- ============ TAB 10: CODE LAB ============ -->
+<section class="panel" id="panel-code" data-label="⑩ Code Lab">
+<p class="phase-marker">Runnable — Google Colab</p>
+<h2>⑩ Code Lab — progressive, runnable in Colab</h2>
+<p>Each box below adds exactly one concept on top of the last. Run them top to bottom in one Colab notebook. Stack: <b>Python · Qdrant · sentence-transformers · rank_bm25 · Cohere · OpenRouter · RAGAS</b>. You'll need a free <b>Cohere</b> key and a free <b>OpenRouter</b> key before Program 5.</p>
+
+<details class="codebox" open><summary>Program 1 — Install & imports</summary><div class="inner">
+<pre class="code">!pip install -q -U qdrant-client langchain-qdrant sentence-transformers rank-bm25 cohere openai ragas pandas requests
+
+import os, re, time, json, math, requests
+import numpy as np, pandas as pd
+from getpass import getpass
+from sentence_transformers import SentenceTransformer
+from rank_bm25 import BM25Okapi
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
+import cohere
+from openai import OpenAI, AsyncOpenAI
+
+EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+GEN_MODEL = "openai/gpt-4o-mini"          <span class="c"># via OpenRouter</span>
+RERANK_MODEL = "rerank-v3.5"              <span class="c"># via Cohere</span></pre>
+</div></details>
+
+<details class="codebox"><summary>Program 2 — Build the knowledge base + embed it (Tab ③)</summary><div class="inner">
+<pre class="code">documents = [
+    {"id": "doc_01", "title": "Annual Leave Policy",
+     "text": "Employees receive 24 days of paid annual leave per calendar year."},
+    {"id": "doc_05", "title": "VPN Support",
+     "text": "If the corporate VPN fails, restart the VPN client, verify MFA, then contact IT."},
+    <span class="c"># ...add the rest of your document set here</span>
+]
+
+embedding_model = SentenceTransformer(EMBED_MODEL)
+texts = [d["text"] for d in documents]
+embeddings = embedding_model.encode(texts, normalize_embeddings=True, show_progress_bar=True)
+print("Embedded", len(embeddings), "docs at dim", embeddings.shape[1])</pre>
+</div></details>
+
+<details class="codebox"><summary>Program 3 — Index in Qdrant + add BM25 (Tabs ③–④)</summary><div class="inner">
+<pre class="code">qdrant_client = QdrantClient(":memory:")
+qdrant_client.create_collection("lab", vectors_config=VectorParams(size=384, distance=Distance.COSINE))
+qdrant_client.upsert("lab", points=[
+    PointStruct(id=i, vector=v.tolist(), payload={"doc_id": d["id"], "title": d["title"], "text": d["text"]})
+    for i, (d, v) in enumerate(zip(documents, embeddings))
+])
+
+def tokenize(t): return re.findall(r"[a-z0-9]+", t.lower())
+bm25 = BM25Okapi([tokenize(d["title"] + " " + d["text"]) for d in documents])
+doc_by_id = {d["id"]: d for d in documents}
+print("Qdrant + BM25 ready.")</pre>
+</div></details>
+
+<details class="codebox"><summary>Program 4 — Hybrid retrieval with RRF (Tab ④)</summary><div class="inner">
+<pre class="code">def dense_retrieve(query, top_k=5):
+    qv = embedding_model.encode(query, normalize_embeddings=True).tolist()
+    hits = qdrant_client.query_points(collection_name="lab", query=qv, limit=top_k, with_payload=True).points
+    return [{"id": h.payload["doc_id"], "text": h.payload["text"]} for h in hits]
+
+def bm25_retrieve(query, top_k=5):
+    scores = bm25.get_scores(tokenize(query))
+    idx = np.argsort(scores)[::-1][:top_k]
+    return [{"id": documents[i]["id"], "text": documents[i]["text"]} for i in idx]
+
+def hybrid_retrieve(query, k=60, top_k=8):
+    dense, lex = dense_retrieve(query), bm25_retrieve(query)
+    scores = {}
+    for rank, item in enumerate(dense, 1): scores[item["id"]] = scores.get(item["id"], 0) + 1/(k+rank)
+    for rank, item in enumerate(lex, 1): scores[item["id"]] = scores.get(item["id"], 0) + 1/(k+rank)
+    ranked = sorted(scores, key=scores.get, reverse=True)[:top_k]
+    return [doc_by_id[d] for d in ranked]
+
+print(hybrid_retrieve("how many leave days")[:2])</pre>
+</div></details>
+
+<details class="codebox"><summary>Program 5 — Rerank + grounded generation (Tab ⑤, needs API keys)</summary><div class="inner">
+<pre class="code">os.environ["COHERE_API_KEY"] = getpass("Cohere key: ")
+os.environ["OPENROUTER_API_KEY"] = getpass("OpenRouter key: ")
+
+co = cohere.ClientV2(api_key=os.environ["COHERE_API_KEY"])
+llm = OpenAI(api_key=os.environ["OPENROUTER_API_KEY"], base_url="https://openrouter.ai/api/v1")
+
+def cohere_rerank(query, candidates, top_n=3):
+    resp = co.rerank(model=RERANK_MODEL, query=query, documents=[c["text"] for c in candidates], top_n=top_n)
+    return [{**candidates[r.index], "rerank_score": float(r.relevance_score)} for r in resp.results]
+
+def call_llm(system, user, temperature=0):
+    r = llm.chat.completions.create(model=GEN_MODEL, temperature=temperature,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
+    return r.choices[0].message.content.strip()
+
+def generate_rag_answer(question, contexts):
+    ctx = "\n\n".join(contexts)
+    prompt = f"Question: {question}\n\nContext:\n{ctx}\n\nAnswer using only this context."
+    return call_llm("You are a grounded enterprise RAG assistant.", prompt)</pre>
+</div></details>
+
+<details class="codebox"><summary>Program 6 — Self-RAG critique loop (Tab ⑦)</summary><div class="inner">
+<pre class="code">def critique_answer(question, answer, contexts):
+    prompt = f"Question: {question}\nAnswer: {answer}\nContext:\n{''.join(contexts)}\nReturn PASS or RETRY only."
+    result = call_llm("You are a strict RAG quality checker.", prompt)
+    return "PASS" if "PASS" in result.upper() else "RETRY"
+
+def self_rag(question):
+    query = question
+    for attempt in range(2):
+        candidates = hybrid_retrieve(query)
+        reranked = cohere_rerank(query, candidates)
+        contexts = [c["text"] for c in reranked]
+        answer = generate_rag_answer(question, contexts)
+        if critique_answer(question, answer, contexts) == "PASS":
+            return {"answer": answer, "retrieval": reranked, "attempts": attempt + 1}
+        query = call_llm("Rewrite this query for better retrieval.", question)
+    return {"answer": answer, "retrieval": reranked, "attempts": 2}</pre>
+</div></details>
+
+<details class="codebox"><summary>Program 7 — CRAG correction layer (Tab ⑧)</summary><div class="inner">
+<pre class="code">CRAG_THRESHOLD = 0.20   <span class="c"># tune this for your own corpus — see Tab ⑧'s Common Mistake</span>
+
+def apply_crag(question, rag_result):
+    retrieval = rag_result.get("retrieval", [])
+    best = retrieval[0]["rerank_score"] if retrieval else 0.0
+    if best >= CRAG_THRESHOLD:
+        return {**rag_result, "action": "KEEP_RAG", "confidence": best}
+    return {"answer": "I could not find reliable support for this in the documents.",
+            "action": "SAFE_FALLBACK", "confidence": best}
+
+result = apply_crag("What is the leave policy?", self_rag("What is the leave policy?"))
+print(result["action"], result["confidence"])</pre>
+</div></details>
+
+<details class="codebox"><summary>Program 8 — End-to-end on a real query file (not hardcoded strings)</summary><div class="inner">
+<pre class="code"><span class="c"># real file end-to-end: load a benchmark CSV of questions + ground truth, run the whole pipeline</span>
+benchmark_df = pd.read_csv("benchmark_queries.csv")   <span class="c"># columns: question, ground_truth</span>
+
+rows = []
+for _, row in benchmark_df.iterrows():
+    rag = self_rag(row["question"])
+    corrected = apply_crag(row["question"], rag)
+    rows.append({"question": row["question"], "answer": corrected["answer"],
+                  "ground_truth": row["ground_truth"], "action": corrected["action"],
+                  "confidence": corrected["confidence"]})
+
+results_df = pd.DataFrame(rows)
+results_df.to_csv("production_rag_results.csv", index=False)
+print("Saved production_rag_results.csv —", len(results_df), "rows")</pre>
+</div></details>
+</section>
+
+<!-- ============ TAB 11: RAGAS EVALUATION & BENCHMARKING ============ -->
+<section class="panel" id="panel-eval" data-label="⑪ Evaluation">
+<p class="phase-marker">Phase C — Production · verify what you built</p>
+<h2>⑪ Evaluation and benchmarking with RAGAS</h2>
+
+<p>Every tab so far produces an <em>answer</em>. This tab produces a <b>number</b> — the step teams skip and then can't explain when a stakeholder asks "is it actually working?"</p>
+
+<h3>Building a benchmark set</h3>
+<p>A benchmark is a fixed set of questions <em>with known-correct ground-truth answers</em>, mixed deliberately to exercise every route in your system: internal policy questions, public tool questions, one guardrail-triggering question, and one deliberately unanswerable question.</p>
+<pre class="code">benchmark = [
+    {"question": "How many paid annual leave days do employees receive?",
+     "ground_truth": "Employees receive 24 days of paid annual leave per calendar year."},
+    {"question": "When is a medical certificate needed for sick leave?",
+     "ground_truth": "A medical certificate is required when sick leave exceeds 2 consecutive working days."},
+    <span class="c"># ... 6 more, mixing routes deliberately</span>
+]</pre>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Benchmarking only with questions the system is expected to answer well. A benchmark that never includes an unanswerable question or a guardrail-triggering question never tests the paths (SAFE_FALLBACK, guardrail rejection) that matter most for trust in production.
+</div>
+
+<h3>The five RAGAS metrics</h3>
+<table class="scroll-wrap">
+<tr><th>Metric</th><th>Side</th><th>Answers</th></tr>
+<tr><td><b>Faithfulness</b></td><td>Answer</td><td>Are the answer's claims actually supported by the retrieved contexts? (catches hallucination)</td></tr>
+<tr><td><b>Answer Relevancy</b></td><td>Answer</td><td>Does the answer directly address the question asked? (catches rambling/off-topic answers)</td></tr>
+<tr><td><b>Answer Correctness</b></td><td>Answer</td><td>Does the answer agree with the ground-truth answer?</td></tr>
+<tr><td><b>Context Precision</b></td><td>Retrieval</td><td>Are the useful retrieved chunks ranked ahead of irrelevant ones?</td></tr>
+<tr><td><b>Context Recall</b></td><td>Retrieval</td><td>Do the retrieved chunks contain everything the ground truth needs?</td></tr>
+</table>
+
+<pre class="code">from ragas.llms import llm_factory
+from ragas.embeddings import HuggingFaceEmbeddings
+from ragas.metrics.collections import Faithfulness, AnswerRelevancy, AnswerCorrectness, ContextPrecision, ContextRecall
+
+judge_llm = llm_factory(JUDGE_MODEL, provider="openai", client=AsyncOpenAI(api_key=os.environ["OPENROUTER_API_KEY"],
+                                                                            base_url="https://openrouter.ai/api/v1"))
+ragas_embeddings = HuggingFaceEmbeddings(model=EMBED_MODEL, normalize_embeddings=True)
+
+faithfulness = Faithfulness(llm=judge_llm)
+relevancy = AnswerRelevancy(llm=judge_llm, embeddings=ragas_embeddings)
+correctness = AnswerCorrectness(llm=judge_llm, embeddings=ragas_embeddings)
+precision = ContextPrecision(llm=judge_llm)
+recall = ContextRecall(llm=judge_llm)
+
+score = await faithfulness.ascore(user_input=question, response=answer, retrieved_contexts=contexts)</pre>
+
+<div class="callout">
+<div class="ctitle">Why an LLM judges the LLM</div>
+<span class="tag concept">concept</span> Four of the five metrics need a <code>judge_llm</code> because "is this supported by the context" and "does this answer the question" are judgment calls, not string matches — RAGAS asks a separate LLM call to make that judgment against a fixed rubric, which is itself an application of the Self-RAG critique idea from Tab ⑦, generalized into a reusable evaluation tool.
+</div>
+
+<h3>Reading the results: which number tells you what to fix</h3>
+<table>
+<tr><th>Symptom</th><th>Look at</th><th>Likely fix</th></tr>
+<tr><td>Answers sound right but contradict ground truth</td><td>Low Answer Correctness, high Faithfulness</td><td>Retrieval found irrelevant-but-plausible content — tune retrieval, not the prompt</td></tr>
+<tr><td>Answers contain facts not in the context</td><td>Low Faithfulness</td><td>Hallucination — tighten the grounding instruction, add/strengthen Self-RAG critique</td></tr>
+<tr><td>Right documents retrieved but ranked low</td><td>Low Context Precision</td><td>Reranker or RRF tuning (Tab ④–⑤), not the LLM</td></tr>
+<tr><td>Needed information simply never retrieved</td><td>Low Context Recall</td><td>Chunking strategy (Tab ③) or missing documents in the knowledge base</td></tr>
+</table>
+
+<pre class="code">final_report_df = benchmark_results_df.merge(ragas_df, on=["query_no", "question"], how="left")
+final_report_df.to_csv("production_rag_benchmark_report.csv", index=False)</pre>
+
+<div class="callout mistake">
+<div class="ctitle">⚠️ Common mistake</div>
+Running RAGAS once and treating the scores as fixed facts about the system. RAGAS scores are themselves LLM judgments and carry their own noise — track them over time as a trend across deployments, not as a single pass/fail gate on one run.
+</div>
+</section>
+
+<!-- ============ PRACTICE ============ -->
+<section class="panel" id="panel-practice" data-label="🎯 Practice">
+<h2>🎯 Practice — one evolving project, three stages</h2>
+<p>All three assignments build <em>one</em> system: an internal-docs assistant for a mid-size company's IT/HR helpdesk. You extend the same codebase at each stage — don't start over.</p>
+
+<div class="assign">
+<h3>Assignment 1 — Foundation Build <span class="diff beg">Beginner</span></h3>
+<p><b>Tests:</b> Tab ③ embeddings/Qdrant, Tab ④ BM25 + RRF, Tab ⑤ grounded generation.</p>
+<p><b>Problem:</b> You're given a CSV of 20 internal IT helpdesk tickets (<code>question</code>, <code>answer</code> columns). Build a hybrid-search FAQ bot: embed the answers, index in Qdrant, add a BM25 index, fuse with RRF, and generate a grounded response for any new question.</p>
+<p><b>Expected outcome:</b> Given a question not word-for-word identical to any ticket, the bot returns an answer grounded in the closest matching ticket(s), and explicitly says "not enough information" when nothing is close.</p>
+
+<details class="codebox"><summary>Starter scaffold</summary><div class="inner">
+<pre class="code">def build_knowledge_base(csv_path):
+    <span class="c"># TODO: load CSV, embed the `answer` column, return (documents, embeddings)</span>
+    pass
+
+def index_in_qdrant(documents, embeddings):
+    <span class="c"># TODO: create collection, upsert points with payload = {question, answer}</span>
+    pass
+
+def build_bm25(documents):
+    <span class="c"># TODO: tokenize and build BM25Okapi index over question+answer text</span>
+    pass
+
+def answer_question(question):
+    <span class="c"># TODO: hybrid_retrieve -> generate_rag_answer -> return grounded answer</span>
+    pass</pre>
+</div></details>
+
+<p><b>Verify your work:</b></p>
+<ul class="checklist">
+<li>Collection reports the correct document count after indexing</li>
+<li>A question using different wording than the ticket still retrieves the right ticket (tests dense search)</li>
+<li>A question containing an exact ticket code/ID still retrieves correctly (tests BM25)</li>
+<li>A question with no related ticket returns "not enough information," not a guess</li>
+</ul>
+
+<p><b>Self-Check:</b></p>
+<ul class="checklist">
+<li>Does your embedding call use <code>normalize_embeddings=True</code>? If not, your cosine scores are meaningless.</li>
+<li>Does <code>bm25_retrieve("VPN-403")</code> return the ticket mentioning that exact code? If not, check your tokenizer regex.</li>
+<li>Does your RRF function use rank position, not raw scores? If you're averaging cosine and BM25 scores directly, re-read Tab ④.</li>
+</ul>
+</div>
+
+<div class="assign">
+<h3>Assignment 2 — Integration Challenge <span class="diff int">Intermediate</span></h3>
+<p><b>Tests:</b> Tab ⑤ reranking, Tab ⑥ guardrails + tool routing, Tab ⑦ Self-RAG.</p>
+<p><b>Scenario:</b> Your helpdesk bot from Assignment 1 is about to go in front of real employees. Extend it to: (1) rerank candidates with Cohere before generating, (2) reject requests for credentials/secrets with a guardrail, (3) route "what's the weather/population/capital of X" questions to a real public API instead of the internal knowledge base, and (4) add a Self-RAG critique-and-retry loop.</p>
+
+<p><b>Requirements:</b></p>
+<table>
+<tr><th>Must-have</th><th>Nice-to-have</th></tr>
+<tr><td>Reranker narrows hybrid candidates to top 3 before generation</td><td>Configurable <code>top_n</code> for reranking</td></tr>
+<tr><td>At least 3 guardrail patterns rejected before retrieval runs</td><td>Guardrail rejection reason varies by pattern type</td></tr>
+<tr><td>Tool routing correctly separates internal vs. external questions on 10 test questions</td><td>A second external tool (e.g. a currency-conversion API)</td></tr>
+<tr><td>Self-RAG retries at least once on a deliberately vague test question</td><td>Logging of which attempt (1st/2nd) produced the returned answer</td></tr>
+</table>
+
+<details><summary>💡 Hint: reranker integration</summary><p>Rerank <em>after</em> RRF fusion, not instead of it — RRF gives you a good, cheap candidate shortlist; the reranker's job is to re-sort that shortlist, not to search the whole corpus itself (Tab ⑤).</p></details>
+<details><summary>💡 Hint: tool routing robustness</summary><p>Keyword matching ("capital of" in question) is what the reference notebook uses and it's intentionally brittle — test it against paraphrases like "tell me Vietnam's capital" and see it fail, then decide whether that's acceptable for this assignment or whether you want to try LLM-based intent classification instead (Tab ⑥'s Common Mistake).</p></details>
+<details><summary>💡 Hint: Self-RAG retry budget</summary><p>Cap retries at 1, exactly as Tab ⑦ does — an uncapped retry loop is the cost/latency failure mode covered in Tab ⑨.</p></details>
+
+<p><b>Evaluation criteria (how to know it's working well, not just working):</b></p>
+<ul class="checklist">
+<li>On the 10 test questions, tool-routing precision and recall are both reported, not just "it seemed to work"</li>
+<li>You can show one example where Self-RAG's retry actually changed PASS/RETRY outcome vs. the first attempt</li>
+<li>Guardrail tests include at least one rephrased attempt to bypass a blocked pattern, and you report whether it succeeded</li>
+</ul>
+</div>
+
+<div class="assign">
+<h3>Assignment 3 — Production Capstone <span class="diff adv">Advanced</span></h3>
+<p><b>Tests:</b> Tab ⑧ CRAG, Tab ⑨ failure modes/production hardening, Tab ⑪ RAGAS evaluation.</p>
+<p><b>Scenario:</b> You're handing this system to a real IT operations team who will depend on it daily. Extend Assignment 2 into a graded, production-grade system.</p>
+
+<p><b>Full requirements spec:</b></p>
+<ul class="checklist">
+<li>Add CRAG: a tunable confidence threshold on rerank score, with KEEP_RAG / USE_TOOL / SAFE_FALLBACK branches (Tab ⑧) — and justify your chosen threshold with evidence, not a copied default</li>
+<li>Build a benchmark set of at least 20 questions mixing all four routes (internal, tool, guardrail, unanswerable)</li>
+<li>Run all 5 RAGAS metrics (Tab ⑪) and produce a report showing where the system is weak</li>
+<li>Write up at least 2 of the failure modes from Tab ⑨'s catalog that you actually observed, with before/after evidence of your fix</li>
+<li>Report p50/p95/p99 latency, not just average, across your benchmark run</li>
+</ul>
+
+<details><summary>Architecture hints</summary><p>Your CRAG threshold should be derived empirically: run your benchmark with a range of thresholds (e.g. 0.1, 0.2, 0.3, 0.4) and plot how many queries fall into each action bucket at each threshold, then pick the one that best separates genuinely-good retrievals from genuinely-bad ones in your own data — don't reuse the notebook's 0.20 unchanged (Tab ⑧'s Common Mistake).</p></details>
+
+<p><b>Grading rubric:</b></p>
+<table>
+<tr><th>Criterion</th><th>What "good" looks like</th></tr>
+<tr><td>CRAG threshold justification</td><td>Threshold chosen from your own benchmark data, with a chart or table showing why</td></tr>
+<tr><td>RAGAS coverage</td><td>All 5 metrics run on all 20+ benchmark questions, results saved to CSV</td></tr>
+<tr><td>Failure analysis</td><td>At least 2 real observed failures, each with root cause and verified fix</td></tr>
+<tr><td>Latency reporting</td><td>p50/p95/p99 reported and the gap between them explained</td></tr>
+<tr><td>Overall system behavior</td><td>All four routes (RAG / tool / guardrail / fallback) demonstrably work on the benchmark</td></tr>
+</table>
+
+<p><b>Stretch goals:</b> add a second external tool and a CRAG branch that chooses between two tools; replace the regex guardrail with a real moderation-model call; add persistent (non-<code>:memory:</code>) Qdrant storage.</p>
+</div>
+
+<div class="callout">
+<div class="ctitle">Concept Map — what you've now practiced</div>
+<ul class="checklist">
+<li>Embeddings, chunking, Qdrant dense retrieval (Tab ③) — Assignment 1</li>
+<li>BM25 + Reciprocal Rank Fusion (Tab ④) — Assignment 1</li>
+<li>Grounded generation + memory (Tab ⑤) — Assignment 1 & 2</li>
+<li>Cohere reranking (Tab ⑤) — Assignment 2</li>
+<li>Guardrails + tool routing (Tab ⑥) — Assignment 2</li>
+<li>Self-RAG critique/retry (Tab ⑦) — Assignment 2</li>
+<li>CRAG confidence correction (Tab ⑧) — Assignment 3</li>
+<li>Failure modes & production hardening (Tab ⑨) — Assignment 3</li>
+<li>RAGAS evaluation & benchmarking (Tab ⑪) — Assignment 3</li>
+</ul>
+Every tab in this guide appears in at least one assignment above.
+</div>
+</section>
+
+<!-- ============ INTERVIEW PREP ============ -->
+<section class="panel" id="panel-interview" data-label="💼 Interview Prep">
+<h2>💼 Interview Prep — 25 questions</h2>
+<p>Open the hint first, attempt an answer out loud or on paper, then open the model answer. Don't skip straight to the model answer — the hint is the useful part.</p>
+
+<div class="qgroup-label">Conceptual · Q1–Q8</div>
+<div class="qa">
+
+<div><span class="qnum">Q1</span><b>What is the actual difference between dense retrieval and keyword (BM25) retrieval, and why does a production system usually need both?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain WHAT each method scores on (meaning vs. exact token overlap)</li><li>Give a concrete example of a query where each one wins and the other loses</li><li>Mention that embeddings are weak on rare exact tokens like codes/IDs</li><li>Name the fusion technique that combines them</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>Dense retrieval encodes text into vectors that capture meaning, so it can match "how much time off do I get" to "annual leave policy" even though they share no words. BM25 instead scores exact token overlap, weighted by term rarity, so it has no idea about meaning but is excellent at exact matches like error codes or product IDs that an embedding model was never trained to treat as meaningful units. A production system needs both because real user queries mix both styles — sometimes paraphrased, sometimes copy-pasting an exact code from an error message — and either method alone silently fails on the other's strength. I combine their two ranked lists with Reciprocal Rank Fusion rather than trying to average their raw scores, since cosine similarity and BM25 scores live on incomparable scales.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate understands retrieval is a methods <em>portfolio</em>, not a single best algorithm.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Says one method is simply "better" than the other with no query-type distinction</li><li>Can't explain why scores from the two methods can't just be averaged</li></ul></details>
+<p class="refline">📖 See Tab ③ (dense retrieval), Tab ④ (BM25 and RRF)</p>
+</div>
+
+<div><span class="qnum">Q2</span><b>Why does a RAG system need reranking at all if hybrid search already produces a ranked list?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain the cost/precision trade-off between fast retrieval and reranking</li><li>Describe the "cheap-then-precise" two-stage pattern</li><li>Mention why you wouldn't rerank the entire corpus</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>Hybrid search is built to scan the whole corpus cheaply and fast, which means it's necessarily an approximation — it can't afford to deeply analyze every query/document pair. A reranker is a model trained specifically for precise query-document relevance scoring, but it's too slow and expensive to run against thousands of documents, so it only ever scores the small shortlist hybrid search already narrowed down. This cheap-then-precise two-stage pattern is standard in production search generally, not just RAG: you trade a little extra latency on a small shortlist for a meaningful precision gain, instead of paying that cost on the whole corpus.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Understanding of why retrieval and reranking are different tools solving different constraints, not redundant steps.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Suggests reranking the full corpus "to be thorough"</li><li>Confuses reranking with simply re-sorting by the original retrieval score</li></ul></details>
+<p class="refline">📖 See Tab ⑤ (reranking)</p>
+</div>
+
+<div><span class="qnum">Q3</span><b>Explain the difference between what Self-RAG checks and what CRAG checks.</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>State precisely what each pattern evaluates (answer quality vs. retrieval/evidence quality)</li><li>Explain why checking the answer alone isn't sufficient</li><li>Mention that CRAG can route to a tool or a fallback, not just retry</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>Self-RAG asks "is the generated answer good enough?" — it critiques the output after generation and, if the critique fails, rewrites the query and tries the whole retrieve-rerank-generate pipeline again, within a capped retry budget. CRAG asks an earlier and different question: "is the retrieved evidence itself reliable enough to trust?" — using something like the top rerank score as a confidence signal, before fully committing to generation on top of it. The key difference is that CRAG has three possible outcomes instead of two: trust the evidence and proceed, redirect to an external tool if one fits the question, or return an explicit "I don't know" safe fallback. Self-RAG alone can still confidently hallucinate on bad evidence if the critique step itself is fooled; CRAG catches that earlier, at the evidence-quality layer.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate understands these are checks at two different pipeline stages, not two names for the same idea.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Describes them as interchangeable or "basically the same thing"</li><li>Doesn't mention CRAG's tool/fallback branching</li></ul></details>
+<p class="refline">📖 See Tab ⑦ (Self-RAG), Tab ⑧ (CRAG)</p>
+</div>
+
+<div><span class="qnum">Q4</span><b>Why is Reciprocal Rank Fusion used instead of just averaging normalized scores from each retriever?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain what makes raw scores from different retrievers incomparable</li><li>Describe what RRF actually uses instead of raw scores</li><li>Mention the role of the rrf_k constant</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>A cosine similarity score and a BM25 score are computed by entirely different formulas on different scales that shift with corpus size and model choice, so even after min-max normalizing them, averaging them mixes two numbers that don't mean the same thing. RRF sidesteps this by discarding the raw scores entirely and using only each document's rank position in each list — a document scores 1/(k+rank) per list it appears in, and those are summed across lists. Rank position is directly comparable across any two retrieval methods, which is the whole reason it's the fusion target instead of the score. The constant k (60 is a common default) controls how much rank-1 dominates versus how flat the blend is, and it's a real tuning parameter, not a fixed constant.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Understanding of why score-space fusion is unreliable and rank-space fusion solves that specific problem.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Proposes normalizing scores to 0–1 and averaging as an equivalent alternative without acknowledging the scale-meaning problem</li></ul></details>
+<p class="refline">📖 See Tab ④ (Hybrid search & RRF)</p>
+</div>
+
+<div><span class="qnum">Q5</span><b>What's the difference between a guardrail and a CRAG safe-fallback? Aren't they both "the system refusing to answer"?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain WHEN each one runs in the pipeline (before vs. after retrieval)</li><li>Explain WHAT each one is protecting against</li><li>Give an example question that triggers each one</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>A guardrail runs before retrieval even happens — it's a cheap check on the question itself, meant to reject requests that are disallowed regardless of what's in the knowledge base, like asking the system to reveal credentials. A CRAG safe-fallback runs after retrieval and reranking, and it's not about the question being disallowed — it's about the system having looked for an answer, found nothing reliable, and admitting that honestly instead of guessing. The first protects against misuse; the second protects against confident wrongness on a legitimate question the knowledge base simply doesn't cover. Conflating them would mean either running expensive retrieval on requests that should have been rejected instantly, or rejecting legitimate questions as if they were malicious.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate tracks pipeline stage and distinguishes "disallowed" from "unanswerable."</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Says they're "basically the same control"</li><li>Can't say which one runs first</li></ul></details>
+<p class="refline">📖 See Tab ⑥ (guardrails), Tab ⑧ (CRAG)</p>
+</div>
+
+<div><span class="qnum">Q6</span><b>Why would a production RAG system ever need to call an external tool instead of just retrieving from its document store?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain the category of question documents structurally can't answer</li><li>Give a concrete example</li><li>Mention how intent is detected to route to a tool</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>Some legitimate questions aren't answerable from any document because they need live or external data that a static knowledge base was never meant to contain — "what's the current population of Vietnam" isn't something an internal HR policy document would ever have, no matter how good retrieval is. Treating that as a retrieval failure and trying to fix it with better chunking or search would be solving the wrong problem; the right fix is detecting that intent and routing to an external API instead. The notebook I worked from used simple keyword matching for intent detection, which is fast but brittle — production systems typically use LLM-based function-calling or a small classifier to detect this routing decision more robustly.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Recognizing that some gaps are architectural (wrong data source), not retrieval-quality problems.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Suggests just adding more documents to cover live/external facts</li></ul></details>
+<p class="refline">📖 See Tab ⑥ (tool routing)</p>
+</div>
+
+<div><span class="qnum">Q7</span><b>What does "grounding" mean in a RAG prompt, and what specifically in the prompt enforces it?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Define grounding precisely</li><li>Name the concrete prompt elements that enforce it</li><li>Explain what happens if grounding instructions are dropped</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>Grounding means the model's answer is constrained to only use information present in the retrieved context, rather than falling back on its own training-data knowledge or inventing plausible-sounding claims. In practice this is enforced by an explicit instruction in the prompt — "answer using only the retrieved context" — combined with an explicit escape hatch instructing the model to say the documents don't provide enough information rather than guess, and usually a temperature of 0 to minimize creative drift. If you drop those instructions, the model will often still produce a fluent answer, but it may blend in outside knowledge indistinguishably from the retrieved facts, which is much harder to catch than an obviously wrong answer.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate can name the concrete, implementable parts of "grounding," not just the concept.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Says grounding is just "using RAG" without naming any specific prompt mechanism</li></ul></details>
+<p class="refline">📖 See Tab ⑤ (grounded generation)</p>
+</div>
+
+<div><span class="qnum">Q8</span><b>Why does RAGAS need an LLM to judge the answers — isn't that circular, using an LLM to grade an LLM?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain why metrics like faithfulness can't be computed by simple string matching</li><li>Address the circularity concern directly — what makes it less circular in practice</li><li>Mention the role of a separate judge model vs. the generation model</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>Metrics like faithfulness and answer relevancy require a judgment call — "is this specific claim actually supported by this specific context" isn't something a string-match or keyword-overlap check can reliably determine, because the same fact can be phrased many different ways. So RAGAS uses a separate judge LLM call, scoring against a fixed rubric, to make that judgment. It's a fair concern that this is somewhat circular, and it is — the judge model has its own biases and error rate — but using a different, often stronger or at least independently-prompted model as judge, and tracking scores as a trend across many runs rather than trusting any single score as ground truth, mitigates the worst of that circularity. It's not perfect, but it's far better than having no measurement at all.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate can acknowledge a real limitation of the tool they're using rather than presenting it as flawless.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Claims RAGAS scores are objective ground truth with no caveat</li></ul></details>
+<p class="refline">📖 See Tab ⑪ (RAGAS evaluation)</p>
+</div>
+
+</div>
+
+<div class="qgroup-label">Scenario-Based · Q9–Q16</div>
+<div class="qa">
+
+<div><span class="qnum">Q9</span><b>Your knowledge base has error codes like VPN-403 and product IDs like SKU-2847. Users report that search isn't finding relevant docs when they paste these codes directly into their question. What's likely wrong, and how do you fix it?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Identify which retrieval method should catch this and why it might not be</li><li>Mention tokenization as a specific thing to check</li><li>Describe how you'd verify the diagnosis before fixing it</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>This smells like a dense-retrieval blind spot — embedding models often don't treat codes like VPN-403 as meaningful tokens, so the semantic vector for a query containing that code may not land close to the right document. First, I'd check whether BM25 is even in the retrieval path at all; if hybrid search isn't wired up, that's the fix. If it is wired up, I'd check the tokenizer regex — if it's splitting on non-alphanumeric characters, "VPN-403" might be tokenized as "vpn" and "403" separately, which could still work for BM25's term-overlap scoring, but I'd verify by running bm25_retrieve("VPN-403") directly and inspecting the top results before touching anything else. If BM25 itself returns the right document but RRF still doesn't surface it, I'd check whether the final_k cutoff in hybrid_retrieve is too small relative to how many candidates are in play. I'd fix the diagnosed layer specifically, rather than guessing broadly across the whole pipeline.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Systematic debugging across pipeline stages instead of a single guessed fix.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Jumps straight to "retrain the embedding model" without checking BM25/tokenization first</li><li>Suggests just increasing top_k everywhere without diagnosing where the loss actually happens</li></ul></details>
+<p class="refline">📖 See Tab ③ (embeddings), Tab ④ (BM25, hybrid retrieve)</p>
+</div>
+
+<div><span class="qnum">Q10</span><b>You're told the RAG assistant must never answer HR compensation questions, even if an HR policy document happens to mention salary bands. How would you implement this, and at which pipeline stage?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Decide whether this belongs at the guardrail stage, the retrieval-filtering stage, or both</li><li>Explain the risk of relying on only one layer</li><li>Mention how you'd test this requirement</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>I'd implement this at two layers, not one, because either alone has a gap. First, a guardrail check on the incoming question to catch direct requests ("what's the salary band for X role") before retrieval even runs. Second, and more importantly, a payload filter at the Qdrant retrieval stage that excludes documents tagged with a compensation data-classification label — this catches cases where a compensation detail leaks through a document that is retrieved for an unrelated reason, which the question-level guardrail alone wouldn't catch. Relying only on the question-level guardrail is risky because a user could ask something unrelated-sounding that still happens to retrieve a document containing salary data; relying only on retrieval filtering misses a direct explicit request that a cheap check could have rejected instantly and cheaply. I'd test this with both direct-ask test cases and indirect-retrieval test cases separately.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate designs defense-in-depth rather than a single point of control for a sensitive-data requirement.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Proposes only a prompt instruction telling the LLM "don't discuss compensation" with no retrieval-side filtering</li></ul></details>
+<p class="refline">📖 See Tab ⑥ (guardrails), Tab ⑨ (security/access control)</p>
+</div>
+
+<div><span class="qnum">Q11</span><b>Your team is debating whether to add Self-RAG, CRAG, or both to an existing hybrid-RAG system. How do you decide?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Name what specific problem each pattern solves</li><li>Describe a scenario where you'd want one but not the other</li><li>Mention the cost each one adds</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>I'd separate the two questions: does the system sometimes generate weak answers from otherwise-fine retrieval, and does the system sometimes trust bad retrieval with high confidence? Self-RAG addresses the first — it's worth adding if answer quality itself, given decent context, is the complaint, and the team can tolerate roughly doubled latency and cost on the subset of queries that retry. CRAG addresses the second — it's worth adding specifically when a confidently-wrong answer is costly, like a compliance or support context, because it adds a retrieval-confidence check and an explicit fallback path rather than trusting whatever got retrieved. In practice I'd lean toward adding both, because they check different things and compose rather than compete, but if I had to pick one first, I'd prioritize CRAG whenever wrong answers carry real cost, since silently-bad retrieval is usually the more damaging failure mode than a slightly weak-but-honest answer.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Ability to map a business requirement (cost of being wrong) to a specific architectural choice rather than defaulting to "add everything."</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Recommends both without being able to say what each one specifically buys you</li></ul></details>
+<p class="refline">📖 See Tab ②  (taxonomy), Tab ⑦ (Self-RAG), Tab ⑧ (CRAG)</p>
+</div>
+
+<div><span class="qnum">Q12</span><b>You can add reranking to improve retrieval quality, but it adds roughly 200ms of latency and a per-call cost. How do you decide whether it's worth it?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Name what you'd actually measure before deciding</li><li>Discuss this as a trade-off with no single right answer, not a yes/no</li><li>Mention where latency budget typically comes from elsewhere in the pipeline</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>There's no universally correct answer here — it depends on the total latency budget and how much reranking actually improves outcomes for this specific corpus. I'd first measure Context Precision with and without reranking on a benchmark set, because that's the metric reranking most directly targets; if the improvement is marginal on this particular corpus, the 200ms and cost aren't justified. I'd also look at where the rest of the latency budget goes — if generation alone already takes 1-2 seconds, 200ms for a meaningful precision gain is a much easier sell than if the system has a strict 300ms total budget. For a support or compliance use case where wrong answers are costly, I'd lean toward keeping reranking even at a real cost, because the Context Precision gain reduces exactly the kind of silently-wrong retrieval that's expensive to get wrong; for a low-stakes internal FAQ bot with tight latency requirements, I might drop it.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Comfort with a genuine trade-off question that has no single correct answer, resolved with a concrete measurement plan.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Gives a flat "always add reranking" or "never add reranking" with no conditions</li><li>Doesn't propose measuring anything before deciding</li></ul></details>
+<p class="refline">📖 See Tab ⑤ (reranking), Tab ⑨ (cost/latency), Tab ⑪ (Context Precision)</p>
+</div>
+
+<div><span class="qnum">Q13</span><b>Your team is debating Qdrant vs. a different vector database for a new project. What questions would you ask to make that decision?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>List concrete operational questions, not just "which is faster"</li><li>Mention filtering/payload needs specifically</li><li>Mention deployment model (managed vs self-hosted)</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>I'd ask about scale first — how many vectors, and whether we're talking thousands or hundreds of millions, since that changes whether in-memory or even a single-node deployment is viable at all. Second, filtering requirements — do we need payload-based filtering at query time, like access-control or data-classification filters, and how well does each candidate's indexing handle filtered search without full scans. Third, deployment model — do we want a managed cloud service or are we self-hosting, and what's our team's existing operational experience with each option. Fourth, ecosystem fit — does it integrate cleanly with our embedding and orchestration stack, for instance whether there's a maintained LangChain integration. I wouldn't start from "which benchmarks faster" because for most RAG workloads below the very largest scale, the operational and filtering questions matter more than raw query latency differences between mature vector databases.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate can decompose a tool-choice decision into concrete operational criteria instead of a vague preference.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Answers with a single benchmark number and no mention of filtering or operational concerns</li></ul></details>
+<p class="refline">📖 See Tab ③ (Qdrant), Tab ⑨ (scaling the vector DB)</p>
+</div>
+
+<div><span class="qnum">Q14</span><b>A stakeholder asks you to make the RAG assistant "never say I don't know." How do you respond, and what would you actually change?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Push back on the premise with a specific reason</li><li>Explain what removing the fallback path would actually cause</li><li>Offer an alternative that addresses the underlying concern</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>I'd push back directly: removing the safe-fallback path doesn't make the system know more, it just forces it to guess every time the evidence is weak, which turns an honest "I don't know" into a confident hallucination — a strictly worse outcome for the stakeholder's actual goal, which is usually "the assistant feels helpful," not literally "never says I don't know." I'd ask what's driving the request — often it's that the fallback triggers too often, which is a CRAG threshold and retrieval-quality problem, not a reason to remove the fallback branch itself. My actual fix would be to lower how often SAFE_FALLBACK fires by improving retrieval (better chunking, hybrid tuning) and by tuning the CRAG confidence threshold against real usage data, while keeping the fallback path itself intact as the thing that prevents confident wrongness.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Willingness to push back on a request that would make the system worse, backed by a specific technical reason and a better alternative.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Agrees to simply remove the fallback branch without raising the hallucination risk</li></ul></details>
+<p class="refline">📖 See Tab ⑧ (CRAG safe fallback)</p>
+</div>
+
+<div><span class="qnum">Q15</span><b>You notice Self-RAG retries are firing on roughly 40% of queries, far more than expected. Walk through how you'd investigate.</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Decide whether the problem is in retrieval, generation, or the critique step itself</li><li>Describe what data you'd pull first</li><li>Mention a specific hypothesis you'd test</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>First I'd pull a sample of the queries that triggered RETRY and read them directly, rather than guessing — I want to know if it's a few repeated query patterns or broadly spread across all query types. If it's broadly spread, I'd suspect the critique prompt itself is miscalibrated — too strict a PASS bar would cause this, so I'd test that hypothesis by manually reading several RETRY-flagged answers and judging whether they actually look adequate to a human; if they do, the critique prompt needs loosening. If instead the RETRY cases cluster around specific query types, I'd check whether retrieval is weak specifically for those — for instance if they're all questions using terminology not well covered by either the embedding model or the BM25 corpus. I would not jump straight to retuning the critique prompt without first checking whether the underlying retrieval is actually the root cause, since fixing the symptom at the critique layer would mask a retrieval problem that RAGAS's Context Precision/Recall metrics would catch more directly.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Systematic root-cause investigation that separates "critique is too strict" from "retrieval is actually weak" before changing anything.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Immediately loosens the critique prompt without checking whether retrieval quality is the real cause</li></ul></details>
+<p class="refline">📖 See Tab ⑦ (Self-RAG), Tab ⑪ (Context Precision/Recall)</p>
+</div>
+
+<div><span class="qnum">Q16</span><b>Product wants the assistant to handle both internal HR/IT questions and general public knowledge questions in one bot. How would you architect this?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Decide whether this needs a routing layer or one unified retrieval path</li><li>Discuss where a public-knowledge answer's "grounding" comes from if not internal documents</li><li>Mention the guardrail implication of broadening scope</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>I would not try to cram public knowledge questions through the same retrieval pipeline built for internal documents — that's exactly the tool-routing pattern from the pipeline I studied, generalized. I'd add an intent-routing layer, ideally LLM-based rather than keyword-based for robustness, that classifies a question as internal-document, external-tool, or (new here) general-knowledge-no-retrieval-needed. For general-knowledge questions, I'd let the LLM answer directly without forcing retrieval and without the strict "only use retrieved context" grounding instruction, since there's no internal document to ground against — though I'd still want some factual-reliability safeguard given LLMs can be wrong about general facts too. Broadening scope like this also means revisiting the guardrails: a bot that now answers general questions has a larger attack surface for misuse, so I'd re-test the guardrail set against this wider scope rather than assuming the original patterns still cover it.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate extends the existing routing pattern to a new case instead of forcing everything through one retrieval path.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Suggests just adding Wikipedia-scale documents to the Qdrant collection to "cover" general knowledge</li></ul></details>
+<p class="refline">📖 See Tab ⑥ (tool routing), Tab ⑨ (guardrail scope)</p>
+</div>
+
+</div>
+
+<div class="qgroup-label">Debugging / Failure · Q17–Q21</div>
+<div class="qa">
+
+<div><span class="qnum">Q17</span><b>Your system returns a fluent, specific answer that turns out to be completely wrong, and retrieval logs show the correct document WAS retrieved. What would you check?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Identify which RAGAS metric this symptom maps to</li><li>Name the specific prompt elements you'd inspect</li><li>Mention Self-RAG's critique step as a relevant check</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>This is the classic hallucination-despite-good-retrieval failure mode — the correct context being retrieved doesn't guarantee the model actually used it. I'd check the Faithfulness score specifically for this query, since that metric measures exactly whether the answer's claims are supported by the retrieved context, independent of whether the right context was found. Then I'd inspect the actual prompt sent to the LLM for that call — is the "answer using only the retrieved context" instruction present, is temperature set to 0, and is the context actually being inserted into the prompt correctly rather than being silently dropped or truncated. I'd also check whether Self-RAG's critique step ran on this query and what it returned — if it returned PASS, the critique prompt itself may be too lenient and worth tightening.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Distinguishing a retrieval problem from a grounding/generation problem using the right metric and the right place to look.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Assumes retrieval must be at fault despite the logs showing correct retrieval</li></ul></details>
+<p class="refline">📖 See Tab ⑤ (grounded generation), Tab ⑦ (critique), Tab ⑪ (Faithfulness)</p>
+</div>
+
+<div><span class="qnum">Q18</span><b>A user reports the bot gave them a working internal document's answer when they asked an obviously public-knowledge question like "what's the capital of France." What's likely broken?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Identify which pipeline stage should have intercepted this</li><li>Name the specific brittleness this points to</li><li>Describe how you'd confirm the diagnosis</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>This points to a tool-routing miss — the intent classifier (or keyword list) that should have routed this to the external country tool failed to match it, so it fell through to the internal RAG path instead. I'd check the exact keyword list used for routing — if it's something like matching "capital of" as a substring, "what's the capital of France" should actually match, so I'd test that specific string against the matcher directly to confirm or rule this out. If the matcher does catch it and the failure is elsewhere, I'd check whether CRAG's SAFE_FALLBACK or tool branch is even reachable for this query, or whether the internal retrieval is confidently (and wrongly) returning a high rerank score on an unrelated internal document, which would mean the CRAG threshold itself is too permissive for this kind of out-of-domain question.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Methodical isolation of whether the bug is in intent-matching or in CRAG's confidence threshold, rather than guessing.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Says "the LLM got confused" with no specific pipeline stage identified</li></ul></details>
+<p class="refline">📖 See Tab ⑥ (tool routing), Tab ⑧ (CRAG)</p>
+</div>
+
+<div><span class="qnum">Q19</span><b>Your Context Recall score is high but Context Precision is low. What does that combination tell you, and what would you fix?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Define what each metric means precisely enough to explain the combination</li><li>Describe what the retrieved set probably looks like given this pattern</li><li>Name the specific fix layer</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>High Context Recall means the chunks needed to answer correctly are in the retrieved set somewhere; low Context Precision means they're not ranked near the top — they're buried under irrelevant chunks that got retrieved alongside them. This combination points specifically at ranking quality, not retrieval coverage — the right information is being found, just not prioritized well. I would not touch chunking or the knowledge base itself, since recall shows nothing is actually missing. Instead I'd look at the reranker configuration — is top_n too large, letting noisy chunks survive into the final context, or is the rerank model itself not discriminating well for this domain — and I'd also sanity-check the RRF candidate_k and final_k values, since too wide a candidate pool before reranking can dilute what the reranker has to work with.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Precise mapping from a specific metric combination to the specific pipeline layer responsible — ranking, not retrieval coverage.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Recommends adding more documents to the knowledge base, which a high-recall score already rules out as the issue</li></ul></details>
+<p class="refline">📖 See Tab ④ (hybrid retrieve candidate_k), Tab ⑤ (reranking), Tab ⑪ (Context Precision/Recall)</p>
+</div>
+
+<div><span class="qnum">Q20</span><b>A guardrail test suite that passed last month now fails to catch three new ways users are phrasing the same disallowed request. What would you check, and what's the longer-term fix?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain why this is expected behavior given the guardrail's implementation, not a regression</li><li>Name the specific limitation of the current approach</li><li>Propose a concrete longer-term architecture change</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>I wouldn't call this a regression exactly — it's the expected, inherent limitation of a regex/pattern-based guardrail, which only catches the specific phrasings someone thought to write a pattern for. Users (or adversarial testers) finding new phrasings that slip past a fixed pattern list is the predictable failure mode of that design, not a bug introduced by a recent change. Short-term, I'd add patterns for the three new phrasings found, but I'd flag to the team that this is whack-a-mole and will keep recurring. The real fix is replacing or supplementing the regex list with a classifier or moderation-model call that judges intent semantically rather than matching literal strings — exactly the production-hardening gap the reference notebook itself calls out around its own toy guardrail implementation.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Recognizing a pattern-matching guardrail's failure as structural rather than treating each bypass as an isolated bug to patch forever.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Treats this purely as "add three more regex patterns" with no mention of the structural limitation</li></ul></details>
+<p class="refline">📖 See Tab ⑥ (guardrails), Tab ⑨ (failure modes catalog)</p>
+</div>
+
+<div><span class="qnum">Q21</span><b>Your p50 latency looks great in dashboards, but support tickets about "the bot is slow" keep coming in. What's your hypothesis, and how do you confirm it?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Explain why average/median latency can hide the actual problem</li><li>Name the specific pipeline feature that causes bimodal latency here</li><li>Describe what you'd actually measure to confirm</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>My hypothesis is that latency is bimodal rather than evenly distributed — most queries take a fast single pass, but a meaningful minority hit Self-RAG's retry branch or CRAG's tool-call branch, which roughly double or further extend the pipeline's work for just those queries. A p50 (median) dashboard will look fine in this situation because the majority-fast-path dominates the middle of the distribution, while the users actually filing complaints are disproportionately the ones hitting the slow tail. I'd confirm this by pulling p95 and p99 latency specifically, and by segmenting latency by crag_action and self_rag_attempts in the production logs — if p99 is dramatically higher than p50 and concentrated in RETRY/USE_TOOL rows, that confirms the hypothesis, and the fix is optimizing or capping that tail path rather than the typical-case pipeline.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Understanding that averages hide tail-latency problems and knowing exactly which pipeline branch to blame and measure.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Suggests the dashboard must be broken or lying instead of considering a bimodal distribution</li></ul></details>
+<p class="refline">📖 See Tab ⑦ (retry cost), Tab ⑨ (cost/latency budgeting, p95/p99)</p>
+</div>
+
+</div>
+
+<div class="qgroup-label">System Design · Q22–Q25</div>
+<div class="qa">
+
+<div><span class="qnum">Q22</span><b>Design a production RAG system for an internal IT/HR helpdesk serving 5,000 employees, mixing policy-document questions, live system-status questions, and occasional attempts to extract sensitive data. Sketch the architecture.</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Touch at least 4 distinct concepts from the guide</li><li>Describe the request's path end-to-end, branch by branch</li><li>Name what you'd monitor once live</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>First, every request passes a guardrail check — a classifier-based one, not a static regex list, given 5,000 users will find phrasings a fixed pattern list misses — to reject credential/security-bypass attempts before any retrieval cost is spent. Second, an intent router classifies the remaining requests as internal-document, live-system-status (routed to a tool calling the actual status API), or ambiguous. For internal-document questions, I'd build hybrid retrieval — dense search via Qdrant plus BM25 — fused with RRF, since HR/IT content mixes semantic questions with exact codes like ticket numbers and VPN error codes. Candidates get reranked with a cross-encoder reranker before generation, and generation uses an explicit grounding instruction with temperature 0. On top of that, I'd add CRAG: a confidence threshold on the top rerank score, tuned empirically against a benchmark set, routing low-confidence cases to either the status tool (if intent matches) or an explicit "I don't have reliable information on this" fallback rather than guessing. I'd add Self-RAG's critique-and-retry only on the internal-document path, capped at one retry, given its cost. Access control matters at 5,000 users: retrieval-time payload filtering by document classification and requester role, not just a prompt instruction. For monitoring, I'd track RAGAS metrics on a rolling benchmark, p50/p95/p99 latency segmented by route, and guardrail-trigger rate as a leading indicator of either misuse attempts or false positives blocking legitimate questions.</p></details>
+<details><summary>🎯 What's being tested</summary><p>End-to-end synthesis: routing, hybrid retrieval, reranking, CRAG, access control, and monitoring, each justified by a requirement in the prompt rather than listed generically.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Lists components without connecting any of them to the specific requirements given (5,000 users, sensitive-data attempts, live status questions)</li><li>Omits access control entirely</li></ul></details>
+<p class="refline">📖 See Tabs ③–⑨ (full pipeline)</p>
+</div>
+
+<div><span class="qnum">Q23</span><b>Design the evaluation and monitoring strategy you'd put in place before this same helpdesk system goes live, and keep running after launch.</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Distinguish pre-launch evaluation from ongoing production monitoring</li><li>Name specific metrics and what decision each one drives</li><li>Mention how you'd catch regressions over time, not just at launch</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>Pre-launch, I'd build a benchmark set of at least several dozen questions deliberately mixing all routes — internal policy, tool-routed, guardrail-triggering, and deliberately unanswerable — because a benchmark that only tests the easy path never validates the fallback and safety behavior that matters most for trust. I'd run all five RAGAS metrics against this set and set rough acceptance thresholds per metric before launch, understanding those thresholds are starting points, not laws. Faithfulness and Context Precision/Recall tell me whether to keep iterating on retrieval and prompting before shipping; if Faithfulness is weak, I don't launch yet regardless of how good the UX feels in demos. Post-launch, I'd move from one-time benchmarking to ongoing monitoring: sampling real production queries into the benchmark set over time (with care around what's logged, given access-control sensitivity), tracking RAGAS scores as a trend rather than a single pass/fail gate, and alerting on p95/p99 latency and on guardrail-trigger-rate spikes, which can indicate either new misuse patterns or a false-positive regression blocking real users. I'd also specifically track the ratio of SAFE_FALLBACK to KEEP_RAG over time — a rising fallback rate usually means something changed in the document set or user query patterns that retrieval hasn't adapted to.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate separates one-time launch gating from continuous production monitoring, with concrete metrics tied to concrete decisions for each.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Describes only a one-time pre-launch test with no mention of ongoing monitoring after launch</li></ul></details>
+<p class="refline">📖 See Tab ⑨ (production hardening), Tab ⑪ (RAGAS evaluation)</p>
+</div>
+
+<div><span class="qnum">Q24</span><b>A client wants this system to scale from 5,000 to 500,000 users across 50 document collections with different access permissions per collection. What changes in your architecture?</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Address vector database scaling specifically, not just "use a bigger server"</li><li>Address the 50-collections-with-different-permissions requirement directly</li><li>Mention what changes in cost/latency budgeting at this scale</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>At this scale, an in-memory or single-node Qdrant instance is no longer viable — I'd move to a persistent, sharded, and replicated Qdrant Cloud deployment, with payload indexes specifically built on the fields used for access-control filtering, since unindexed filters degrade into full scans as document count grows. For 50 collections with different permissions, I'd design the data model so collection choice and payload-level access tags both encode permissions — some teams use one collection per permission tier with payload tags for finer-grained filtering within it, rather than 50 fully separate collections, which would complicate cross-collection queries if any question legitimately spans multiple domains. Retrieval-time filtering by the requester's resolved permissions becomes non-negotiable at this scale, enforced at the query layer, never as a post-hoc filter after retrieval already happened. On cost and latency, 500,000 users means the Self-RAG retry path and reranker calls, which are fine at 5,000 users' query volume, now represent real infrastructure cost at scale — I'd revisit whether every query needs reranking or whether a cheaper tier for high-confidence dense-only matches could reduce reranker calls, and I'd add caching for frequently-repeated questions, which becomes statistically common at this user count.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate can reason about how a design that's fine at small scale breaks at 100x scale across data modeling, access control, and cost, not just infrastructure sizing.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Says "just use a bigger Qdrant instance" with no mention of sharding, payload indexing, or the permissions data model</li></ul></details>
+<p class="refline">📖 See Tab ⑨ (scaling the vector DB, security, cost)</p>
+</div>
+
+<div><span class="qnum">Q25</span><b>Design how you would add a second external tool (e.g. a live currency-conversion API) to this system without breaking the existing guardrail, CRAG, and routing logic.</b>
+<details><summary>💡 Hint: What to cover in your answer</summary><ul><li>Describe how the routing layer generalizes to N tools, not just 2</li><li>Explain how CRAG's branching logic needs to change, if at all</li><li>Mention what you'd test to confirm the new tool doesn't regress the existing one</li></ul></details>
+<details><summary>✅ Model Answer</summary><p>I'd generalize the intent router from a binary internal-vs-tool decision into a multi-way classifier (or multiple independent intent checks) that can match either tool's trigger conditions, rather than hard-coding a second if-statement next to the first — this keeps adding a third tool later cheap instead of compounding special cases. CRAG's branching logic doesn't fundamentally change: it still checks retrieval confidence first and, on low confidence, checks "does any tool's intent match," now checking against a list of tools instead of one, and routing to whichever tool matches. The main new risk is tool-routing collisions — a question that could plausibly match both tools' keyword or intent patterns — so I'd explicitly test for overlap between the two tools' trigger conditions and define a priority order or a more precise classifier if ambiguous cases turn up. Before shipping, I'd re-run the full existing benchmark set, not just new currency-specific test cases, specifically to confirm the new tool's routing patterns didn't accidentally start matching questions that used to correctly route to the country-facts tool or to internal RAG.</p></details>
+<details><summary>🎯 What's being tested</summary><p>Whether the candidate designs for extensibility and explicitly checks for regression on existing behavior, not just whether the new feature works in isolation.</p></details>
+<details><summary>🚩 Red flags in a bad answer</summary><ul><li>Adds a second hard-coded if-statement without considering how a third tool would be added</li><li>Doesn't mention re-testing existing routing for regressions</li></ul></details>
+<p class="refline">📖 See Tab ⑥ (tool routing), Tab ⑧ (CRAG), Tab ⑨ (failure modes)</p>
+</div>
+
+</div>
+</section>
+
+
+</div> <!-- /panels -->
+</div> <!-- /wrap -->
+
+<script>
+(function(){
+  var panels = Array.from(document.querySelectorAll('.panel'));
+  var nav = document.getElementById('tabnav');
+  var icons = ["⓪","①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩","⑪","🎯","💼"];
+  panels.forEach(function(p, i){
+    var btn = document.createElement('button');
+    btn.textContent = p.getAttribute('data-label') || (icons[i]+' Tab'+i);
+    btn.addEventListener('click', function(){ show(i); });
+    btn.dataset.idx = i;
+    nav.appendChild(btn);
+  });
+  function show(i){
+    panels.forEach(function(p, j){ p.classList.toggle('active', j===i); });
+    Array.from(nav.children).forEach(function(b, j){ b.classList.toggle('active', j===i); });
+    try{ localStorage.setItem('rag-guide-tab', String(i)); }catch(e){}
+    window.scrollTo({top:0});
+  }
+  var start = 0;
+  try{ var s = localStorage.getItem('rag-guide-tab'); if(s!==null) start = Math.min(parseInt(s,10)||0, panels.length-1); }catch(e){}
+  show(start);
+
+  // mindmap
+  var mindmapData = {
+    label: "Production RAG Architecture", cat: "concept", children: [
+      { label: "Foundations", cat:"concept", children: [
+        { label: "Embeddings & vector similarity", cat:"concept", children:[
+          { label:"Dense vectors (semantic)", cat:"concept" },
+          { label:"Cosine similarity", cat:"concept" },
+          { label:"sentence-transformers / all-MiniLM-L6-v2", cat:"tool" }
+        ]},
+        { label:"Chunking & knowledge base construction", cat:"technique", children:[
+          { label:"Fixed-size vs semantic chunking", cat:"decision" },
+          { label:"Metadata/payload per chunk", cat:"technique" }
+        ]},
+        { label:"Dense retrieval", cat:"technique", children:[
+          { label:"Qdrant (vector DB)", cat:"tool" },
+          { label:"Collections, points, payload", cat:"concept" }
+        ]}
+      ]},
+      { label:"Retrieval layer", cat:"concept", children:[
+        { label:"BM25 / lexical search", cat:"technique", children:[ { label:"rank_bm25", cat:"tool" }, { label:"Tokenization", cat:"concept" } ]},
+        { label:"Hybrid search", cat:"variant", children:[ { label:"Reciprocal Rank Fusion (RRF)", cat:"technique" }, { label:"RRF k constant tuning", cat:"decision" } ]},
+        { label:"Reranking", cat:"technique", children:[ { label:"Cohere Rerank v3.5", cat:"tool" }, { label:"relevance_score threshold", cat:"decision" } ]}
+      ]},
+      { label:"Generation & memory", cat:"concept", children:[
+        { label:"Grounded prompt construction", cat:"technique" },
+        { label:"Conversation memory", cat:"technique", children:[ { label:"Sliding window (MAX_MEMORY_TURNS)", cat:"decision" } ]},
+        { label:"OpenRouter / LLM client", cat:"tool" }
+      ]},
+      { label:"Safety & agentic layer", cat:"concept", children:[
+        { label:"Guardrails", cat:"technique", children:[ { label:"Regex / pattern blocklists", cat:"technique" }, { label:"Classifier-based guardrails (production)", cat:"production" } ]},
+        { label:"Tool routing", cat:"technique", children:[ { label:"Intent detection", cat:"decision" }, { label:"External API call", cat:"tool" } ]}
+      ]},
+      { label:"Self-correction patterns", cat:"concept", children:[
+        { label:"Self-RAG", cat:"variant", children:[ { label:"Critique step (PASS/RETRY)", cat:"technique" }, { label:"Query rewrite", cat:"technique" }, { label:"Retry budget", cat:"decision" } ]},
+        { label:"CRAG", cat:"variant", children:[ { label:"Retrieval confidence score", cat:"decision" }, { label:"KEEP_RAG / USE_TOOL / SAFE_FALLBACK", cat:"technique" } ]}
+      ]},
+      { label:"Failure modes", cat:"failure", children:[
+        { label:"Silent retrieval failure (confident wrong answer)", cat:"failure" },
+        { label:"Hallucination despite correct retrieval", cat:"failure" },
+        { label:"Guardrail bypass via paraphrase", cat:"failure" },
+        { label:"Tool-routing misfire", cat:"failure" },
+        { label:"Retry-loop cost/latency blowup", cat:"failure" }
+      ]},
+      { label:"Evaluation", cat:"concept", children:[
+        { label:"RAGAS", cat:"tool", children:[
+          { label:"Faithfulness", cat:"concept" },{ label:"Answer Relevancy", cat:"concept" },
+          { label:"Answer Correctness", cat:"concept" },{ label:"Context Precision", cat:"concept" },
+          { label:"Context Recall", cat:"concept" }
+        ]},
+        { label:"Benchmark query sets", cat:"technique" }
+      ]},
+      { label:"Production concerns", cat:"production", children:[
+        { label:"Scaling the vector DB (sharding, persistence)", cat:"production" },
+        { label:"Security & access control (RBAC, data classification)", cat:"production" },
+        { label:"Cost & latency budgeting", cat:"production" },
+        { label:"Observability / logging", cat:"production" }
+      ]}
+    ]
+  };
+  function catClass(c){ return 'tag '+(c||'concept'); }
+  function buildNode(n){
+    var li = document.createElement('li');
+    var row = document.createElement('div'); row.className='node';
+    var hasKids = n.children && n.children.length;
+    li.className = hasKids ? '' : 'leaf';
+    row.innerHTML = '<span class="arr">'+(hasKids?'▸':'•')+'</span><span class="'+catClass(n.cat)+'">'+(n.cat||'concept')+'</span><span>'+n.label+'</span>';
+    li.appendChild(row);
+    if(hasKids){
+      var ul = document.createElement('ul'); ul.className='children';
+      n.children.forEach(function(c){ ul.appendChild(buildNode(c)); });
+      li.appendChild(ul);
+      row.addEventListener('click', function(){
+        li.classList.toggle('open');
+        row.querySelector('.arr').textContent = li.classList.contains('open') ? '▾' : '▸';
+      });
+    }
+    return li;
+  }
+  var mmRoot = document.getElementById('mindmap');
+  var topUl = document.createElement('ul');
+  topUl.appendChild(buildNode(mindmapData));
+  mmRoot.appendChild(topUl);
+  mmRoot.querySelector('li').classList.add('open');
+  mmRoot.querySelector('li .arr').textContent = '▾';
+})();
+</script>
