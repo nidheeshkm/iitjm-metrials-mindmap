@@ -1,0 +1,1203 @@
+<title>Multi-Agent Systems with LangGraph</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* ===== Design plan =====
+   Layout concept: a left-anchored numbered-tab rail (the guide's spine) feeding a single
+   scrollable reading pane, so the ordered-tab structure that the curriculum itself requires
+   (each tab builds on the last) is visible as a physical rail, not just a row of buttons.
+   Color: graphite/ink neutrals (slate, not pure black) with a single signal-teal accent
+   borrowed from terminal/graph-diagram conventions (state machines, circuit traces) — the
+   subject is graphs, so the accent reads as a "live wire" on a schematic, not decoration.
+   Type: Source Serif 4 for headings (the project's own system), Inter for body/UI,
+   IBM Plex Mono for code, state keys and node/edge labels.
+*/
+:root{
+  --bg:#f7f6f3; --bg-raised:#ffffff; --ink:#1b2024; --ink-soft:#52585e; --line:#dcdbd6;
+  --accent:#0f7a72; --accent-ink:#ffffff; --accent-soft:#e3f1ef;
+  --warn:#b4541a; --warn-soft:#fbe9dd;
+  --code-bg:#1b2024; --code-ink:#e9ece9; --code-accent:#5fd4c4;
+  --tag-concept:#0f7a72; --tag-tool:#8a5a2b; --tag-technique:#3a5fa0; --tag-variant:#7a4a9e;
+  --tag-failure:#a33b3b; --tag-production:#2d6a4f; --tag-decision:#a37a1a;
+  font-size:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16191c; --bg-raised:#1e2226; --ink:#e9ece9; --ink-soft:#a8aeb2; --line:#333a3f;
+    --accent:#5fd4c4; --accent-ink:#0f1413; --accent-soft:#1f3936;
+    --warn:#e2985e; --warn-soft:#3a2a1c;
+    --code-bg:#0e1113; --code-ink:#dfe4e1; --code-accent:#5fd4c4;
+    --tag-concept:#5fd4c4; --tag-tool:#d3a373; --tag-technique:#8fb0e8; --tag-variant:#c79fe6;
+    --tag-failure:#e39a9a; --tag-production:#8fd0ac; --tag-decision:#e0bf6e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16191c; --bg-raised:#1e2226; --ink:#e9ece9; --ink-soft:#a8aeb2; --line:#333a3f;
+  --accent:#5fd4c4; --accent-ink:#0f1413; --accent-soft:#1f3936;
+  --warn:#e2985e; --warn-soft:#3a2a1c;
+  --code-bg:#0e1113; --code-ink:#dfe4e1; --code-accent:#5fd4c4;
+  --tag-concept:#5fd4c4; --tag-tool:#d3a373; --tag-technique:#8fb0e8; --tag-variant:#c79fe6;
+  --tag-failure:#e39a9a; --tag-production:#8fd0ac; --tag-decision:#e0bf6e;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:Inter,system-ui,sans-serif; line-height:1.55}
+h1,h2,h3,h4{font-family:"Source Serif 4",Georgia,serif; text-wrap:balance; font-weight:600; color:var(--ink)}
+code,pre,.mono{font-family:"IBM Plex Mono",monospace}
+a{color:var(--accent)}
+.app{display:flex; min-height:100%; flex-direction:column}
+.topbar{
+  padding-block:14px; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));
+  border-bottom:1px solid var(--line); background:var(--bg-raised); position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+  display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:19;background:var(--bg-raised)}
+.topbar h1{font-size:1.15rem; margin:0}
+.topbar .eyebrow{font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:600}
+.layout{display:flex; flex:1; min-width:0}
+.rail{
+  display:flex; flex-direction:column; gap:2px; padding:10px; border-right:1px solid var(--line);
+  background:var(--bg-raised); flex-shrink:0; overflow-y:auto; max-height:calc(100vh - 60px);
+}
+.railbtn{
+  display:flex; align-items:center; gap:10px; text-align:left; background:none; border:none; color:var(--ink-soft);
+  font:inherit; font-size:.86rem; padding:8px 10px; border-radius:7px; cursor:pointer; white-space:nowrap;
+}
+.railbtn .num{font-family:"IBM Plex Mono",monospace; font-size:1rem; width:1.4em; flex-shrink:0; color:var(--ink-soft)}
+.railbtn:hover{background:var(--accent-soft)}
+.railbtn[aria-selected="true"]{background:var(--accent-soft); color:var(--ink); font-weight:600}
+.railbtn[aria-selected="true"] .num{color:var(--accent)}
+main{flex:1; min-width:0; padding:28px max(20px, env(safe-area-inset-right,0px)) 60px max(20px, env(safe-area-inset-left,0px)); overflow-x:hidden}
+.panel{display:none; max-width:860px}
+.panel.active{display:block}
+.panel > .tabhead{display:flex; align-items:baseline; gap:12px; margin-bottom:6px}
+.panel > .tabhead .num{font-family:"IBM Plex Mono",monospace; color:var(--accent); font-size:1.3rem}
+.panel h2{font-size:1.5rem; margin:0}
+.subtitle{color:var(--ink-soft); margin-top:2px; margin-bottom:22px}
+.panel h3{font-size:1.1rem; margin-top:2em}
+p{margin:.7em 0}
+.card{background:var(--bg-raised); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:16px 0}
+.callout{border-left:3px solid var(--warn); background:var(--warn-soft); border-radius:0 8px 8px 0; padding:12px 14px; margin:16px 0; font-size:.92rem}
+.callout b{color:var(--warn)}
+.analogy{border-left:3px solid var(--accent); background:var(--accent-soft); border-radius:0 8px 8px 0; padding:12px 14px; margin:16px 0; font-size:.92rem}
+table{width:100%; border-collapse:collapse; font-size:.88rem}
+.tablewrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:8px}
+th,td{padding:9px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top}
+th{background:var(--accent-soft); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em}
+tr:last-child td{border-bottom:none}
+.diagram{
+  font-family:"IBM Plex Mono",monospace; background:var(--code-bg); color:var(--code-ink); border-radius:8px;
+  padding:16px; overflow-x:auto; font-size:.78rem; line-height:1.5; margin:16px 0; white-space:pre;
+}
+.pipeline{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:16px 0}
+.pipeline .step{background:var(--bg-raised); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:.84rem; font-weight:500}
+.pipeline .arrow{color:var(--accent); font-weight:700}
+.tag{display:inline-block; font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.03em; padding:2px 8px; border-radius:20px; color:#fff; margin-right:4px}
+.tag-concept{background:var(--tag-concept)} .tag-tool{background:var(--tag-tool)} .tag-technique{background:var(--tag-technique)}
+.tag-variant{background:var(--tag-variant)} .tag-failure{background:var(--tag-failure)} .tag-production{background:var(--tag-production)} .tag-decision{background:var(--tag-decision)}
+:root[data-theme="dark"] .tag, :root:not([data-theme="light"]) .tag{color:#0f1413}
+@media (prefers-color-scheme: light){ .tag{color:#fff} }
+details{border:1px solid var(--line); border-radius:8px; margin:10px 0; background:var(--bg-raised)}
+details summary{cursor:pointer; padding:10px 14px; font-weight:600; font-size:.88rem; list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"▸ "; color:var(--accent)}
+details[open] summary::before{content:"▾ "}
+details .inner{padding:4px 16px 16px}
+pre.code{background:var(--code-bg); color:var(--code-ink); border-radius:8px; padding:14px; overflow-x:auto; font-size:.8rem; line-height:1.55; margin:8px 0}
+pre.code .c{color:#8a938f} /* comment */
+.mindtree{font-size:.88rem}
+.mindtree ul{list-style:none; padding-left:22px; border-left:1px dashed var(--line); margin:4px 0}
+.mindtree > ul{border-left:none; padding-left:0}
+.mindtree li{margin:4px 0}
+.mnode{background:var(--bg-raised); border:1px solid var(--line); border-radius:7px; padding:6px 10px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:500}
+.mnode:hover{border-color:var(--accent)}
+.mnode .car{color:var(--ink-soft); font-size:.7rem}
+.comparebox{display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin:16px 0}
+.comparebox .cell{border:1px solid var(--line); border-radius:8px; padding:12px 14px; background:var(--bg-raised)}
+.comparebox .cell h4{margin:0 0 6px; font-size:.95rem}
+.qcard{border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:20px 0; background:var(--bg-raised)}
+.qcard .qnum{font-family:"IBM Plex Mono",monospace; color:var(--accent); font-size:.8rem; font-weight:600}
+.qcard .qtext{font-size:1rem; font-weight:600; margin:6px 0 10px}
+.qcard .ref{font-size:.78rem; color:var(--ink-soft); margin-top:10px}
+.qcard details ul{margin:6px 0; padding-left:20px}
+.checklist li{margin:4px 0}
+.scaffold{background:var(--code-bg); color:var(--code-ink); font-family:"IBM Plex Mono",monospace; font-size:.78rem; border-radius:8px; padding:14px; overflow-x:auto; margin:10px 0; white-space:pre}
+.rubric td:first-child{font-weight:600; white-space:nowrap}
+.copybtn{font:inherit; font-size:.72rem; background:var(--accent); color:var(--accent-ink); border:none; border-radius:6px; padding:4px 10px; cursor:pointer; float:right}
+.footrow{display:flex; justify-content:space-between; margin-top:50px; padding-top:16px; border-top:1px solid var(--line); gap:10px}
+.navbtn{font:inherit; font-size:.85rem; background:var(--bg-raised); border:1px solid var(--line); border-radius:8px; padding:8px 14px; cursor:pointer; color:var(--ink)}
+.navbtn:hover{border-color:var(--accent); color:var(--accent)}
+.phasebadge{font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); font-weight:600; margin-bottom:10px}
+@media (max-width:760px){
+  .layout{flex-direction:column}
+  .rail{flex-direction:row; max-height:none; overflow-x:auto; border-right:none; border-bottom:1px solid var(--line); width:100%}
+  .railbtn{flex-direction:column; gap:2px; padding:8px}
+  .railbtn span.label{font-size:.62rem; max-width:64px; white-space:normal; text-align:center; line-height:1.1}
+  main{padding:20px 16px 50px}
+}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <span class="eyebrow">Learning Guide · Level 4</span>
+    <h1>Multi-Agent Systems with LangGraph</h1>
+  </div>
+  <div class="layout">
+    <nav class="rail" id="rail" role="tablist" aria-label="Guide sections"></nav>
+    <main id="main">
+
+<section class="panel" id="panel-prereq">
+  <div class="tabhead"><span class="num">⓪</span><h2>Prerequisites</h2></div>
+  <p class="subtitle">What you need before tab ① — and what you don't.</p>
+
+  <h3>What this guide assumes</h3>
+  <ul>
+    <li>You can read and write basic Python: functions, dictionaries, classes, <code>if/else</code>.</li>
+    <li>You've called an LLM API at least once (OpenAI, Anthropic, or via <code>langchain_openai</code>/OpenRouter) — you don't need to be fluent, just to have seen a prompt go in and text come out.</li>
+    <li>You know what a "prompt" and a "system message" are.</li>
+  </ul>
+  <p>You do <b>not</b> need prior LangChain or LangGraph experience — tab ⑥ builds that from zero. You do <b>not</b> need prior multi-agent experience — tab ③ exists precisely to build the motivation from first principles.</p>
+
+  <h3>Environment for the Code Lab (tab ⑪)</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Piece</th><th>What it's for</th></tr>
+    <tr><td><code>langgraph</code>, <code>langchain</code>, <code>langchain-openai</code></td><td>The graph engine and the LLM wrapper</td></tr>
+    <tr><td>OpenRouter API key</td><td>One key, access to many models — <code>gpt-4o-mini</code> is used throughout for cost</td></tr>
+    <tr><td>Google Colab</td><td>Zero local setup; every code block in this guide runs there as-is</td></tr>
+  </table></div>
+  <pre class="code">!pip install -U langgraph langchain langchain-core langchain-community \
+               langchain-openai langchain-experimental pydantic typing-extensions</pre>
+
+  <div class="analogy"><b>Analogy — the guide as a kitchen apprenticeship.</b> Tab ⓪ is reading the knife-safety sheet. Tabs ①–② are the walk around the kitchen so you know where things are. Tabs ③–⑤ are learning why a brigade (several cooks, each with one station) beats one cook doing everything. Tabs ⑥–⑧ are actually cooking at a station, then running the pass. Tabs ⑨–⑩ are what happens on a Saturday night when a station falls behind, and how the head chef knows. ⑪–⑬ are your knife tests.</div>
+
+  <h3>How the phases work</h3>
+  <p>This guide moves through three phases, and the teaching style changes on purpose as it goes:</p>
+  <div class="comparebox">
+    <div class="cell"><h4>Phase A · Foundations (⓪–③)</h4>Heavy analogies, everything defined, "what and why" before "how."</div>
+    <div class="cell"><h4>Phase B · Building (④–⑧)</h4>Architecture, trade-offs, progressively heavier code, fewer analogies.</div>
+    <div class="cell"><h4>Phase C · Production (⑨–⑪)</h4>Failure modes, evaluation, infrastructure — analogies mostly retired, you've earned the real vocabulary.</div>
+  </div>
+</section>
+
+<section class="panel" id="panel-mindmap">
+  <div class="tabhead"><span class="num">①</span><h2>The Complete Landscape</h2></div>
+  <p class="subtitle">Click a node's children to expand. This is the map the rest of the guide fills in.</p>
+  <div class="mindtree">
+  <ul>
+    <li><span class="mnode">AI Systems <span class="car">(root)</span></span>
+      <ul>
+        <li><span class="mnode">Generative AI <span class="tag tag-concept">concept</span></span>
+          <ul><li>Produces content (text, image, code) from a prompt — no memory of its own actions, no tools, no goal beyond this response. <span class="tag tag-concept">concept</span></li></ul>
+        </li>
+        <li><span class="mnode">AI Agent <span class="tag tag-concept">concept</span></span>
+          <ul>
+            <li>An LLM given tools + a loop: it can decide to call a tool, observe the result, and decide again. <span class="tag tag-concept">concept</span></li>
+            <li>Single-agent limitations <span class="tag tag-failure">failure</span>
+              <ul>
+                <li>Context window ceiling <span class="tag tag-failure">failure</span></li>
+                <li>Task-complexity overload (jack-of-all-trades prompt) <span class="tag tag-failure">failure</span></li>
+                <li>No parallelism — everything is sequential <span class="tag tag-failure">failure</span></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><span class="mnode">Agentic AI <span class="tag tag-concept">concept</span></span>
+          <ul><li>The broader paradigm of systems that plan, act, and adapt toward a goal — of which both single agents and multi-agent systems are instances. <span class="tag tag-concept">concept</span></li></ul>
+        </li>
+        <li><span class="mnode">Multi-Agent System (MAS) <span class="tag tag-concept">concept</span></span>
+          <ul>
+            <li>Core roles
+              <ul>
+                <li>Orchestrator <span class="tag tag-concept">concept</span></li>
+                <li>Supervisor <span class="tag tag-concept">concept</span></li>
+                <li>Worker agent <span class="tag tag-concept">concept</span></li>
+                <li>Shared state <span class="tag tag-concept">concept</span></li>
+              </ul>
+            </li>
+            <li>Patterns <span class="tag tag-variant">variant</span>
+              <ul>
+                <li>Sequential crew <span class="tag tag-variant">variant</span></li>
+                <li>Supervisor–worker <span class="tag tag-variant">variant</span></li>
+                <li>Hierarchical <span class="tag tag-variant">variant</span></li>
+                <li>Parallel (fan-out / fan-in) <span class="tag tag-variant">variant</span></li>
+              </ul>
+            </li>
+            <li>Built with → <b>LangGraph</b>
+              <ul>
+                <li>State <span class="tag tag-concept">concept</span>, Node <span class="tag tag-concept">concept</span>, Edge <span class="tag tag-concept">concept</span></li>
+                <li>Conditional edges <span class="tag tag-technique">technique</span>, loops <span class="tag tag-technique">technique</span></li>
+                <li>Parallel execution (fan-out/fan-in) <span class="tag tag-technique">technique</span></li>
+                <li>Tooling: LangChain (components) vs LangGraph (orchestration) <span class="tag tag-tool">tool</span></li>
+              </ul>
+            </li>
+            <li>Production concerns
+              <ul>
+                <li>Runaway loops, state bloat, silent partial failure <span class="tag tag-failure">failure</span></li>
+                <li>Checkpointing, retries, max-iteration guards, tracing <span class="tag tag-production">production</span></li>
+                <li>Choosing a pattern: sequential vs parallel vs hierarchical <span class="tag tag-decision">decision</span></li>
+              </ul>
+            </li>
+            <li>Evaluation
+              <ul><li>Trajectory evaluation, per-agent scoring, end-to-end task success <span class="tag tag-production">production</span></li></ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+  </div>
+  <p class="subtitle" style="margin-top:20px">Tag key: <span class="tag tag-concept">concept</span><span class="tag tag-tool">tool</span><span class="tag tag-technique">technique</span><span class="tag tag-variant">variant</span><span class="tag tag-failure">failure</span><span class="tag tag-production">production</span><span class="tag tag-decision">decision</span></p>
+</section>
+
+<section class="panel" id="panel-fundamentals">
+  <div class="tabhead"><span class="num">④</span><h2>Multi-Agent Fundamentals</h2></div>
+  <p class="subtitle">The vocabulary every multi-agent system is built from: orchestrator, supervisor, worker, shared state — then the four patterns they combine into.</p>
+
+  <h3>Orchestrator — the workflow's project manager</h3>
+  <p>The orchestrator decides which agent runs, when it runs, what information it receives, and when the process is finished. It owns the <i>flow</i>, not the <i>judgment</i> of whether an answer is good.</p>
+
+  <h3>Supervisor — the workflow's reviewer</h3>
+  <p>A supervisor assigns tasks and <i>evaluates</i> what comes back: it can ask an agent to retry, decide the next step, or decide the answer is good enough to stop. In small systems the same agent plays both roles; the distinction matters once a system grows past one layer.</p>
+  <div class="tablewrap"><table>
+    <tr><th></th><th>Orchestrator</th><th>Supervisor</th></tr>
+    <tr><td>Focus</td><td>Workflow / routing</td><td>Decision / quality</td></tr>
+    <tr><td>Typical question</td><td>"Whose turn is it?"</td><td>"Is this good enough?"</td></tr>
+    <tr><td>Can trigger a retry?</td><td>Rarely</td><td>Yes, that's its job</td></tr>
+  </table></div>
+
+  <h3>Worker agent — the specialist</h3>
+  <p>A worker agent does one scoped job: a Research Worker finds information, a SQL Worker queries data, a Writing Worker drafts text. It generally has no visibility into the whole workflow — only its own slice of the shared state.</p>
+
+  <h3>Shared state — the common notebook</h3>
+  <p>Agents coordinate by reading and writing a common data structure, not by talking to each other directly.</p>
+  <div class="diagram">Shared State
+{
+  user_question,
+  research_results,
+  competitor_results,
+  financial_analysis,
+  final_answer
+}
+
+Research Agent ──writes──→ research_results ──┐
+Finance Agent  ──writes──→ financial_analysis ─┼─→ Shared State ─→ read by anyone downstream</div>
+  <div class="callout"><b>Common mistake.</b> Two parallel agents writing to the <i>same</i> state key. Without an explicit merge/reducer strategy, the second write usually just clobbers the first — this is the single most common cause of "my parallel agent's output disappeared." Give every branch its own key (tab ⑦ shows the fix).</div>
+
+  <h3>The four patterns</h3>
+  <div class="diagram">1. Sequential          Researcher → Analyst → Writer
+                        (each step needs the previous one's output)
+
+2. Supervisor-Worker         Supervisor
+                          /      |      \
+                    Research    SQL    Writing
+                     Worker    Worker   Worker
+                          \      |      /
+                           Supervisor → Final Answer
+
+3. Hierarchical              Main Supervisor
+                             /              \
+                  Research Supervisor    Tech Supervisor
+                    /        \              /       \
+                Web Agent  News Agent   Code Agent  DB Agent
+
+4. Parallel                   Orchestrator
+                            /      |        \
+                      Research  Reviews  Competitor
+                        Agent    Agent     Agent
+                            \      |        /
+                             Aggregator → Final Answer</div>
+
+  <div class="tablewrap"><table>
+    <tr><th>Pattern</th><th>How it works</th><th>Best when</th><th></th></tr>
+    <tr><td>Sequential</td><td>Agent → Agent → Agent</td><td>Each task depends on the one before it</td><td><span class="tag tag-variant">variant</span></td></tr>
+    <tr><td>Supervisor-Worker</td><td>Supervisor picks a worker per task</td><td>Different specialist skills are needed, work is not strictly ordered</td><td><span class="tag tag-variant">variant</span></td></tr>
+    <tr><td>Hierarchical</td><td>Supervisors manage sub-supervisors/agents</td><td>The system is large enough that one supervisor can't reasonably hold the whole picture</td><td><span class="tag tag-variant">variant</span></td></tr>
+    <tr><td>Parallel</td><td>Independent agents run together, then merge</td><td>Sub-tasks don't depend on each other</td><td><span class="tag tag-variant">variant</span></td></tr>
+  </table></div>
+
+  <div class="analogy"><b>Analogy — a hospital, not a general practice.</b> A supervisor-worker system is a triage nurse routing patients to the right specialist and checking the chart before discharge. A hierarchical system is a hospital with department heads under a chief of medicine. The pattern you pick should mirror how the real responsibilities are actually structured — not the other way around.</div>
+</section>
+
+<section class="panel" id="panel-lcvslg">
+  <div class="tabhead"><span class="num">⑤</span><h2>LangChain vs LangGraph: What, When, Where</h2></div>
+  <p class="subtitle">They solve different problems and are usually used together, not instead of each other.</p>
+
+  <div class="comparebox">
+    <div class="cell"><h4>LangChain</h4>A library of <i>components</i>: LLM wrappers, prompt templates, retrievers, tool definitions, output parsers. It answers "how do I call this model / this tool / this vector store?"</div>
+    <div class="cell"><h4>LangGraph</h4>An <i>orchestration engine</i> built on top of those components: state, nodes, edges, conditional routing, loops, checkpointing. It answers "in what order, under what conditions, do these calls happen?"</div>
+  </div>
+
+  <div class="tablewrap"><table>
+    <tr><th>Need</th><th>Use</th><th>Why</th></tr>
+    <tr><td>One LLM call with a prompt template</td><td>LangChain alone</td><td>No branching or state to manage</td></tr>
+    <tr><td>A linear chain: retrieve → prompt → parse</td><td>LangChain (<code>LCEL</code> chains)</td><td>Still strictly linear, no loops or conditional branches</td></tr>
+    <tr><td>An agent that loops until it has an answer</td><td>LangGraph</td><td>Needs explicit state + conditional edges to decide "keep going vs stop"</td></tr>
+    <tr><td>Multiple agents, shared state, parallel branches</td><td>LangGraph</td><td>This is exactly what it was built for</td></tr>
+  </table></div>
+
+  <div class="callout"><b>Common mistake.</b> Trying to build loops and conditional retries with plain LangChain chains by nesting Python <code>while</code> loops around <code>.invoke()</code> calls. It works for a demo and becomes unmanageable the moment you need to resume from a failure, inspect intermediate state, or run two branches at once — all things LangGraph gives you for free.</div>
+
+  <h3>Decision rule</h3>
+  <p>If you can draw your workflow as a straight line with no branches, no loops, and no need to inspect state mid-flight — LangChain chains are enough and simpler. The moment you draw an arrow that loops back, or a diamond that asks "which way next?" — reach for LangGraph. Tabs ⑥–⑦ are that diamond and that loop, in code.</p>
+</section>
+
+<section class="panel" id="panel-taxonomy">
+  <div class="tabhead"><span class="num">②</span><h2>Generative AI vs AI Agents vs Agentic AI vs Multi-Agent Systems</h2></div>
+  <p class="subtitle">Four terms that get used interchangeably in job posts and shouldn't be.</p>
+
+  <div class="diagram">Generative AI
+    └─ one shot: prompt in → content out, no memory of acting
+
+AI Agent  (= Generative AI + tools + a loop)
+    └─ "do I need a tool? call it. look at result. decide again."
+
+Agentic AI  (the umbrella paradigm)
+    └─ systems that plan → act → observe → adapt toward a goal
+       (a single agent is ONE way to be agentic; it is not the only way)
+
+Multi-Agent System  (= Agentic AI, split across specialists)
+    └─ several agents, each scoped, coordinating through shared state</div>
+
+  <div class="tablewrap"><table>
+    <tr><th>Term</th><th>Has memory of its own actions?</th><th>Can call tools?</th><th>Plans multi-step?</th><th>Example</th></tr>
+    <tr><td>Generative AI</td><td>No</td><td>No</td><td>No</td><td>A chatbot answering one question from training knowledge</td></tr>
+    <tr><td>AI Agent</td><td>Within one run</td><td>Yes</td><td>Yes, alone</td><td>A single ReAct agent that searches the web then answers</td></tr>
+    <tr><td>Agentic AI</td><td>Depends on design</td><td>Yes</td><td>Yes</td><td>The paradigm name — covers both of the rows below it</td></tr>
+    <tr><td>Multi-Agent System</td><td>Per agent + shared state</td><td>Yes, per agent</td><td>Yes, distributed</td><td>A supervisor routing to a research agent, a finance agent, a writer agent</td></tr>
+  </table></div>
+
+  <div class="callout"><b>Common mistake.</b> Calling any LLM call with a <code>for</code> loop around it "agentic AI." A loop that just retries the same prompt isn't agency — the system needs to be able to <i>choose</i> its next action based on what it just observed. That choice is the dividing line between a generative pipeline and an agent.</div>
+
+  <h3>Where multi-agent sits in the progression</h3>
+  <div class="pipeline">
+    <span class="step">Single LLM call</span><span class="arrow">→</span>
+    <span class="step">Single Agent (+ tools)</span><span class="arrow">→</span>
+    <span class="step">Agent + more tools</span><span class="arrow">→</span>
+    <span class="step">Multi-Agent System</span>
+  </div>
+  <p>Each arrow is a decision, not an upgrade you apply by default — tab ③ is entirely about when the rightmost box actually earns its complexity.</p>
+</section>
+
+<section class="panel" id="panel-why">
+  <div class="tabhead"><span class="num">③</span><h2>Why Multi-Agent? Limits of a Single Agent</h2></div>
+  <p class="subtitle">If one agent can do the job, use one agent. This tab is about the point where it can't.</p>
+
+  <h3>1. The context window is working memory, and working memory has a ceiling</h3>
+  <p>Give one agent 100 documents, competitor sites, financial reports, and a long chat history, and somewhere past the ceiling it starts forgetting earlier instructions, mixing unrelated facts, or silently dropping documents. It doesn't fail loudly — it fails by getting quietly worse.</p>
+  <div class="diagram">Small task:    [ Instruction + Data + Question ] → Agent → Good
+Large task:    [ Docs + Reports + History + APIs + Instructions + ... ]
+                                     ↓
+                              context limit
+                                     ↓
+                      information silently lost</div>
+
+  <h3>2. One agent, every skill</h3>
+  <p>"Build a market research report" quietly asks one agent to search well, extract well, analyze numbers well, and write well. Those are different skills with different failure modes — a prompt tuned to be a precise extractor is rarely also a persuasive writer.</p>
+
+  <h3>3. Sequential work doesn't parallelize</h3>
+  <p>Research → analyze → find competitors → check reviews → write, at 20 seconds each, is 100 seconds, even though "find competitors" and "check reviews" don't depend on each other at all.</p>
+  <div class="diagram">Sequential (one agent):  20+20+20+20+20 = 100s
+
+Parallel (three agents at once):
+              Orchestrator
+                   ↓
+        ┌──────────┼──────────┐
+   Competitor   Customer   Financial
+     Agent        Agent      Agent     (each ~20s, running together)
+        └──────────┼──────────┘
+                   ↓
+             Final Report          ≈ 20s + merge, not 60s</div>
+
+  <div class="analogy"><b>Analogy — a company, not a solo founder.</b> A solo founder doing research, finance, and marketing alone works at small scale. Past a certain size, you hire a researcher, a financial analyst, a marketer — each specialized, coordinating through shared documents and a manager who decides who does what next. A multi-agent system is that company, built in code.</div>
+
+  <div class="callout"><b>Common mistake.</b> Reaching for multi-agent because the task is long, rather than because it's genuinely separable. A 2,000-word report that one coherent agent can write end-to-end doesn't get better by being split into five agents — it gets slower, costlier, and harder to debug. Split along real seams: independent sub-tasks, or distinct skills that conflict when forced into one prompt.</div>
+
+  <h3>The decision in one line</h3>
+  <p><b>Use multiple agents when the problem genuinely benefits from specialization, coordination, parallel work, or clear separation of responsibility — not simply because more agents sounds more capable.</b></p>
+</section>
+
+<section class="panel" id="panel-lgbasics">
+  <div class="tabhead"><span class="num">⑥</span><h2>LangGraph Basics: State, Node, Edge</h2></div>
+  <div class="phasebadge">Phase B · Building</div>
+  <p class="subtitle">Three words carry the whole mental model. Everything else in LangGraph is built from them.</p>
+  <div class="diagram">State = What do we know?
+Node  = What do we do?
+Edge  = Where do we go next?</div>
+
+  <h3>State — a TypedDict, the workflow's shared notebook</h3>
+  <pre class="code">from typing_extensions import TypedDict
+
+class State(TypedDict):
+    product_name: str
+    basic_description: str
+    features_benefits: str
+    marketing_message: str
+    final_description: str</pre>
+  <p><code>TypedDict</code> just declares which keys exist and what type each holds — LangGraph doesn't enforce the types at runtime, but your own functions and your IDE both benefit from the contract.</p>
+
+  <h3>Node — a function that reads state and returns an update</h3>
+  <pre class="code">def generate_basic_description(state: State):
+    response = llm.invoke([
+        SystemMessage(content="You are a helpful assistant that generates brief product descriptions."),
+        HumanMessage(content=f"Write a brief description of '{state['product_name']}'.")
+    ])
+    return {"basic_description": response.content}  <span class="c"># only the changed key(s)</span></pre>
+  <div class="callout"><b>Common mistake.</b> Returning the <i>entire</i> state dict from a node instead of just the changed keys. It still "works" for a simple sequential graph, but it breaks the moment you add parallel branches or a reducer, because LangGraph can no longer tell what each branch actually changed.</div>
+
+  <h3>Edge — the route between nodes</h3>
+  <pre class="code">workflow.add_edge(START, "basic")      <span class="c"># START is the graph's entry point</span>
+workflow.add_edge("basic", "features")  <span class="c"># after "basic" finishes, run "features"</span>
+workflow.add_edge("final", END)         <span class="c"># END stops the graph and returns state</span></pre>
+
+  <h3>Function name vs. node label</h3>
+  <p>A Python function and the node name you register it under don't have to match — this trips people up when reading someone else's graph:</p>
+  <div class="diagram">builder.add_node("basic", generate_basic_description)
+
+Node Label     Function
+----------     ---------------------------
+basic      →   generate_basic_description
+features   →   add_features_benefits
+marketing  →   create_marketing_message
+final      →   polish_final_description</div>
+
+  <h3>Building and running a sequential graph</h3>
+  <div class="pipeline">
+    <span class="step">START</span><span class="arrow">→</span><span class="step">basic</span><span class="arrow">→</span><span class="step">features</span><span class="arrow">→</span><span class="step">marketing</span><span class="arrow">→</span><span class="step">final</span><span class="arrow">→</span><span class="step">END</span>
+  </div>
+  <pre class="code">def build_workflow():
+    workflow = StateGraph(State)
+    workflow.add_node("basic", generate_basic_description)
+    workflow.add_node("features", add_features_benefits)
+    workflow.add_node("marketing", create_marketing_message)
+    workflow.add_node("final", polish_final_description)
+
+    workflow.add_edge(START, "basic")
+    workflow.add_edge("basic", "features")
+    workflow.add_edge("features", "marketing")
+    workflow.add_edge("marketing", "final")
+    workflow.add_edge("final", END)
+    return workflow.compile()   <span class="c"># validates the graph, makes it runnable</span>
+
+app = build_workflow()
+result = app.invoke({"product_name": "Smart Water Bottle", "basic_description": "",
+                      "features_benefits": "", "marketing_message": "", "final_description": ""})</pre>
+  <p><code>app.invoke()</code> sends the initial state to the first node, merges each returned update into shared state, follows the edge to the next node, and repeats until it reaches <code>END</code>.</p>
+
+  <div class="analogy"><b>Analogy — a relay race with a shared baton.</b> State is the baton (it carries everything learned so far). A node is one runner's leg of the race — they do their part, update what's written on the baton, and hand it off. An edge is the handoff itself: it decides whose leg comes next.</div>
+</section>
+
+<section class="panel" id="panel-lgadvanced">
+  <div class="tabhead"><span class="num">⑦</span><h2>LangGraph Advanced: Branches, Fan-In, Loops</h2></div>
+  <div class="phasebadge">Phase B · Building</div>
+  <p class="subtitle">Four moves turn a straight line into a real multi-agent graph: fan-out, fan-in, conditional edges, and loops.</p>
+
+  <h3>Fan-out — one node, many branches</h3>
+  <pre class="code">workflow.add_edge("basic", "features")
+workflow.add_edge("basic", "audience")
+workflow.add_edge("basic", "seo")   <span class="c"># three independent branches start together</span></pre>
+  <div class="diagram">                    basic_description
+                           ↓
+                        FAN-OUT
+            ┌──────────────┼──────────────┐
+            ↓               ↓               ↓
+      add_features   identify_audience  generate_seo
+            ↓               ↓               ↓
+       features         audience         keywords</div>
+  <p>Each branch must write to a <b>different</b> state key (<code>features_benefits</code>, <code>target_audience</code>, <code>seo_keywords</code>) — this is the fix for the shared-state collision flagged back in tab ④.</p>
+
+  <h3>Fan-in — many branches, one merge node</h3>
+  <pre class="code">workflow.add_edge("features", "marketing")
+workflow.add_edge("audience", "marketing")
+workflow.add_edge("seo", "marketing")   <span class="c"># marketing only runs once ALL three finish</span></pre>
+  <p>The merge node (<code>marketing</code>) reads all three results out of shared state — that's the whole point of having a shared notebook instead of three separate conversations.</p>
+
+  <h3>Conditional edges — the graph makes a choice</h3>
+  <pre class="code">workflow.add_conditional_edges(
+    "evaluate",
+    lambda state: "improve" if state["quality_score"] < 6 else "end",
+    {"improve": "improve", "end": END}
+)</pre>
+  <p>A normal edge always goes the same way. A conditional edge runs a routing function against the <i>current state</i> and returns a route name, which the route-map dictionary turns into an actual node (or <code>END</code>).</p>
+
+  <h3>Loops — the graph returns to an earlier node</h3>
+  <pre class="code">workflow.add_edge("improve", "evaluate")   <span class="c"># creates: evaluate → improve → evaluate → ...</span></pre>
+  <div class="diagram">            FAN-OUT                      Quality Check
+   ┌──────────┼──────────┐                  /      \
+   ↓          ↓          ↓               Good        Poor
+Features   Audience    SEO                ↓            ↓
+   └──────────┼──────────┘               END        Improve
+           FAN-IN                                       ↓
+              ↓                                   Quality Check  (loop back)
+      Quality Check</div>
+  <div class="callout"><b>Common mistake.</b> A loop with no exit guard. <code>evaluate → improve → evaluate</code> is fine until the quality score never crosses the threshold — then it loops forever (or until you hit a provider timeout and a surprise bill). Production loops need a <b>max-iteration counter</b> in state, checked alongside the quality condition — tab ⑨ covers this as a named failure mode.</div>
+
+  <h3>Reading a full advanced graph definition</h3>
+  <pre class="code">def build_workflow():
+    workflow = StateGraph(State)
+    for label, fn in [("basic", generate_basic_description), ("features", add_features),
+                       ("audience", identify_audience), ("seo", generate_seo_keywords),
+                       ("marketing", create_marketing_message), ("final", polish_final_description),
+                       ("evaluate", evaluate_quality), ("improve", improve_description)]:
+        workflow.add_node(label, fn)
+
+    workflow.add_edge(START, "basic")
+    for branch in ["features", "audience", "seo"]:        <span class="c"># fan-out</span>
+        workflow.add_edge("basic", branch)
+        workflow.add_edge(branch, "marketing")              <span class="c"># fan-in</span>
+    workflow.add_edge("marketing", "final")
+    workflow.add_edge("final", "evaluate")
+    workflow.add_conditional_edges("evaluate",
+        lambda s: "improve" if s["quality_score"] < 6 else "end",
+        {"improve": "improve", "end": END})
+    workflow.add_edge("improve", "evaluate")                <span class="c"># the loop</span>
+    return workflow.compile()</pre>
+
+  <h3>Parallel execution — why fan-out is actually concurrent</h3>
+  <p>When a node has multiple outgoing edges to independent nodes, LangGraph schedules those branches to run together rather than one-by-one, because nothing in state makes one depend on another's output yet. This is the mechanism behind tab ③'s "100 seconds → ~20 seconds" claim — it isn't a metaphor, it's how the fan-out graph actually executes.</p>
+</section>
+
+<section class="panel" id="panel-building">
+  <div class="tabhead"><span class="num">⑧</span><h2>Building Multi-Agent Systems in LangGraph</h2></div>
+  <div class="phasebadge">Phase B · Building</div>
+  <p class="subtitle">Putting ④'s supervisor-worker pattern together with ⑥–⑦'s state/node/edge/conditional-edge mechanics.</p>
+
+  <p>A supervisor-worker system in LangGraph is a graph where one node (the supervisor) is reached repeatedly, and a conditional edge out of it decides which worker runs next — instead of a fixed sequence.</p>
+  <pre class="code">class State(TypedDict):
+    task: str
+    research_notes: str
+    sql_result: str
+    draft: str
+    next_worker: str      <span class="c"># the supervisor writes its routing decision here</span>
+
+def supervisor(state: State):
+    <span class="c"># In production this call asks an LLM "given what's done so far, who goes next?"</span>
+    done = [k for k in ("research_notes","sql_result","draft") if state.get(k)]
+    if "research_notes" not in done: nxt = "research_worker"
+    elif "sql_result" not in done:    nxt = "sql_worker"
+    elif "draft" not in done:         nxt = "writing_worker"
+    else:                             nxt = "end"
+    return {"next_worker": nxt}
+
+def route(state: State):
+    return state["next_worker"]
+
+workflow.add_node("supervisor", supervisor)
+workflow.add_node("research_worker", research_worker)
+workflow.add_node("sql_worker", sql_worker)
+workflow.add_node("writing_worker", writing_worker)
+
+workflow.add_edge(START, "supervisor")
+for worker in ["research_worker", "sql_worker", "writing_worker"]:
+    workflow.add_edge(worker, "supervisor")      <span class="c"># every worker reports back to the supervisor</span>
+workflow.add_conditional_edges("supervisor", route,
+    {"research_worker":"research_worker", "sql_worker":"sql_worker",
+     "writing_worker":"writing_worker", "end": END})</pre>
+  <div class="diagram">                 ┌──────────────────────────┐
+                 ↓                          │
+            Supervisor ──routes to──→  Worker runs
+                 ↑                          │
+                 └──────────────────────────┘
+          (every worker hands control back to the supervisor,
+           which decides the NEXT worker — or END)</div>
+
+  <div class="callout"><b>Common mistake.</b> Letting workers call each other directly "to save a hop." It's tempting and it quietly destroys the supervisor's ability to track progress, retry a failed worker, or stop the process — the entire point of the pattern is that workers only talk to shared state and the supervisor, never to each other.</div>
+
+  <h3>Hierarchical extension</h3>
+  <p>A hierarchical system is this same shape, recursively: a "Research Supervisor" subgraph (with its own internal supervisor + workers) gets compiled and plugged in as a single node under a "Main Supervisor." LangGraph graphs can be nested as nodes — this is the actual implementation of the hierarchy diagram from tab ④.</p>
+</section>
+
+<section class="panel" id="panel-production">
+  <div class="tabhead"><span class="num">⑨</span><h2>Production: Failure Modes, Infra, Scaling</h2></div>
+  <div class="phasebadge">Phase C · Production</div>
+  <p class="subtitle">What breaks in a multi-agent system that never broke in a single agent, and what to put in place before it does.</p>
+
+  <div class="tablewrap"><table>
+    <tr><th>Failure mode</th><th>What it looks like</th><th>Mitigation</th><th></th></tr>
+    <tr><td>Runaway loop</td><td>Quality score never clears the threshold; graph loops until timeout or cost spike</td><td>Max-iteration counter in state, hard-capped and checked in the conditional edge</td><td><span class="tag tag-failure">failure</span></td></tr>
+    <tr><td>State key collision</td><td>A parallel branch's output silently overwritten by a sibling branch</td><td>One state key per branch, or an explicit reducer (<code>Annotated[list, add]</code>-style merge)</td><td><span class="tag tag-failure">failure</span></td></tr>
+    <tr><td>Silent partial failure</td><td>One worker's LLM call errors; the graph proceeds with an empty/stale field instead of stopping</td><td>Validate each node's output before returning it; route failures to an explicit error/retry node, not past them</td><td><span class="tag tag-failure">failure</span></td></tr>
+    <tr><td>Supervisor drift</td><td>Supervisor keeps re-routing to the same worker because its "done" check is wrong</td><td>Make completion conditions explicit booleans in state, not inferred from free text</td><td><span class="tag tag-failure">failure</span></td></tr>
+    <tr><td>Unbounded state growth</td><td>Long-running graphs accumulate huge message histories, re-sent to every LLM call</td><td>Summarize/trim history fields; don't let every node read the full raw history</td><td><span class="tag tag-failure">failure</span></td></tr>
+    <tr><td>No resumability</td><td>A crash mid-graph loses all completed work</td><td>LangGraph checkpointing (e.g. <code>SqliteSaver</code>/<code>PostgresSaver</code>) persists state after every node</td><td><span class="tag tag-production">production</span></td></tr>
+  </table></div>
+
+  <h3>Infrastructure checklist</h3>
+  <ul>
+    <li><b>Checkpointing</b> — persist state after each node so a crash resumes instead of restarting from scratch.</li>
+    <li><b>Tracing</b> — every node call, its input/output, and latency logged (LangSmith or an equivalent) so a bad final answer can be traced back to the node that caused it.</li>
+    <li><b>Retries with backoff</b> — per-node, not per-graph: retrying the whole graph because one worker's API call timed out re-does work that already succeeded.</li>
+    <li><b>Cost/latency budgets</b> — a parallel fan-out of five LLM calls is five times the cost of one; know that multiplier before shipping.</li>
+    <li><b>Human-in-the-loop gates</b> — for any action with real-world side effects (sending an email, making a purchase), an explicit pause node rather than trusting the supervisor's judgment alone.</li>
+  </ul>
+
+  <div class="callout"><b>Common mistake.</b> Treating "it worked in the notebook" as "it's production-ready." A notebook run is one trajectory through the graph with no concurrent users, no transient API failures, and a human watching. Production is thousands of trajectories, some of which will hit every failure mode above simultaneously.</div>
+
+  <div class="analogy"><b>Analogy — a kitchen on a Saturday night, not a cooking class.</b> In the class (the notebook), one dish, one cook, no pressure. On a Saturday night, a burned station needs to be caught and 86'd before it reaches the pass (tracing), the kitchen keeps running if one burner dies (resumability), and the head chef has a hard rule on how many times a dish gets sent back before it just goes out as-is (max-iteration guard).</div>
+</section>
+
+<section class="panel" id="panel-eval">
+  <div class="tabhead"><span class="num">⑩</span><h2>Evaluation: Verifying It Actually Works</h2></div>
+  <div class="phasebadge">Phase C · Production</div>
+  <p class="subtitle">"It ran without an exception" and "it worked" are different claims. This tab is about proving the second one.</p>
+
+  <h3>Three levels to evaluate</h3>
+  <div class="comparebox">
+    <div class="cell"><h4>Per-node</h4>Did <i>this</i> node's output meet its own bar? (e.g. did the SQL worker generate valid SQL?)</div>
+    <div class="cell"><h4>Trajectory</h4>Did the graph take a <i>reasonable path</i> — right workers, right order, no wasted loops?</div>
+    <div class="cell"><h4>End-to-end</h4>Did the final answer actually solve the user's task?</div>
+  </div>
+
+  <h3>Trajectory evaluation</h3>
+  <p>Log the sequence of node names the graph actually visited for a given input, then compare against an expected (or acceptable-set of) trajectories. A system that reaches the right final answer by routing through every worker twice is not healthy, even if the end-to-end score looks fine.</p>
+  <pre class="code">expected_trajectory = ["supervisor", "research_worker", "supervisor", "writing_worker", "supervisor"]
+actual_trajectory   = [step["node"] for step in app.get_state_history(config)]
+trajectory_match    = actual_trajectory == expected_trajectory   <span class="c"># exact, or use edit-distance for "close enough"</span></pre>
+
+  <h3>LLM-as-judge for subjective outputs</h3>
+  <p>For free-text outputs (a marketing message, a research summary) a second LLM call scores the result against a rubric — exactly the pattern tab ⑦'s <code>evaluate_quality</code> node simulated with <code>random.randint()</code>. In production that random stub becomes:</p>
+  <pre class="code">def evaluate_quality(state: State):
+    response = judge_llm.invoke(f"""Rate this product description from 1-10 for clarity,
+persuasion, and relevance. Return only the number.\n\n{state['final_description']}""")
+    return {"quality_score": int(response.content.strip())}</pre>
+  <div class="callout"><b>Common mistake.</b> Using the <i>same</i> LLM call, same prompt, as both a worker and its own judge. It tends to rate its own output generously. Use a different prompt (ideally a different, cheaper model) dedicated only to scoring, and anchor it with a rubric and a few examples.</div>
+
+  <h3>Tracking it over time</h3>
+  <p>A single run's score tells you little; a test set of 15-20 representative tasks, re-run after every prompt or graph change, tells you whether a change actually helped. This is the same discipline regression tests bring to normal software — multi-agent systems need it more, not less, because small prompt edits can silently change routing behavior.</p>
+</section>
+
+<section class="panel" id="panel-code">
+  <div class="tabhead"><span class="num">⑪</span><h2>Code Lab: Progressive Build</h2></div>
+  <div class="phasebadge">Code · Runnable in Google Colab</div>
+  <p class="subtitle">Five programs, each adding exactly one concept, building toward a real supervisor-worker system. Programs 1-3 extend the product-description workflow; programs 4-5 build the multi-agent layer on top.</p>
+
+  <details open>
+    <summary>Program 1 — Sequential graph (state, node, edge)</summary>
+    <div class="inner">
+      <p>The minimal graph: one state, four nodes in a straight line.</p>
+      <pre class="code"><span class="c"># pip install -U langgraph langchain langchain-openai</span>
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+import os, getpass
+
+os.environ["OPENROUTER_API_KEY"] = getpass.getpass("OpenRouter API key: ")
+llm = ChatOpenAI(model="openai/gpt-4o-mini", temperature=0.3,
+                  openai_api_key=os.environ["OPENROUTER_API_KEY"],
+                  base_url="https://openrouter.ai/api/v1")
+
+class State(TypedDict):
+    product_name: str; basic_description: str
+    features_benefits: str; marketing_message: str; final_description: str
+
+def generate_basic_description(state: State):
+    r = llm.invoke([SystemMessage(content="You write brief product descriptions."),
+                     HumanMessage(content=f"Describe '{state['product_name']}' in one sentence.")])
+    return {"basic_description": r.content}
+
+def add_features_benefits(state: State):
+    r = llm.invoke(f"List key features and benefits of:\n{state['basic_description']}")
+    return {"features_benefits": r.content}
+
+def create_marketing_message(state: State):
+    r = llm.invoke(f"Create a compelling marketing message using:\n{state['features_benefits']}")
+    return {"marketing_message": r.content}
+
+def polish_final_description(state: State):
+    r = llm.invoke(f"Polish and finalize this description:\n{state['marketing_message']}")
+    return {"final_description": r.content}
+
+workflow = StateGraph(State)
+for label, fn in [("basic", generate_basic_description), ("features", add_features_benefits),
+                   ("marketing", create_marketing_message), ("final", polish_final_description)]:
+    workflow.add_node(label, fn)
+workflow.add_edge(START, "basic"); workflow.add_edge("basic", "features")
+workflow.add_edge("features", "marketing"); workflow.add_edge("marketing", "final")
+workflow.add_edge("final", END)
+app = workflow.compile()
+
+result = app.invoke({"product_name": "Smart Water Bottle", "basic_description": "",
+                      "features_benefits": "", "marketing_message": "", "final_description": ""})
+print(result["final_description"])</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Program 2 — Parallel fan-out / fan-in</summary>
+    <div class="inner">
+      <p>Adds: three independent branches off <code>basic</code>, merging into <code>marketing</code>. New concept only — the imports and <code>llm</code> setup from Program 1 are unchanged.</p>
+      <pre class="code">class State(TypedDict):
+    product_name: str; basic_description: str; features_benefits: str
+    target_audience: str; seo_keywords: str; marketing_message: str; final_description: str
+
+def add_features(state): return {"features_benefits": llm.invoke(f"Features/benefits:\n{state['basic_description']}").content}
+def identify_audience(state): return {"target_audience": llm.invoke(f"Target audience for:\n{state['basic_description']}").content}
+def generate_seo_keywords(state): return {"seo_keywords": llm.invoke(f"SEO keywords for:\n{state['basic_description']}").content}
+
+def create_marketing_message(state: State):
+    combined = f"Features:\n{state['features_benefits']}\n\nAudience:\n{state['target_audience']}\n\nSEO:\n{state['seo_keywords']}"
+    return {"marketing_message": llm.invoke(f"Compelling marketing message using:\n{combined}").content}
+
+workflow = StateGraph(State)
+workflow.add_node("basic", generate_basic_description)
+for label, fn in [("features", add_features), ("audience", identify_audience), ("seo", generate_seo_keywords)]:
+    workflow.add_node(label, fn)
+workflow.add_node("marketing", create_marketing_message)
+workflow.add_node("final", polish_final_description)
+
+workflow.add_edge(START, "basic")
+for branch in ["features", "audience", "seo"]:
+    workflow.add_edge("basic", branch)        <span class="c"># fan-out</span>
+    workflow.add_edge(branch, "marketing")     <span class="c"># fan-in</span>
+workflow.add_edge("marketing", "final"); workflow.add_edge("final", END)
+app = workflow.compile()</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Program 3 — Conditional edge + loop (quality gate)</summary>
+    <div class="inner">
+      <p>Adds: a <code>quality_score</code> field, an <code>evaluate</code> node, and a conditional edge that loops back to <code>improve</code> until the score clears 6 — with a max-retry guard this time, fixing the gap flagged in tab ⑦.</p>
+      <pre class="code">import random
+
+class State(TypedDict):
+    product_name: str; basic_description: str; features_benefits: str; target_audience: str
+    seo_keywords: str; marketing_message: str; final_description: str
+    quality_score: int; retry_count: int
+
+def evaluate_quality(state: State):
+    score = random.randint(4, 7)          <span class="c"># swap for judge_llm.invoke(...) in tab ⑩</span>
+    print(f"Quality score: {score}, retry #{state.get('retry_count', 0)}")
+    return {"quality_score": score}
+
+def improve_description(state: State):
+    r = llm.invoke(f"Make this more persuasive:\n{state['final_description']}")
+    return {"final_description": r.content, "retry_count": state.get("retry_count", 0) + 1}
+
+def route_on_quality(state: State):
+    MAX_RETRIES = 3                          <span class="c"># the guard tab ⑨ calls out as missing</span>
+    if state["quality_score"] >= 6 or state.get("retry_count", 0) >= MAX_RETRIES:
+        return "end"
+    return "improve"
+
+workflow.add_node("evaluate", evaluate_quality)
+workflow.add_node("improve", improve_description)
+workflow.add_edge("final", "evaluate")
+workflow.add_conditional_edges("evaluate", route_on_quality, {"improve": "improve", "end": END})
+workflow.add_edge("improve", "evaluate")
+app = workflow.compile()</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Program 4 — Supervisor-worker multi-agent system</summary>
+    <div class="inner">
+      <p>Adds: the multi-agent layer from tab ⑧ — a supervisor node and a conditional edge that routes to whichever worker hasn't run yet.</p>
+      <pre class="code">class MASState(TypedDict):
+    task: str; research_notes: str; draft: str; final_description: str; next_worker: str
+
+def research_worker(state: MASState):
+    return {"research_notes": llm.invoke(f"Research key facts for: {state['task']}").content}
+
+def writing_worker(state: MASState):
+    return {"draft": llm.invoke(f"Write a draft using:\n{state['research_notes']}").content}
+
+def polish_worker(state: MASState):
+    return {"final_description": llm.invoke(f"Polish:\n{state['draft']}").content}
+
+def supervisor(state: MASState):
+    if not state.get("research_notes"): nxt = "research_worker"
+    elif not state.get("draft"):        nxt = "writing_worker"
+    elif not state.get("final_description"): nxt = "polish_worker"
+    else: nxt = "end"
+    return {"next_worker": nxt}
+
+workflow = StateGraph(MASState)
+workflow.add_node("supervisor", supervisor)
+for label, fn in [("research_worker", research_worker), ("writing_worker", writing_worker), ("polish_worker", polish_worker)]:
+    workflow.add_node(label, fn)
+    workflow.add_edge(label, "supervisor")     <span class="c"># every worker reports back</span>
+
+workflow.add_edge(START, "supervisor")
+workflow.add_conditional_edges("supervisor", lambda s: s["next_worker"],
+    {"research_worker": "research_worker", "writing_worker": "writing_worker",
+     "polish_worker": "polish_worker", "end": END})
+app = workflow.compile()
+result = app.invoke({"task": "Smart Water Bottle launch copy", "research_notes": "", "draft": "", "final_description": "", "next_worker": ""})</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Program 5 — End-to-end: Gradio UI over the full workflow</summary>
+    <div class="inner">
+      <p>The last program is a real file, not a hardcoded string: a small Gradio interface over Program 2/3's compiled workflow, so a non-technical reviewer can type a product name and see every agent's output.</p>
+      <pre class="code">!pip install -q gradio
+import gradio as gr
+
+def run_product_agent(product_name):
+    initial = {"product_name": product_name, "basic_description": "", "features_benefits": "",
+               "target_audience": "", "seo_keywords": "", "marketing_message": "",
+               "final_description": "", "quality_score": 0, "retry_count": 0}
+    result = app.invoke(initial)
+    return (result.get("basic_description",""), result.get("features_benefits",""),
+            result.get("target_audience",""), result.get("seo_keywords",""),
+            result.get("marketing_message",""), str(result.get("quality_score","")),
+            result.get("final_description",""))
+
+with gr.Blocks(title="LangGraph Multi-Agent Product Copy") as demo:
+    gr.Markdown("# LangGraph Multi-Agent Product Copy")
+    product_input = gr.Textbox(label="Product Name", value="Smart Water Bottle")
+    run_button = gr.Button("Generate")
+    outs = [gr.Textbox(label=l) for l in ["Basic","Features","Audience","SEO","Marketing","Quality Score","Final"]]
+    run_button.click(fn=run_product_agent, inputs=product_input, outputs=outs)
+
+demo.launch()</pre>
+    </div>
+  </details>
+</section>
+
+<section class="panel" id="panel-practice">
+  <div class="tabhead"><span class="num">⑫</span><h2>🎯 Practice</h2></div>
+  <p class="subtitle">One evolving project, three assignments. Each extends the last — you end with a real multi-agent system, not three disconnected exercises.</p>
+
+  <div class="card">
+    <h3>Assignment 1 — Foundation Build <span class="tag tag-decision">Beginner</span></h3>
+    <p><b>Tests:</b> Tab ⑥ state/node/edge, Tab ③ why multi-agent even applies here.</p>
+    <p><b>Problem.</b> Build a sequential LangGraph workflow that takes a raw customer support ticket (a string) and produces: a one-line summary, a category (billing / technical / account / other), and a suggested first reply. Three nodes, straight line, no branching.</p>
+    <p><b>Expected outcome.</b> <code>app.invoke({"ticket": "..."})</code> returns a state dict with <code>summary</code>, <code>category</code>, and <code>suggested_reply</code> all filled in.</p>
+    <div class="scaffold">class State(TypedDict):
+    ticket: str
+    summary: str
+    category: str
+    suggested_reply: str
+
+def summarize(state: State):
+    # TODO: call llm with state["ticket"], return {"summary": ...}
+    ...
+
+def categorize(state: State):
+    # TODO: use state["summary"] to pick one of: billing, technical, account, other
+    ...
+
+def draft_reply(state: State):
+    # TODO: use state["summary"] and state["category"] to draft a first reply
+    ...
+
+# TODO: build the StateGraph — add_node x3, add_edge START->summarize->categorize->draft_reply->END, compile()</div>
+    <p><b>Self-Check</b></p>
+    <ul class="checklist">
+      <li>☐ Does <code>result["category"]</code> ever return something outside your four allowed categories? If so, constrain the prompt.</li>
+      <li>☐ Does the graph run start-to-finish on a ticket about a refund <i>and</i> one about a password reset?</li>
+      <li>☐ If you print state after each node, does only the expected key change each time?</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Assignment 2 — Integration Challenge <span class="tag tag-decision">Intermediate</span></h3>
+    <p><b>Tests:</b> Tab ⑦ fan-out/fan-in, Tab ④ shared state, Tab ⑤ deciding when LangGraph is warranted.</p>
+    <p><b>Scenario.</b> Extend Assignment 1's ticket triage into a parallel system: once <code>categorize</code> runs, fan out to three independent agents — a <b>Priority Agent</b> (urgent/normal/low), a <b>Sentiment Agent</b> (angry/neutral/positive), and a <b>Similar-Tickets Agent</b> (given a small hardcoded list of 10 past tickets, pick the most similar one) — then fan in to a <b>Routing Agent</b> that combines all three into a final routing decision (which team, what priority flag).</p>
+    <p><b>Requirements.</b></p>
+    <ul>
+      <li>Must-have: three branches run as true fan-out (not three sequential calls disguised as "parallel"); each writes a distinct state key; a single fan-in node reads all three.</li>
+      <li>Nice-to-have: a conditional edge that skips the Similar-Tickets Agent entirely when the Priority Agent already says "urgent" (saves a call on the cases that matter least for it).</li>
+    </ul>
+    <details><summary>💡 Hint — structuring the fan-out</summary><div class="inner">Give each branch its own key (<code>priority</code>, <code>sentiment</code>, <code>similar_ticket</code>) exactly like tab ⑦'s <code>features</code>/<code>audience</code>/<code>seo</code> split. Wire all three edges from <code>categorize</code>, and all three into <code>route_ticket</code>.</div></details>
+    <details><summary>💡 Hint — the skip-on-urgent conditional edge</summary><div class="inner">This needs <code>add_conditional_edges</code> out of the Priority Agent itself, not out of <code>categorize</code> — the routing function reads <code>state["priority"]</code> and returns either "similar_tickets" or straight to "route_ticket".</div></details>
+    <p><b>Evaluation criteria</b> (not just "does it run"): Does disabling the skip-logic measurably slow it down (proving the branches really were parallel)? Does the final routing decision actually change when you feed it an angry, urgent ticket vs. a calm, low-priority one?</p>
+    <p><b>Self-Check</b></p>
+    <ul class="checklist">
+      <li>☐ If two branches write to the same key by mistake, does one silently disappear? (Confirm you understand why, from tab ④.)</li>
+      <li>☐ Does the Similar-Tickets Agent actually get skipped on an urgent ticket, provable by a print statement or trace?</li>
+      <li>☐ Does the final decision differ for at least two meaningfully different test tickets?</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Assignment 3 — Production Capstone <span class="tag tag-decision">Advanced</span></h3>
+    <p><b>Tests:</b> Tab ⑧ supervisor-worker, Tab ⑨ failure modes/guards, Tab ⑩ evaluation.</p>
+    <p><b>Scenario.</b> Your team wants Assignment 2's triage system running against a live queue, not a one-off call. Convert it to a <b>supervisor-worker</b> architecture: a supervisor decides whether a ticket needs the full parallel analysis (Assignment 2's path) or can take a <b>fast path</b> (a single LLM call) when it's an obvious duplicate of something in the similar-tickets list — this is the one required advanced pattern (routing-based short-circuiting, the lightweight cousin of query routing).</p>
+    <p><b>Requirements spec.</b></p>
+    <ul>
+      <li>A supervisor node that inspects the similar-tickets match confidence and routes to either the fast path or the full Assignment-2 graph (as a nested subgraph node, per tab ⑧'s hierarchical-extension note).</li>
+      <li>A max-iteration / max-retry guard on any loop you introduce (tab ⑨).</li>
+      <li>An evaluation harness: 10 test tickets with a hand-labeled expected category + priority, scored for exact-match accuracy, plus a trajectory check that fast-path tickets never visit all three parallel agents (tab ⑩).</li>
+    </ul>
+    <details><summary>🏗️ Architecture hint</summary><div class="inner">Compile the Assignment-2 graph as its own object, then add it as a single node (<code>workflow.add_node("full_analysis", assignment2_app)</code>) inside the new top-level graph — LangGraph treats a compiled graph as a callable, so this "just works" as a node.</div></details>
+    <p><b>Grading rubric</b></p>
+    <div class="tablewrap"><table class="rubric">
+      <tr><td>Correctness</td><td>Fast path and full path both produce valid, schema-complete state</td></tr>
+      <tr><td>Routing logic</td><td>Supervisor's fast/full decision is explainable from state, not arbitrary</td></tr>
+      <tr><td>Safety guard</td><td>A max-retry/max-iteration cap exists and is actually reachable in a test</td></tr>
+      <tr><td>Evaluation</td><td>Accuracy number reported on the 10-ticket set, with a trajectory check, not just "it ran"</td></tr>
+      <tr><td>Write-up</td><td>One paragraph justifying the routing threshold you chose</td></tr>
+    </table></div>
+    <p><b>Stretch goals:</b> swap the random quality stub for a real judge-LLM call (tab ⑩); add LangGraph checkpointing so the queue survives a restart (tab ⑨); replace the hardcoded 10-ticket similarity list with a real vector retriever.</p>
+  </div>
+
+  <div class="card">
+    <h3>Concept Map — what you've now practiced</h3>
+    <ul>
+      <li>✅ State / node / edge, sequential graphs (A1, Tab ⑥)</li>
+      <li>✅ Fan-out / fan-in, shared-state key discipline (A2, Tab ④ + ⑦)</li>
+      <li>✅ Conditional edges for routing and short-circuiting (A2, A3, Tab ⑦)</li>
+      <li>✅ Supervisor-worker and nested/hierarchical graphs (A3, Tab ④ + ⑧)</li>
+      <li>✅ Failure-mode guards: max-retry caps (A3, Tab ⑨)</li>
+      <li>✅ Trajectory + accuracy evaluation (A3, Tab ⑩)</li>
+    </ul>
+  </div>
+</section>
+
+<section class="panel" id="panel-interview">
+  <div class="tabhead"><span class="num">⑬</span><h2>💼 Interview Prep</h2></div>
+  <p class="subtitle">25 questions: 8 conceptual, 8 scenario-based, 5 debugging, 4 system design. Open the hint first, attempt an answer, then check the model answer.</p>
+  <div id="interview-list"></div>
+</section>
+
+  </main>
+  </div>
+</div>
+
+<script>
+/* ===================== TAB REGISTRY ===================== */
+const TABS = [
+  {n:"⓪", id:"prereq", label:"Prerequisites"},
+  {n:"①", id:"mindmap", label:"Mindmap"},
+  {n:"②", id:"taxonomy", label:"Taxonomy"},
+  {n:"③", id:"why", label:"Why Multi-Agent"},
+  {n:"④", id:"fundamentals", label:"MAS Fundamentals"},
+  {n:"⑤", id:"lcvslg", label:"LangChain vs LangGraph"},
+  {n:"⑥", id:"lgbasics", label:"LangGraph Basics"},
+  {n:"⑦", id:"lgadvanced", label:"LangGraph Advanced"},
+  {n:"⑧", id:"building", label:"Building MAS"},
+  {n:"⑨", id:"production", label:"Production"},
+  {n:"⑩", id:"eval", label:"Evaluation"},
+  {n:"⑪", id:"code", label:"Code Lab"},
+  {n:"⑫", id:"practice", label:"🎯 Practice"},
+  {n:"⑬", id:"interview", label:"💼 Interview Prep"},
+];
+let current = 0;
+
+function renderRail(){
+  const rail = document.getElementById("rail");
+  rail.innerHTML = TABS.map((t,i)=>`
+    <button class="railbtn" role="tab" aria-selected="${i===current}" data-i="${i}">
+      <span class="num">${t.n}</span><span class="label">${t.label}</span>
+    </button>`).join("");
+  rail.querySelectorAll(".railbtn").forEach(b=>b.addEventListener("click",()=>goTo(+b.dataset.i)));
+}
+function goTo(i){
+  current = i;
+  document.querySelectorAll(".railbtn").forEach(b=>b.setAttribute("aria-selected", String(+b.dataset.i===i)));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById("panel-"+TABS[i].id).classList.add("active");
+  try{ localStorage.setItem("mas-guide-tab", String(i)); }catch(e){}
+  document.getElementById("main").scrollTop = 0;
+  window.scrollTo(0,0);
+}
+function footNav(i){
+  const prev = i>0 ? `<button class="navbtn" onclick="goTo(${i-1})">← ${TABS[i-1].n} ${TABS[i-1].label}</button>` : `<span></span>`;
+  const next = i<TABS.length-1 ? `<button class="navbtn" onclick="goTo(${i+1})">${TABS[i+1].n} ${TABS[i+1].label} →</button>` : `<span></span>`;
+  return `<div class="footrow">${prev}${next}</div>`;
+}
+function copyCode(btn){
+  const code = btn.parentElement.querySelector("pre,.scaffold").innerText;
+  navigator.clipboard?.writeText(code).then(()=>{btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy",1200)}).catch(()=>{});
+}
+</script>
+
+<script>
+/* ===================== INTERVIEW QUESTIONS (25) ===================== */
+const QUESTIONS = [
+{t:"conceptual", q:"What is the difference between an AI agent and a multi-agent system?",
+ hints:["Define an agent as an LLM + tools + a decision loop","State what multi-agent adds on top: specialization, shared state, coordination","Don't say 'multi-agent is just more agents' — say what structural problem it solves","Give one concrete example of each"],
+ answer:"An AI agent is a single LLM given tools and a loop: it can observe, decide to call a tool, and decide again until it's done. A multi-agent system is a step up in structure, not just in headcount — it's several agents, each scoped to one responsibility, coordinating through a shared state object and usually a supervisor or orchestrator that decides who acts next. The difference that matters isn't 'one versus many,' it's that a multi-agent system adds specialization, explicit coordination, and often parallelism, which a single agent can't get no matter how many tools you give it. For example, one agent with a search tool and a calculator is still a single agent. A system where a research agent, a finance agent, and a writer agent each do their part and hand off through shared state is a multi-agent system.",
+ tested:"Whether the candidate understands multi-agent as a structural solution to specific limitations, not just 'using more than one LLM call.'",
+ red:["Says multi-agent just means 'running several prompts'","Can't name what a single agent actually can't do that justifies the extra complexity"],
+ ref:"Tab ②, Tab ④"},
+{t:"conceptual", q:"Why does a single agent eventually break down as a task grows, and what breaks first?",
+ hints:["Name the context-window limit specifically, not just 'it gets confused'","Mention task-complexity overload — one prompt trying to be good at everything","Mention the lack of parallelism as a separate, distinct limitation","Explain WHY these happen, not just list them"],
+ answer:"Three independent things break, and they break for different reasons. First, the context window is the agent's working memory, and past a point, documents, history, and instructions start getting silently dropped or mixed up — it doesn't error, it just gets quietly worse. Second, one agent is being asked to be a good researcher, analyst, and writer all in one prompt, and those are different skills with different failure modes, so the prompt becomes a compromise that's mediocre at all three instead of good at one. Third, a single agent executes sequentially even when parts of the task don't depend on each other, so independent sub-tasks that could run in parallel instead queue up one after another. None of these is really a 'bug' — they're structural consequences of asking one process to do unbounded work.",
+ tested:"Whether the candidate can name the specific mechanisms rather than giving a vague 'it gets overwhelmed' answer.",
+ red:["Only mentions 'the context window gets full' and stops there","Describes the limitations as bugs to be fixed rather than structural constraints of a single process"],
+ ref:"Tab ③"},
+{t:"conceptual", q:"Explain the difference between an orchestrator and a supervisor in a multi-agent system.",
+ hints:["Orchestrator = workflow/routing focus","Supervisor = decision/quality focus — can request a retry","State that in small systems the same agent often plays both roles","Give a concrete trigger each one would act on"],
+ answer:"An orchestrator's job is purely about flow: which agent runs, when, with what input, and when the whole process is done. A supervisor's job is about judgment: it looks at what an agent produced and decides if it's good enough, whether to retry, or what should happen next based on quality, not just sequence. In a lot of small systems these collapse into one agent that both routes and judges, and that's fine — the distinction only starts to matter once a system is big enough that you want to reason about 'who decides where things go' separately from 'who decides if the output is acceptable.' A concrete trigger for a supervisor would be a low quality score sending work back for revision; a trigger for a pure orchestrator would just be 'step 3 finished, start step 4.'",
+ tested:"Whether the candidate distinguishes routing logic from quality judgment instead of treating the terms as synonyms.",
+ red:["Uses the two terms interchangeably with no distinction","Can't explain why a system might need both roles rather than one"],
+ ref:"Tab ④"},
+{t:"conceptual", q:"What is shared state in LangGraph, and why don't agents just message each other directly?",
+ hints:["Define state as the common, typed data structure every node reads/writes","Explain the coordination problem direct messaging creates (point-to-point complexity)","Mention that it lets a supervisor track progress without intercepting every message","Note the collision risk when two agents write the same key"],
+ answer:"Shared state is a single data structure — a TypedDict in LangGraph — that every node in the graph can read from and write to. Each agent's output lands in its own key, and downstream nodes just read whatever keys they need, rather than agents having to know who else exists and send each other messages directly. Direct agent-to-agent messaging turns into an N-squared coordination problem as the system grows, and it makes it very hard for a supervisor to track overall progress, because progress is scattered across private conversations instead of visible in one place. The trade-off is that shared state introduces a new failure mode: if two parallel agents write to the same key without an explicit merge strategy, one silently overwrites the other.",
+ tested:"Whether the candidate sees shared state as a coordination-complexity reducer, not just 'a database for agents.'",
+ red:["Describes shared state as just a performance optimization","Doesn't mention the write-collision risk when parallel branches share a key"],
+ ref:"Tab ④, Tab ⑥"},
+{t:"conceptual", q:"What's the difference between LangChain and LangGraph, and why would a real project need both?",
+ hints:["LangChain = components (LLM wrappers, prompts, retrievers, tools)","LangGraph = orchestration engine (state, nodes, edges, conditional routing, loops)","Explain that LangGraph workflows are typically built FROM LangChain components","Give the concrete line where you'd switch from one to the other"],
+ answer:"LangChain is a library of components — ways to call an LLM, format a prompt, wrap a retriever, define a tool. LangGraph is the orchestration layer on top: it defines state, nodes, edges, conditional routing, and loops, and the nodes inside a LangGraph graph are usually just functions that call LangChain components. So in practice you don't choose one instead of the other — a multi-agent LangGraph system is built using LangChain pieces inside each node. The line where you actually need LangGraph is when your workflow stops being a straight line: the moment you need a loop, a branch that depends on runtime state, or inspectable intermediate state, plain LangChain chains become awkward and LangGraph is the better fit.",
+ tested:"Whether the candidate understands these as complementary layers rather than competing frameworks.",
+ red:["Frames it as 'LangGraph replaced LangChain'","Can't articulate the concrete trigger (branching/looping/state) for reaching for LangGraph"],
+ ref:"Tab ⑤"},
+{t:"conceptual", q:"Explain what a node and an edge are in LangGraph, using the state as the throughline.",
+ hints:["Node = a function that reads state, does work, returns an update","Edge = tells LangGraph which node runs next","Explain the merge: nodes return only CHANGED keys, which get merged into state","Mention START and END as special nodes"],
+ answer:"A node is a Python function registered with the graph; it receives the current state, does something — usually calling an LLM — and returns a dictionary with only the keys it changed. LangGraph merges that returned update into the full shared state rather than replacing it. An edge tells LangGraph which node to run next after the current one finishes; a normal edge always points to the same next node, while START and END are special markers for the graph's entry point and its stopping point. The mental model is state as what you know, nodes as what you do, edges as where you go next — and critically, a node's return value should only ever be its own changed slice of state, not the whole thing, or you lose the ability to track what each node actually did.",
+ tested:"Whether the candidate understands the update-and-merge mechanics, not just the diagram-level definitions.",
+ red:["Says a node 'returns the new state' without mentioning it's only the changed keys","Can't explain what START/END actually do"],
+ ref:"Tab ⑥"},
+{t:"conceptual", q:"What is a conditional edge, and how does it differ from a normal edge?",
+ hints:["Normal edge: fixed destination, always the same","Conditional edge: a routing function inspects state and returns a route name","Mention the route-map dictionary that turns a route name into an actual node or END","Give an example condition"],
+ answer:"A normal edge always connects the same two nodes — after A finishes, B always runs next, no matter what's in state. A conditional edge instead calls a routing function with the current state, and that function returns a string naming a route; a route-map dictionary then turns that string into an actual next node, or END. A typical example is an evaluate node whose conditional edge checks state['quality_score'] and routes to 'improve' if it's below a threshold, or 'end' otherwise. This is the mechanism that makes loops, retries, and dynamic branching possible — without it, a graph can only ever be a fixed sequence.",
+ tested:"Whether the candidate can describe the actual mechanics (routing function + route map), not just 'it's an if-statement.'",
+ red:["Describes it only as 'an if-statement' with no mention of the route-map structure","Can't give a concrete example condition"],
+ ref:"Tab ⑦"},
+{t:"conceptual", q:"Why is fan-out considered parallel execution rather than just several sequential calls?",
+ hints:["Explain that multiple edges out of one node to independent nodes are scheduled together","Contrast with a disguised-sequential version that LOOKS parallel in code but isn't","State the condition required: branches must not depend on each other's output","Connect it back to the time-savings claim from the 'why multi-agent' tab"],
+ answer:"When one node has edges to several other nodes that don't depend on each other's output, LangGraph can run those branches concurrently instead of one after another, because nothing in the data flow forces an order between them. That's the actual mechanism behind the earlier claim that three 20-second tasks can finish in about 20 seconds total instead of 60 — it's not a metaphor, it's how the engine schedules the graph. The catch is that this only works when the branches are genuinely independent; if you write three functions that each depend on a previous branch's state key, even though they're wired as 'fan-out,' the dependency forces an effective ordering and you don't get real concurrency. So the test for whether something is truly parallel isn't how it's drawn, it's whether each branch's inputs are already available before any of them run.",
+ tested:"Whether the candidate understands that parallelism comes from data independence, not just from the graph's visual shape.",
+ red:["Thinks any fan-out diagram automatically means genuine concurrency","Can't explain what would silently turn a 'parallel' fan-out back into sequential execution"],
+ ref:"Tab ③, Tab ⑦"},
+
+{t:"scenario", q:"You're asked to build a system that researches a company, analyzes competitors, and writes a report. Single agent or multi-agent — and why?",
+ hints:["Apply the decision rule from 'why multi-agent' — don't default to multi-agent","Identify which sub-tasks are genuinely independent (parallelizable) vs dependent","Consider the different skills involved (research vs analysis vs writing)","State what you'd check before committing to either answer"],
+ answer:"I'd start by asking how big the research surface actually is — if it's a handful of documents and a short report, I'd default to a single agent, because the complexity of a multi-agent system isn't free and a simple task doesn't earn it back. But the task as described has a real seam: researching the company and researching competitors are largely independent of each other, and both need to finish before analysis and writing can happen, and writing needs a different skill profile than research does. So for anything beyond a small scope, I'd build this as a parallel pattern — a research agent and a competitor agent running concurrently, feeding into an analysis node, feeding into a writer node — rather than sequential, because the parallel structure actually saves wall-clock time here, not just organizational tidiness. I'd validate that choice by checking whether the competitor research genuinely doesn't need anything from the company research first; if it does, the 'parallel' framing is wrong and it should be sequential with a fan-in instead.",
+ tested:"Whether the candidate applies the decision framework rather than reflexively reaching for multi-agent because the prompt sounds complex.",
+ red:["Jumps straight to 'multi-agent, obviously' without checking if the task is actually separable","Doesn't distinguish the parallel opportunity (independent research) from the sequential requirement (analysis needs both research results first)"],
+ ref:"Tab ③, Tab ④, Tab ⑦"},
+{t:"scenario", q:"Your team is debating sequential vs. supervisor-worker for a customer-support triage pipeline. What questions would you ask to decide?",
+ hints:["Is the set of steps fixed, or does it vary per ticket?","Do some tickets skip steps entirely (e.g., obvious duplicates)?","Is there a need to retry or re-route a step based on quality?","Connect the answer back to the comparison table: 'tasks depend on each other' vs 'different specialists, not strictly ordered'"],
+ answer:"The first question is whether every ticket actually goes through the same fixed steps in the same order — if yes, sequential is simpler and there's no reason to add a supervisor's routing overhead. The second is whether some tickets need to skip steps (a known duplicate doesn't need full analysis) or need a step repeated (low-confidence classification needs a second pass) — if routing varies per ticket, that's exactly the signal for supervisor-worker, because a fixed sequential chain can't express 'sometimes skip this.' Third, I'd ask whether we need per-ticket visibility into 'why did this ticket go here,' since a supervisor's explicit routing decision is easier to log and audit than an implicit sequential chain. If the answer to the first question is 'yes, always the same steps' and nobody needs conditional skipping, I'd push back on supervisor-worker — it's solving a flexibility problem the pipeline doesn't have yet.",
+ tested:"Whether the candidate picks the pattern based on real variability in the workflow, not habit or resume-driven preference.",
+ red:["Picks supervisor-worker by default because it 'sounds more sophisticated'","Doesn't ask whether the routing actually varies per input"],
+ ref:"Tab ④"},
+{t:"scenario", q:"You need three independent checks — spam, PII, toxicity — run on each incoming message before a final decision. How would you structure this in LangGraph?",
+ hints:["This is a textbook fan-out/fan-in shape","Each check must write to its OWN state key","One merge node reads all three and makes the final call","Mention what you'd do if one check needs to short-circuit the others (e.g. spam found → skip the rest)"],
+ answer:"This is a direct fan-out/fan-in: one incoming-message node fans out to three independent nodes — spam_check, pii_check, toxicity_check — each writing to its own state key, like spam_result, pii_result, toxicity_result, and then a single decision node fans back in and reads all three to make the final accept/reject call. I'd keep each check as a separate node rather than one combined node calling three functions internally, specifically so they run concurrently instead of inside one sequential function body. If I wanted an optimization where a confirmed-spam result makes the other two checks pointless, I'd add that as a conditional edge out of spam_check that skips straight to the decision node when spam confidence is very high, rather than always running all three unconditionally.",
+ tested:"Whether the candidate can map a described requirement onto the fan-out/fan-in pattern without being told to use it by name.",
+ red:["Suggests running the three checks in one node with three internal function calls (loses real concurrency)","Doesn't mention giving each check its own state key"],
+ ref:"Tab ⑦"},
+{t:"scenario", q:"A workflow needs to retry a step up to 3 times if quality is below a bar, otherwise continue. How do you implement this, and what do you have to guard against?",
+ hints:["Conditional edge out of an evaluate node, routing to 'retry' or 'continue'","A retry_count field in state, incremented on each pass","The loop-exit condition must check BOTH the quality bar and the retry cap","Name the failure mode this prevents"],
+ answer:"I'd add a quality_score field and a retry_count field to state. An evaluate node computes the score, and a conditional edge's routing function checks: if score is above the bar, route to 'continue'; otherwise, if retry_count is still under 3, route to 'improve' and increment the counter there; if retry_count has hit 3 and quality is still below bar, route to 'continue' anyway rather than looping again. The thing I have to guard against is checking only the quality condition and forgetting the retry cap — that produces a loop with no forced exit, which on a particular stubborn input can run indefinitely, burning API cost and hitting provider timeouts. The cap has to be checked in the same routing function as the quality bar, not bolted on separately, or it's easy to have a code path that skips it.",
+ tested:"Whether the candidate treats the retry cap as a required part of the loop design, not an optional afterthought.",
+ red:["Describes the quality-check loop without mentioning a retry cap at all","Puts the retry cap check in a different place than the quality check, creating a path that skips it"],
+ ref:"Tab ⑦, Tab ⑨"},
+{t:"scenario", q:"You're deciding between a flat supervisor-worker system and a hierarchical one for a 12-agent system. What would push you toward hierarchical?",
+ hints:["A single supervisor's routing logic getting too complex to reason about","Natural groupings of agents by domain (e.g. research agents vs technical agents)","The need for a sub-team to have its own internal retry/quality logic without the top supervisor seeing it","Note the cost: added latency/complexity of nested graphs"],
+ answer:"The main signal is whether one supervisor's routing decision is starting to require knowledge of twelve agents' worth of context — at that point the supervisor itself becomes the bottleneck and its prompt becomes as overloaded as the single-agent problem this whole architecture was meant to avoid. If the twelve agents naturally cluster into domains — say, four research agents, four technical agents, four writing agents — a hierarchical structure lets a Research Supervisor handle the internal routing and quality-checking for its four agents without the Main Supervisor needing to know anything below that layer. I'd also look at whether a sub-team needs its own retry loop that shouldn't bubble up to the top level; nesting a compiled sub-graph as a single node is exactly how LangGraph supports that. The cost is real, though — nested graphs add latency and make debugging a failing trajectory harder, since you now have to drill into which layer actually failed, so I wouldn't do this just because twelve sounds like a big number.",
+ tested:"Whether the candidate reasons about supervisor cognitive load and natural groupings rather than picking hierarchical based on agent count alone.",
+ red:["Says 'more than N agents always needs hierarchy' as a fixed rule","Doesn't mention the added debugging/latency cost of nesting"],
+ ref:"Tab ④"},
+{t:"scenario", q:"Your PM wants 'the agent to just figure it out' instead of defining explicit worker roles. How do you respond, and what would you actually build?",
+ hints:["Acknowledge the appeal (less upfront design) without agreeing it's free","Explain the real cost: an unscoped agent re-creates the single-agent limitations the system was meant to avoid","Propose a concrete middle ground (a planner agent that proposes a role split for the task at hand)","State what you'd want to see before expanding scope further"],
+ answer:"I'd tell the PM plainly that 'figure it out' isn't actually less work, it's deferred work — if we don't define roles, the system either becomes one big agent again, with the exact context-window and skill-overload problems multi-agent was supposed to fix, or it becomes a free-floating swarm with no clear coordination, which is much harder to debug when something goes wrong. What I'd build instead is a lightweight planner step: a single call that looks at the incoming task and proposes a small, explicit set of worker roles for it, which then get instantiated as actual LangGraph nodes with their own scoped prompts. That gets the PM's flexibility — the roles aren't hardcoded for every possible task — without losing the specialization and traceability that make multi-agent worth the complexity in the first place. Before expanding this further I'd want to see it work reliably on a handful of representative tasks, because a planner that mis-splits roles is its own new failure mode to evaluate.",
+ tested:"Whether the candidate can translate a vague stakeholder request into a concrete architectural compromise rather than just agreeing or refusing.",
+ red:["Just agrees to build an unscoped 'figure it out' agent without flagging the trade-off","Dismisses the PM's request instead of finding the actual middle ground (dynamic role planning)"],
+ ref:"Tab ③, Tab ④"},
+{t:"scenario", q:"Adding a reranking/review step improves output quality but adds latency and cost per request. How do you decide whether to include it?",
+ hints:["This has no single right answer — frame it as a trade-off, not a verdict","Name the actual levers: how much latency, how much cost, how much quality gain, how the output is used downstream","Consider a conditional version: only run it when a cheaper signal suggests it's needed","State what data you'd want before deciding"],
+ answer:"There's no universal answer here — it depends on what's downstream of the output and how much quality actually moves. If this output goes straight to an end user in a latency-sensitive flow, I'd want to measure the actual quality delta, not assume it's large, and weigh it against a concrete latency budget the product has committed to. If the quality gain is marginal but consistent, and the downstream consumer barely notices, it's probably not worth the added cost at scale. A middle path I'd explore first is making it conditional: route only the lower-confidence outputs — say, below some quality-score threshold from a cheap first-pass check — through the reranking step, so the cost is paid only where it earns its keep instead of on every single request. Before committing either way I'd want A/B data on a representative sample: the quality delta, the p50/p95 latency delta, and the per-request cost delta, not just a demo-level impression that it 'feels better.'",
+ tested:"Whether the candidate treats this as a real trade-off requiring data, instead of giving a one-sided 'always add it' or 'never add it' answer.",
+ red:["Gives a flat yes/no without naming the actual cost and benefit levers","Doesn't propose the conditional/selective-application option as a middle ground"],
+ ref:"Tab ⑨, Tab ⑩"},
+{t:"scenario", q:"Your team is debating LangGraph vs. a simple while-loop with LangChain calls for a 3-step agent. What questions would you ask to decide?",
+ hints:["Does the workflow ever need to loop or branch conditionally?","Does anyone need to inspect or resume intermediate state?","Will this stay at 3 steps, or is it likely to grow?","State the actual cost of choosing LangGraph for something that doesn't need it yet"],
+ answer:"First question: does this workflow ever loop back, or branch based on runtime state, or is it strictly three steps in a fixed order every time? If it's truly fixed and linear, a plain LangChain chain is simpler and I wouldn't add LangGraph's machinery for no benefit. Second: does anyone need to pause, inspect, or resume this mid-flight — if a step fails, do we want to resume from there rather than restart from scratch? That resumability is something LangGraph gives you via checkpointing and a hand-rolled while-loop doesn't, for free. Third: how likely is this to grow past three steps or gain a conditional branch in the next few months — if the team already expects that, I'd rather pay the LangGraph setup cost once now than migrate a working while-loop under pressure later. If the honest answer to all three is 'no, and it's staying this simple,' I'd actually agree with the while-loop camp — this is one of the cases from tab ⑤ where LangGraph would be overhead, not a win.",
+ tested:"Whether the candidate can argue against over-engineering just as readily as for it, based on concrete criteria rather than tool preference.",
+ red:["Defaults to 'always use LangGraph, it's the more capable tool' without considering the simpler case","Can't name resumability/checkpointing as a concrete LangGraph benefit the while-loop lacks"],
+ ref:"Tab ⑤"},
+
+{t:"debugging", q:"Your parallel fan-out writes features, audience, and seo keys, but after merging, the audience field is always empty. What would you check first?",
+ hints:["Check whether two branches are writing to the SAME state key by mistake","Check that the audience node's edge actually points into the merge node","Check whether the audience node is even being reached (log/print inside it)","Don't jump to 'the LLM call failed' before ruling out a wiring bug"],
+ answer:"First I'd check the simplest wiring mistake: is the audience node's function actually registered under a distinct key, or did a copy-paste leave it returning the same key as another branch, so it gets silently overwritten the moment the other branch's write lands? Second, I'd verify the edges — does the graph actually have an edge from the fan-out node into audience, and from audience into the merge node, or did the audience branch get left out of the edge wiring entirely, meaning it never runs at all? Third, if both of those check out, I'd add a print or a trace inside the audience node itself to confirm it's actually being invoked and what it returns, since 'the field is empty' could mean the node ran and returned an empty string, not that it never ran. I'd rule these out in that order because a wiring or key-collision bug is far more likely than an LLM silently returning nothing, and checking the cheap things first saves time.",
+ tested:"Whether the candidate's debugging instinct goes to the most likely structural cause (key collision, missing edge) before assuming a model-quality issue.",
+ red:["Jumps straight to 'the prompt must be bad' without checking the graph wiring","Doesn't mention state-key collision as a specific, likely cause"],
+ ref:"Tab ④, Tab ⑦"},
+{t:"debugging", q:"Your evaluate→improve loop runs forever on one particular input. What's happening, and what do you add?",
+ hints:["The quality bar is probably never being cleared for this specific input","Check whether a retry/iteration cap exists in the routing function at all","If a cap exists, check whether it's actually being incremented and checked on every pass","Describe the fix, not just the diagnosis"],
+ answer:"The most likely explanation is that for this particular input, the quality score genuinely never crosses the threshold — maybe the input itself is malformed or asks for something the model structurally can't produce well — so the conditional edge keeps routing back to improve indefinitely because nothing in the routing logic forces an exit after N attempts. The fix is to add a retry_count field to state, increment it inside the improve node, and change the routing function to exit to 'end' (or to a fallback/error path) once either the quality bar is cleared or the retry count hits a cap, whichever comes first. If a cap already exists in the code, I'd specifically check that it's being incremented on every pass and that the routing function is actually reading the current value rather than a stale one from an earlier state snapshot — a surprisingly common version of this bug is the counter existing but never being wired into the actual exit condition.",
+ tested:"Whether the candidate identifies a missing or broken iteration guard as the root cause, not just 'the model is bad at this.'",
+ red:["Suggests fixing it by just tweaking the prompt, without adding a hard iteration cap","Doesn't consider that a cap might exist but not actually be checked correctly"],
+ ref:"Tab ⑦, Tab ⑨"},
+{t:"debugging", q:"Your supervisor keeps routing back to the same worker even though that worker already produced output. What would you check?",
+ hints:["Check the supervisor's 'is this done' condition — is it checking the right state key?","Check that the worker's output is actually being merged into the state the supervisor reads","Check for a key-name mismatch between what the worker writes and what the supervisor checks","Consider whether the output exists but fails a stricter completeness check"],
+ answer:"My first suspicion is a key-name mismatch: the worker writes its result under one key name, but the supervisor's 'has this worker already run' check is reading a different key name — a classic copy-paste or refactor bug, and it would exactly produce this symptom of infinite re-routing to an already-completed worker. Second, I'd check whether the worker's return value is actually making it into shared state — if the node accidentally returns an empty dict, or returns the key nested one level too deep, the supervisor would see the key as still-empty and keep routing back. Third, if the key names and the merge both check out, I'd look at whether the supervisor's completeness check is stricter than 'key is non-empty' — for example checking a specific sub-field inside the worker's output that the worker isn't actually populating — so the output exists but doesn't satisfy the exact condition the supervisor is testing.",
+ tested:"Whether the candidate can reason about state-key integrity between what's written and what's read, which is the dominant real-world cause of this symptom.",
+ red:["Assumes the worker itself is broken without first checking the supervisor's completion condition","Doesn't consider a key-name mismatch between writer and reader as a cause"],
+ ref:"Tab ⑧"},
+{t:"debugging", q:"In production, your multi-agent system is 5x slower than in testing even though the graph hasn't changed. What would you investigate?",
+ hints:["Check whether branches that were parallel in testing are actually running concurrently in production (e.g. async/executor config)","Check for growing state size — is message history being passed unbounded into every LLM call?","Check for provider-side rate limiting or retries-with-backoff silently adding latency","Check for a change in load (concurrent users) vs. a change in the graph itself"],
+ answer:"Since the graph itself hasn't changed, I'd first check whether what was true concurrency in testing has quietly become serial in production — for instance, if the deployment environment's executor or async configuration limits concurrent LLM calls differently than my local test setup did, fan-out branches that ran in parallel locally might now be queued. Second, I'd check whether state has grown unbounded in production in a way it didn't in short test runs — if every node is re-sending a full, ever-growing message history to the LLM on each call, token counts and therefore per-call latency climb over the life of a long-running session in a way a short test never exercises. Third, I'd check for silent retries: if a provider is rate-limiting under real production load and the client is retrying with backoff, that shows up as slowness, not as an error, and it's easy to miss in a casual trace. Finally I'd just confirm load itself — testing with one user and production with many concurrent requests competing for the same rate limit is itself a sufficient explanation, separate from anything in the graph.",
+ tested:"Whether the candidate distinguishes concurrency/environment issues, state growth, and provider-side throttling as distinct hypotheses rather than guessing a single cause.",
+ red:["Assumes the graph must have silently changed without considering environment or load differences","Doesn't mention unbounded state/history growth as a plausible cause of creeping latency"],
+ ref:"Tab ⑨"},
+{t:"debugging", q:"Your end-to-end evaluation score looks great, but a teammate says the system is 'obviously broken' when they use it. What's the likely gap?",
+ hints:["End-to-end score measures outcome; it can miss a bad TRAJECTORY that happened to land on a right-looking answer","Consider whether the eval set is representative of real usage","Consider whether the judge/scoring method itself is too lenient or scoring the wrong thing","Tie this back to the three evaluation levels: per-node, trajectory, end-to-end"],
+ answer:"The most likely gap is that end-to-end scoring only checks the final answer, and a system can land on a plausible-looking final answer by a bad path — looping through workers unnecessarily, skipping a step it should have taken, or getting lucky on a specific test input — without that bad path being visible in the final score at all. I'd specifically check whether a trajectory-level evaluation exists alongside the end-to-end score, because that's the level that would catch 'it got the right answer by doing the wrong thing.' Second, I'd question whether the evaluation set actually reflects what my teammate is doing — a hand-picked test set of 15 clean cases can score beautifully while missing the messy real input that breaks it. Third, if an LLM-as-judge is doing the scoring, I'd check whether it's too lenient or scoring something adjacent to what actually matters to the user — a judge prompt that rates 'is this fluent text' will pass outputs a real user would call broken for an entirely different reason, like wrong information.",
+ tested:"Whether the candidate understands that end-to-end success and a healthy trajectory are different claims, and that an eval set can be unrepresentative.",
+ red:["Treats a high end-to-end score as proof the system has no problems","Doesn't mention trajectory evaluation as the missing check"],
+ ref:"Tab ⑩"},
+
+{t:"system-design", q:"Design a production multi-agent customer-support system that triages, routes, and drafts replies for 50,000 tickets/day.",
+ hints:["Pick a pattern (supervisor-worker, with a fast-path short-circuit) and justify it against the alternatives","Name at least 4 distinct concepts from the guide: state design, fan-out for independent checks, a conditional edge for fast-path routing, failure-mode guards","Describe what you'd monitor and evaluate once it's live, not just how you'd build it","Mention cost/latency at this volume explicitly — 50,000/day is a real constraint, not a throwaway number"],
+ answer:"At 50,000 tickets a day — roughly 35 a minute at steady state — the design has to treat cost-per-ticket as a first-class constraint, not an afterthought, so I'd start with a cheap triage step before committing to the full pipeline. The entry node computes a fast classification and a similarity match against recent tickets; if it's a high-confidence duplicate of something already resolved, a fast path sends a templated or lightly-personalized reply straight through with one cheap LLM call, skipping the rest of the graph entirely. Everything else goes through a supervisor-worker structure: a priority agent, a sentiment agent, and a category agent run as a parallel fan-out off the triage node, each writing its own state key, merging into a routing agent that decides the destination team and a draft-reply worker that only runs once routing is settled. State carries the ticket text, the three analysis results, the routing decision, and the draft — kept lean, with no growing message history re-sent on every call, since at this volume token cost compounds fast. I'd add a conditional edge with a hard iteration cap on any revise-and-recheck loop in the draft step, specifically because an unbounded loop at this scale is a cost incident, not just a slow response. For infrastructure, I'd want checkpointing so a worker crash mid-ticket doesn't lose work, tracing on every node so a bad reply can be traced back to which step caused it, and per-node retries rather than whole-graph retries so a transient API failure doesn't redo completed work. For evaluation, I'd run a held-out set of a few hundred hand-labeled tickets weekly, scoring routing accuracy and reply quality via a dedicated judge model, plus a trajectory check specifically confirming that fast-path tickets never traverse the full parallel analysis — if they do, the fast-path logic itself has a bug. Monitoring in production would track p50/p95 latency, cost per ticket, the fast-path hit rate, and the iteration-cap trigger rate as an early warning that something is systematically low quality.",
+ tested:"Whether the candidate can design for real production constraints — cost at volume, resumability, bounded loops, trajectory monitoring — not just sketch the happy-path graph shape.",
+ red:["Designs only the happy-path routing graph with no mention of cost, retries, or monitoring","Proposes running every ticket through the full analysis with no cheaper fast path at this volume"],
+ ref:"Tab ④, Tab ⑦, Tab ⑧, Tab ⑨, Tab ⑩"},
+{t:"system-design", q:"Design a hierarchical multi-agent research system that can research any of 5 different industries, each needing different sub-agents.",
+ hints:["Justify hierarchical over flat supervisor-worker given the 5-domain structure","Describe the top-level supervisor's one job: pick the right industry sub-graph","Describe how a sub-graph is compiled and plugged in as a single node","Mention what's shared across all 5 sub-graphs vs. what's domain-specific"],
+ answer:"Five industries, each needing a different set of sub-agents, is close to the textbook case for hierarchical rather than flat supervisor-worker: a single top-level supervisor trying to hold all five domains' worth of worker definitions in one routing decision would be exactly the overloaded-supervisor problem that pushes toward hierarchy in the first place. So I'd build five separate, independently compiled LangGraph sub-graphs — one per industry — each with its own internal supervisor and the workers that industry actually needs; a healthcare sub-graph might have a regulatory-agent and a clinical-trials agent, while a retail sub-graph has a competitor-pricing agent and a supply-chain agent, and neither needs to know the other exists. The top-level Main Supervisor's only job is industry classification: given the request, decide which one of the five compiled sub-graphs to invoke, then hand off entirely — each sub-graph is registered as a single node in the top-level graph, exactly the nesting pattern from tab ⑧. Shared state at the top level stays minimal: the original request, the chosen industry, and a final_report field that whichever sub-graph completes writes into; the rich, industry-specific intermediate state lives inside each sub-graph's own scope and never needs to be visible to the top level. For evaluation I'd track per-industry accuracy separately rather than one blended number, since a system that's excellent at three industries and weak at two would look only mediocre in an aggregate score — and I'd specifically watch the Main Supervisor's classification accuracy on its own, since a wrong industry pick wastes the entire downstream sub-graph's work regardless of how good that sub-graph is.",
+ tested:"Whether the candidate correctly uses hierarchy to solve a genuine domain-separation problem and keeps the top-level supervisor's job appropriately narrow.",
+ red:["Puts all workers from all five industries under one flat supervisor despite the domain separation being the whole premise","Doesn't separate per-industry evaluation from a single blended accuracy number"],
+ ref:"Tab ④, Tab ⑧"},
+{t:"system-design", q:"Design the evaluation and monitoring stack for a multi-agent system already running in production.",
+ hints:["Cover all three evaluation levels: per-node, trajectory, end-to-end","Describe a concrete regression-test setup (fixed test set, re-run on every change)","Describe live monitoring signals distinct from offline evaluation (latency, cost, iteration-cap triggers)","Address the LLM-as-judge pitfall explicitly"],
+ answer:"I'd separate this into offline evaluation, which runs on a fixed schedule or before any deploy, and live monitoring, which runs continuously on real traffic. For offline evaluation, I'd maintain a hand-labeled test set of 15-20+ representative tasks, scored at all three levels every time a prompt or graph change is proposed: per-node checks that each worker's output meets its own bar (valid SQL, a classification in the allowed set), a trajectory check confirming the graph visited the expected sequence of nodes rather than looping unnecessarily or skipping a required step, and an end-to-end score on whether the final answer actually solves the task, scored by a judge model that's distinct from any worker in the system and anchored with a rubric, specifically to avoid the self-grading leniency problem. For live monitoring, since the full offline eval can't run on every production request, I'd track proxy signals continuously: p50/p95 latency per node, cost per request, the rate at which any iteration cap actually triggers — a rising trigger rate is an early warning that quality is degrading before it shows up in a weekly eval — and a sampled trace review where a human spot-checks a small percentage of real trajectories weekly. I'd version the test set and the judge prompt themselves, because an evaluation system that silently changes its own bar over time can hide real regressions, and I'd re-run the full offline suite on every graph or prompt change before it ships, not just periodically.",
+ tested:"Whether the candidate designs genuinely separate offline/online evaluation layers and avoids the single-score-is-enough trap.",
+ red:["Proposes only an end-to-end score with no trajectory or per-node check","Doesn't address the self-grading risk of using the same model as both worker and judge"],
+ ref:"Tab ⑨, Tab ⑩"},
+{t:"system-design", q:"Design a system that must choose, per incoming request, between a cheap fast-path single-agent flow and a full multi-agent flow.",
+ hints:["Describe what signal decides fast-path vs. full (confidence, similarity, explicit rule)","Explain this as a conditional edge/routing decision, not a separate system bolted on the side","Name the evaluation risk specific to this design: fast-path requests must be checked for correctness, not just speed","Mention LangChain vs LangGraph: is the fast path even complex enough to need LangGraph at all?"],
+ answer:"I'd put a lightweight classification-and-confidence step at the very front of the graph — a single, cheap LLM call that estimates how well-understood this request type is, for instance via similarity to a set of known request patterns the full system has already handled well. A conditional edge off that first node routes high-confidence, well-understood requests to the fast path and everything else to the full multi-agent flow; this is a routing decision inside one graph, not two separate systems glued together, which keeps state and tracing consistent across both paths. The fast path itself might not need LangGraph's machinery at all — if it's genuinely one LLM call with no branching, it can just be a single node that returns directly, which is actually the right call per the LangChain-vs-LangGraph decision rule: don't force structure onto something that's truly linear. The evaluation risk unique to this design is that fast-path correctness has to be tracked separately from full-path correctness, because the whole point of the split was speed, and it's easy to let fast-path quality quietly slip while celebrating the latency win — so my evaluation set would be stratified by path, with an explicit floor on fast-path accuracy below which the confidence threshold gets raised to push more traffic into the full flow. I'd also monitor the fast-path hit rate itself as a signal: if it creeps up over time without a corresponding accuracy check, that's often a sign the confidence threshold has drifted too permissive rather than genuine improvement.",
+ tested:"Whether the candidate designs the fast/full split as one coherent, evaluable system rather than two disconnected pipelines, and tracks fast-path correctness explicitly.",
+ red:["Builds the fast path and full path as entirely separate, untraced systems with no shared evaluation","Doesn't mention needing a correctness floor specifically for the fast path, only a speed metric"],
+ ref:"Tab ⑤, Tab ⑦, Tab ⑧, Tab ⑨"},
+];
+
+function renderQuestions(){
+  const groups = {conceptual:{label:"Conceptual", range:"1–8"}, scenario:{label:"Scenario-Based", range:"9–16"},
+                   debugging:{label:"Debugging / Failure", range:"17–21"}, "system-design":{label:"System Design", range:"22–25"}};
+  let html = "", n = 0;
+  let lastType = null;
+  QUESTIONS.forEach((item)=>{
+    n++;
+    if(item.t !== lastType){
+      html += `<h3 style="margin-top:2.4em">${groups[item.t].label} <span style="color:var(--ink-soft);font-weight:400;font-size:.8em">(Q${groups[item.t].range})</span></h3>`;
+      lastType = item.t;
+    }
+    html += `<div class="qcard">
+      <div class="qnum">Question ${n}</div>
+      <div class="qtext">${item.q}</div>
+      <details><summary>💡 Hint: What to cover in your answer</summary><div class="inner"><ul>${item.hints.map(h=>`<li>${h}</li>`).join("")}</ul></div></details>
+      <details><summary>✅ Model Answer</summary><div class="inner">${item.answer}</div></details>
+      <details><summary>🎯 What's being tested</summary><div class="inner">${item.tested}</div></details>
+      <details><summary>🚩 Red flags in a bad answer</summary><div class="inner"><ul>${item.red.map(r=>`<li>${r}</li>`).join("")}</ul></div></details>
+      <div class="ref">📖 See ${item.ref}</div>
+    </div>`;
+  });
+  document.getElementById("interview-list").innerHTML = html;
+}
+
+/* ===================== INIT ===================== */
+document.addEventListener("DOMContentLoaded", ()=>{
+  renderRail();
+  renderQuestions();
+  document.querySelectorAll(".panel").forEach((p,i)=>{
+    p.insertAdjacentHTML("beforeend", footNav(TABS.findIndex(t=>"panel-"+t.id===p.id)));
+  });
+  let saved = 0;
+  try{ const s = localStorage.getItem("mas-guide-tab"); if(s!==null) saved = +s; }catch(e){}
+  goTo(Math.min(Math.max(saved,0), TABS.length-1));
+});
+</script>
