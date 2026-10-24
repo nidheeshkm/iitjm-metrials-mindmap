@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LangGraph: Basic to Advanced</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f7f5; --bg-elev:#ffffff; --bg-sunken:#eef0ef;
+  --text:#1b1d1c; --text-dim:#55605c; --border:#dcdfdc;
+  --accent:#2f6f5e; --accent-soft:#e3f0ec;
+  --tag-concept:#2f6f5e; --tag-tool:#3a5a9b; --tag-technique:#8a5a2b;
+  --tag-variant:#7a3e8a; --tag-failure:#b23b3b; --tag-production:#1f5fa8; --tag-decision:#a3791a;
+  --code-bg:#1e2422; --code-text:#d8e6e0;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181a; --bg-elev:#1c2023; --bg-sunken:#121416;
+    --text:#e7ece9; --text-dim:#9aa6a1; --border:#2b3134;
+    --accent:#5fcba0; --accent-soft:#1c3330;
+    --tag-concept:#5fcba0; --tag-tool:#7ea6ff; --tag-technique:#e0a85f;
+    --tag-variant:#d49be0; --tag-failure:#ff8a8a; --tag-production:#7ec3ff; --tag-decision:#e3c25f;
+    --code-bg:#0e1210; --code-text:#d8e6e0;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 18px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181a; --bg-elev:#1c2023; --bg-sunken:#121416;
+  --text:#e7ece9; --text-dim:#9aa6a1; --border:#2b3134;
+  --accent:#5fcba0; --accent-soft:#1c3330;
+  --tag-concept:#5fcba0; --tag-tool:#7ea6ff; --tag-technique:#e0a85f;
+  --tag-variant:#d49be0; --tag-failure:#ff8a8a; --tag-production:#7ec3ff; --tag-decision:#e3c25f;
+  --code-bg:#0e1210; --code-text:#d8e6e0;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;line-height:1.55;}
+h1,h2,h3{font-family:'Source Serif 4',serif;font-weight:700;letter-spacing:-.01em;}
+h1{font-size:1.5rem;margin:0;}
+h2{font-size:1.3rem;margin:1.6rem 0 .7rem;color:var(--text);}
+h3{font-size:1.05rem;margin:1.3rem 0 .5rem;color:var(--text);}
+code,pre{font-family:'IBM Plex Mono',monospace;}
+a{color:var(--accent);}
+.topbar{position:sticky;top:0;z-index:20;background:var(--bg-elev);border-bottom:1px solid var(--border);padding:.7rem 1rem;display:flex;align-items:center;gap:.8rem;box-shadow:var(--shadow);}
+.topbar h1{flex:1;}
+.themebtn{background:var(--bg-sunken);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.4rem .7rem;cursor:pointer;font-size:.85rem;}
+.tabs{display:flex;overflow-x:auto;gap:.3rem;padding:.6rem 1rem 0;background:var(--bg-elev);border-bottom:1px solid var(--border);position:sticky;top:53px;z-index:19;scrollbar-width:thin;}
+.tab-btn{flex:none;padding:.5rem .8rem;border:none;background:transparent;color:var(--text-dim);font-size:.85rem;font-weight:500;cursor:pointer;border-radius:8px 8px 0 0;white-space:nowrap;border-bottom:2px solid transparent;}
+.tab-btn.active{color:var(--accent);border-bottom:2px solid var(--accent);background:var(--accent-soft);}
+.wrap{max-width:900px;margin:0 auto;padding:1.4rem 1rem 4rem;}
+.panel{display:none;}
+.panel.active{display:block;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.lead{color:var(--text-dim);font-size:1.02rem;margin-bottom:1rem;}
+.card{background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;margin:.8rem 0;box-shadow:var(--shadow);}
+.analogy{border-left:3px solid var(--accent);background:var(--accent-soft);padding:.7rem .9rem;border-radius:0 8px 8px 0;margin:.7rem 0;font-size:.93rem;}
+.mistake{border-left:3px solid var(--tag-failure);background:rgba(178,59,59,.08);padding:.7rem .9rem;border-radius:0 8px 8px 0;margin:.7rem 0;font-size:.93rem;}
+table{width:100%;border-collapse:collapse;margin:.8rem 0;font-size:.88rem;}
+th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--border);}
+th{color:var(--text-dim);font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.03em;}
+tr:hover td{background:var(--bg-sunken);}
+pre{background:var(--code-bg);color:var(--code-text);padding:.9rem 1rem;border-radius:10px;overflow-x:auto;font-size:.82rem;line-height:1.5;}
+.pill{display:inline-block;font-size:.68rem;font-weight:600;padding:.12rem .5rem;border-radius:999px;color:#fff;margin-right:.3rem;text-transform:uppercase;letter-spacing:.02em;}
+.pill.concept{background:var(--tag-concept);} .pill.tool{background:var(--tag-tool);}
+.pill.technique{background:var(--tag-technique);} .pill.variant{background:var(--tag-variant);}
+.pill.failure{background:var(--tag-failure);} .pill.production{background:var(--tag-production);}
+.pill.decision{background:var(--tag-decision);}
+details{background:var(--bg-sunken);border:1px solid var(--border);border-radius:10px;margin:.5rem 0;padding:.1rem .9rem;}
+details summary{cursor:pointer;font-weight:600;padding:.6rem 0;font-size:.88rem;}
+details[open] summary{margin-bottom:.3rem;}
+.pipe{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:1rem 0;}
+.pstep{background:var(--bg-sunken);border:1px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.82rem;font-weight:500;}
+.arrow{color:var(--text-dim);font-weight:700;}
+.mm-node{margin-left:1.1rem;border-left:1px dashed var(--border);padding-left:.8rem;}
+.mm-row{display:flex;align-items:center;gap:.4rem;cursor:pointer;padding:.25rem 0;user-select:none;}
+.mm-caret{width:.8rem;display:inline-block;color:var(--text-dim);font-size:.7rem;}
+.mm-label{font-size:.88rem;}
+.mm-children{display:none;}
+.mm-children.open{display:block;}
+.q-block{border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;margin:1rem 0;background:var(--bg-elev);}
+.q-num{color:var(--accent);font-weight:700;font-family:'IBM Plex Mono',monospace;}
+.q-type{font-size:.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;}
+.q-text{font-weight:600;font-size:1rem;margin-bottom:.5rem;}
+.q-ref{font-size:.8rem;color:var(--text-dim);margin-top:.6rem;}
+ul,ol{padding-left:1.3rem;}
+.scaffold{position:relative;}
+.assign-badge{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.2rem .55rem;border-radius:6px;background:var(--accent-soft);color:var(--accent);}
+.footer-nav{display:flex;justify-content:space-between;margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border);}
+.footer-nav button{background:var(--bg-sunken);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.5rem 1rem;cursor:pointer;font-size:.85rem;}
+.footer-nav button:disabled{opacity:.3;cursor:default;}
+.chip-key{display:flex;gap:.8rem;flex-wrap:wrap;margin:.6rem 0 1.2rem;font-size:.8rem;}
+@media (max-width:640px){
+  .wrap{padding:1rem .8rem 3rem;}
+  table{font-size:.8rem;}
+  th,td{padding:.4rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>LangGraph: Basic → Advanced</h1>
+  <button class="themebtn" id="themeToggle">🌓 Theme</button>
+</div>
+<div class="tabs" id="tabBar"></div>
+<div class="wrap" id="panelHost"></div>
+
+<script>
+/* ========================= THEME ========================= */
+(function(){
+  const saved = localStorage.getItem("lg-theme");
+  if(saved) document.documentElement.setAttribute("data-theme", saved);
+  document.getElementById("themeToggle").onclick = () => {
+    const cur = document.documentElement.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try{ localStorage.setItem("lg-theme", next); }catch(e){}
+  };
+})();
+
+/* ========================= TAB DEFINITIONS ========================= */
+const TABS = [
+  {id:"t0", num:"⓪", label:"Prerequisites", render: renderPrereq},
+  {id:"t1", num:"①", label:"Mindmap", render: renderMindmap},
+  {id:"t2", num:"②", label:"Core Concepts", render: renderCore},
+  {id:"t3", num:"③", label:"Control Flow", render: renderControlFlow},
+  {id:"t4", num:"④", label:"Memory & HITL", render: renderMemory},
+  {id:"t5", num:"⑤", label:"Multi-Agent", render: renderMultiAgent},
+  {id:"t6", num:"⑥", label:"Taxonomy", render: renderTaxonomy},
+  {id:"t7", num:"⑦", label:"Production Ecosystem", render: renderProduction},
+  {id:"t8", num:"⑧", label:"Failure Modes", render: renderFailures},
+  {id:"t9", num:"⑨", label:"Code Lab", render: renderCodeLab},
+  {id:"t10", num:"⑩", label:"Evaluation", render: renderEval},
+  {id:"tP", num:"🎯", label:"Practice", render: renderPractice},
+  {id:"tI", num:"💼", label:"Interview Prep", render: renderInterview},
+];
+
+const tabBar = document.getElementById("tabBar");
+const host = document.getElementById("panelHost");
+let activeIdx = 0;
+
+TABS.forEach((t, i) => {
+  const b = document.createElement("button");
+  b.className = "tab-btn" + (i===0?" active":"");
+  b.textContent = t.num + " " + t.label;
+  b.onclick = () => showTab(i);
+  b.id = "btn-" + t.id;
+  tabBar.appendChild(b);
+});
+
+function showTab(i){
+  activeIdx = i;
+  document.querySelectorAll(".tab-btn").forEach((b,bi)=>b.classList.toggle("active", bi===i));
+  host.innerHTML = "";
+  const panel = document.createElement("div");
+  panel.className = "panel active";
+  panel.innerHTML = TABS[i].render();
+  host.appendChild(panel);
+  const nav = document.createElement("div");
+  nav.className = "footer-nav";
+  nav.innerHTML = `<button id="prevBtn" ${i===0?"disabled":""}>← ${i>0?TABS[i-1].num+" "+TABS[i-1].label:""}</button>
+                    <button id="nextBtn" ${i===TABS.length-1?"disabled":""}>${i<TABS.length-1?TABS[i+1].num+" "+TABS[i+1].label:""} →</button>`;
+  host.appendChild(nav);
+  document.getElementById("prevBtn").onclick = () => { if(i>0) showTab(i-1); };
+  document.getElementById("nextBtn").onclick = () => { if(i<TABS.length-1) showTab(i+1); };
+  window.scrollTo(0,0);
+  initMindmapHandlers();
+}
+
+/* ========================= TAB 0: PREREQUISITES ========================= */
+function renderPrereq(){
+  return `
+  <div class="lead">What you need before Tab ② — and the mental model that makes everything after it click.</div>
+
+  <h2>Prerequisites checklist</h2>
+  <table>
+    <tr><th>Needed</th><th>Why</th></tr>
+    <tr><td>Python functions, dicts, type hints</td><td>A LangGraph node is just a Python function; state is a typed dict</td></tr>
+    <tr><td>Calling an LLM API (any provider)</td><td>Nodes mostly call a model and return its output</td></tr>
+    <tr><td>What an "agent" is (a loop that decides + acts)</td><td>LangGraph is the engine that runs that loop reliably</td></tr>
+    <tr><td>Nodes & edges from graph theory (just the words)</td><td>LangGraph's whole vocabulary is graph vocabulary</td></tr>
+  </table>
+
+  <h2>Why a graph, not a chain</h2>
+  <p>A LangChain-style "chain" is a straight pipe: step 1 → step 2 → step 3, always in that order, once. The moment your agent needs to decide what to do next, retry a step, or loop until a condition is met, a straight pipe can't express that — you end up hand-rolling while-loops and if/else around chain calls, and the control flow lives outside any framework's view (so it can't be traced, checkpointed, or paused).</p>
+
+  <div class="analogy">🍳 <strong>Kitchen analogy:</strong> a chain is a recipe card you follow top to bottom once. A graph is the kitchen itself — stations (nodes) connected by a floor plan (edges), where a dish can bounce from the grill back to prep if it's not ready, skip the fryer entirely if it's a salad, and the expo station (a router) decides where each plate goes next. LangGraph doesn't replace the cooking (the LLM calls) — it replaces the kitchen's floor plan with one you can actually see and control.</div>
+
+  <h3>What LangGraph actually is</h3>
+  <p>A library for defining a computation as a graph: <strong>nodes</strong> (units of work — usually "call an LLM" or "call a tool"), <strong>edges</strong> (what runs next), and a <strong>shared state</strong> object that flows through every node, getting updated as it goes. You compile the graph once; then you can invoke, stream, or batch it like any function — except it can pause, resume, branch, and loop.</p>
+
+  <div class="mistake">⚠️ <strong>Common mistake:</strong> treating LangGraph as "LangChain but with extra steps." LangGraph doesn't need LangChain at all — it only borrows LangChain's model/tool wrapper classes for convenience. The graph engine itself is independent, which is why it also underlies non-chain-based multi-agent systems.</div>
+
+  <h3>The five words you'll see everywhere</h3>
+  <table>
+    <tr><th>Term</th><th>Plain meaning</th></tr>
+    <tr><td><strong>State</strong></td><td>The one shared object every node reads from and writes to — think "the clipboard passed around the kitchen"</td></tr>
+    <tr><td><strong>Node</strong></td><td>A Python function: state -&gt; partial state update</td></tr>
+    <tr><td><strong>Edge</strong></td><td>"After node A, run node B" (fixed) or "after node A, run whichever node a function decides" (conditional)</td></tr>
+    <tr><td><strong>Reducer</strong></td><td>The rule for merging a node's output into the existing state, instead of overwriting it</td></tr>
+    <tr><td><strong>Checkpoint</strong></td><td>A saved snapshot of state after each step, so execution can pause, resume, or rewind</td></tr>
+  </table>
+  <p>Everything in Tabs ② through ⑩ is a variation on these five ideas. Nothing you learn later replaces them — it composes them.</p>
+  `;
+}
+
+/* ========================= TAB 1: MINDMAP ========================= */
+const MINDMAP_DATA = {
+  name: "LangGraph", tag: "concept", children: [
+    { name: "Core Primitives", tag:"concept", children: [
+      { name:"StateGraph", tag:"concept" },
+      { name:"State Schema (TypedDict / Pydantic)", tag:"concept" },
+      { name:"Nodes", tag:"concept" },
+      { name:"Edges (fixed & conditional)", tag:"concept" },
+      { name:"Reducers & Channels", tag:"technique" },
+      { name:"START / END", tag:"concept" },
+    ]},
+    { name:"Execution", tag:"concept", children:[
+      { name:"compile()", tag:"concept" },
+      { name:"invoke / stream / batch", tag:"concept" },
+      { name:"Streaming modes: values, updates, messages, debug", tag:"technique" },
+      { name:"Recursion limit", tag:"decision" },
+    ]},
+    { name:"State & Memory", tag:"concept", children:[
+      { name:"Checkpointer (MemorySaver, SqliteSaver, PostgresSaver, Redis)", tag:"tool" },
+      { name:"Thread ID (conversation/session scoping)", tag:"concept" },
+      { name:"Time travel (replay from a checkpoint)", tag:"technique" },
+    ]},
+    { name:"Control Flow Patterns", tag:"variant", children:[
+      { name:"Conditional routing", tag:"technique" },
+      { name:"Cycles / loops", tag:"technique" },
+      { name:"Send API (map-reduce / parallel fan-out)", tag:"technique" },
+      { name:"Command (goto + state update in one return)", tag:"technique" },
+      { name:"interrupt() — human-in-the-loop pause", tag:"technique" },
+    ]},
+    { name:"Composition", tag:"variant", children:[
+      { name:"Subgraphs (a compiled graph as a node)", tag:"technique" },
+      { name:"Supervisor pattern", tag:"variant" },
+      { name:"Hierarchical multi-agent", tag:"variant" },
+      { name:"Swarm / handoff pattern", tag:"variant" },
+    ]},
+    { name:"Failure Modes", tag:"failure", children:[
+      { name:"Infinite loops / recursion limit hit", tag:"failure" },
+      { name:"State bloat (unbounded message history)", tag:"failure" },
+      { name:"Race conditions on parallel branches writing same key", tag:"failure" },
+      { name:"Checkpoint store becomes the bottleneck", tag:"failure" },
+      { name:"Silent prompt/graph regressions with no eval gate", tag:"failure" },
+    ]},
+    { name:"Tools & Frameworks", tag:"tool", children:[
+      { name:"LangSmith (tracing & eval)", tag:"tool" },
+      { name:"LangGraph Platform / Cloud", tag:"tool" },
+      { name:"OpenTelemetry export", tag:"tool" },
+      { name:"LangChain model/tool wrappers (optional)", tag:"tool" },
+    ]},
+    { name:"Production Concerns", tag:"production", children:[
+      { name:"CI/CD with eval gates", tag:"production" },
+      { name:"Deployment architecture (managed vs self-hosted)", tag:"production" },
+      { name:"Observability (traces, cost, quality drift)", tag:"production" },
+      { name:"Guardrails (input/output validation, rate limits, kill switch)", tag:"production" },
+    ]},
+  ]
+};
+
+function renderMindmap(){
+  return `
+  <div class="lead">The whole topic landscape, one click away from any leaf. Color = kind of thing.</div>
+  <div class="chip-key">
+    <span><span class="pill concept">concept</span>idea/primitive</span>
+    <span><span class="pill tool">tool</span>library/platform</span>
+    <span><span class="pill technique">technique</span>how-to pattern</span>
+    <span><span class="pill variant">variant</span>architectural choice</span>
+    <span><span class="pill failure">failure</span>what breaks</span>
+    <span><span class="pill production">production</span>ops concern</span>
+    <span><span class="pill decision">decision</span>needs a choice</span>
+  </div>
+  <div class="card" id="mindmapRoot"></div>
+  `;
+}
+
+function buildMindmapNode(node, depth){
+  const hasKids = node.children && node.children.length;
+  const row = document.createElement("div");
+  row.className = "mm-row";
+  row.innerHTML = `<span class="mm-caret">${hasKids?"▸":"•"}</span>
+                    <span class="pill ${node.tag}">${node.tag}</span>
+                    <span class="mm-label">${node.name}</span>`;
+  const container = document.createElement("div");
+  container.appendChild(row);
+  if(hasKids){
+    const childWrap = document.createElement("div");
+    childWrap.className = "mm-children mm-node";
+    node.children.forEach(c => childWrap.appendChild(buildMindmapNode(c, depth+1)));
+    container.appendChild(childWrap);
+    row.onclick = () => {
+      childWrap.classList.toggle("open");
+      row.querySelector(".mm-caret").textContent = childWrap.classList.contains("open") ? "▾" : "▸";
+    };
+    if(depth === 0) { childWrap.classList.add("open"); row.querySelector(".mm-caret").textContent = "▾"; }
+  }
+  return container;
+}
+
+function initMindmapHandlers(){
+  const root = document.getElementById("mindmapRoot");
+  if(root && !root.dataset.built){
+    root.appendChild(buildMindmapNode(MINDMAP_DATA, 0));
+    root.dataset.built = "1";
+  }
+}
+
+/* ========================= TAB 2: CORE CONCEPTS ========================= */
+function renderCore(){
+  return `
+  <div class="lead">The five primitives from Tab ⓪, now with syntax.</div>
+
+  <h2>State schema</h2>
+  <p>State is a TypedDict (or Pydantic model). Every field needs a <strong>reducer</strong> — the rule for combining a node's returned value with what's already there. The default reducer overwrites; add_messages appends.</p>
+  <pre>from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
+
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]   # appends, never overwrites
+    retries: int                               # default reducer: overwrite
+    verdict: str | None                        # default reducer: overwrite</pre>
+
+  <div class="mistake">⚠️ <strong>Common mistake:</strong> forgetting the reducer on a message list. Without Annotated[list, add_messages], every node's return replaces the whole conversation history with just its own output — the agent "forgets" everything before the current node.</div>
+
+  <h2>Nodes</h2>
+  <p>A node is a function state -&gt; dict. It returns only the keys it's changing — the reducer merges that into the full state.</p>
+  <pre>def call_model(state: AgentState) -> dict:
+    response = llm.invoke(state["messages"])
+    return {"messages": [response]}   # add_messages appends this to the list</pre>
+
+  <h2>Building and wiring the graph</h2>
+  <pre>from langgraph.graph import StateGraph, START, END
+
+builder = StateGraph(AgentState)
+builder.add_node("agent", call_model)
+builder.add_node("tools", run_tools)
+builder.add_edge(START, "agent")
+builder.add_edge("tools", "agent")       # loop back after tool use
+builder.add_conditional_edges(
+    "agent",
+    lambda s: "tools" if s["messages"][-1].tool_calls else END,
+)
+graph = builder.compile()</pre>
+
+  <div class="analogy">📚 <strong>Library analogy:</strong> the state is the one card catalog every librarian (node) can read and update. A fixed edge is "the returns desk always sends the cart to shelving." A conditional edge is "the front desk looks at the request and decides: reference section, or just hand over the book."</div>
+
+  <h2>Channels: what a reducer really is</h2>
+  <p>Internally, every state key is a "channel" with a reducer function (old_value, new_value) -&gt; merged_value. add_messages is just a reducer that concatenates lists (and de-duplicates by message ID, so a retried node doesn't double-append). You can write your own:</p>
+  <pre>def keep_max(old: int, new: int) -> int:
+    return max(old, new)
+
+class State(TypedDict):
+    best_score: Annotated[int, keep_max]</pre>
+
+  <h3>Common mistake</h3>
+  <div class="mistake">⚠️ Two parallel nodes both writing to the same plain (default-reducer) key in the same super-step. The default reducer can't merge two concurrent writes — LangGraph raises an InvalidUpdateError. (Tab ⑧ covers this as a named failure mode.)</div>
+  `;
+}
+
+/* ========================= TAB 3: CONTROL FLOW ========================= */
+function renderControlFlow(){
+  return `
+  <div class="lead">How execution actually branches, loops, and stops.</div>
+
+  <h2>Conditional edges</h2>
+  <p>A conditional edge is a router function that inspects state and returns the name of the next node (or a list of names, for fan-out).</p>
+  <pre>def route(state: AgentState) -> str:
+    last = state["messages"][-1]
+    if last.tool_calls:
+        return "tools"
+    if state["retries"] > 3:
+        return END
+    return "agent"
+
+builder.add_conditional_edges("agent", route, {"tools": "tools", "agent": "agent", END: END})</pre>
+
+  <h2>Cycles & recursion limits</h2>
+  <p>A cycle is just an edge pointing backward — "tools" → "agent" in the example above. LangGraph counts <strong>super-steps</strong> (one full round through the graph), and raises GraphRecursionError past a limit (default 25, set via config={"recursion_limit": N}). This is the framework's built-in guard against an agent that never decides to stop.</p>
+
+  <div class="mistake">⚠️ <strong>Common mistake:</strong> raising the recursion limit to "fix" a recursion error instead of fixing the router logic that never routes to END. The limit is a symptom detector, not the disease.</div>
+
+  <h2>Compiling and running</h2>
+  <table>
+    <tr><th>Call</th><th>Returns</th><th>Use when</th></tr>
+    <tr><td>graph.invoke(input)</td><td>final state</td><td>you only need the end result</td></tr>
+    <tr><td>graph.stream(input)</td><td>generator of state deltas</td><td>you want to show progress / intermediate steps</td></tr>
+    <tr><td>graph.batch([inputs])</td><td>list of final states</td><td>running many independent inputs</td></tr>
+  </table>
+
+  <h2>Send: fan-out to parallel branches</h2>
+  <p>Send lets one node dispatch N parallel invocations of another node, each with its own state slice — the map half of map-reduce.</p>
+  <pre>from langgraph.types import Send
+
+def fan_out(state: State) -> list[Send]:
+    return [Send("grade_one", {"item": item}) for item in state["items"]]
+
+builder.add_conditional_edges("split", fan_out)</pre>
+
+  <h2>Command: route and update state in one return</h2>
+  <pre>from langgraph.types import Command
+
+def triage(state: State) -> Command:
+    if state["priority"] == "high":
+        return Command(goto="escalate", update={"flag": True})
+    return Command(goto="normal_queue")</pre>
+  <p>Command is what most production multi-agent routers use (Tab ⑤) — it replaces "return a dict, then a separate conditional edge decides where to go" with one node that does both.</p>
+  `;
+}
+
+/* ========================= TAB 4: MEMORY & HITL ========================= */
+function renderMemory(){
+  return `
+  <div class="lead">Checkpointing is what makes pausing, resuming, and human approval possible at all.</div>
+
+  <h2>Checkpointing</h2>
+  <p>Give compile() a checkpointer, and LangGraph saves a snapshot of state after every super-step, keyed by a thread_id you pass in config. Re-invoking with the same thread_id resumes exactly where it left off.</p>
+  <pre>from langgraph.checkpoint.memory import MemorySaver
+
+graph = builder.compile(checkpointer=MemorySaver())
+config = {"configurable": {"thread_id": "user-42-session-1"}}
+graph.invoke({"messages": [("user", "hi")]}, config)
+graph.invoke({"messages": [("user", "and then?")]}, config)   # continues the same thread</pre>
+
+  <div class="analogy">🏥 <strong>Doctor's office analogy:</strong> the checkpointer is the patient's chart. Every visit (invocation) with the same patient ID (thread_id) picks up exactly where the last visit left off, instead of the doctor re-asking your whole medical history each time.</div>
+
+  <h2>Checkpointer backends</h2>
+  <table>
+    <tr><th>Backend</th><th>Fits</th></tr>
+    <tr><td>MemorySaver</td><td>dev / tests only — gone when the process exits</td></tr>
+    <tr><td>SqliteSaver</td><td>single-instance apps, local prototypes</td></tr>
+    <tr><td>PostgresSaver</td><td>most production deployments — durable, queryable, fits existing ops</td></tr>
+    <tr><td>Redis-backed</td><td>when checkpoint read latency matters more than strict durability</td></tr>
+  </table>
+
+  <h2>Human-in-the-loop with interrupt()</h2>
+  <p>interrupt() pauses the graph mid-node and surfaces a value to the caller; the caller resumes by invoking again with a Command(resume=...).</p>
+  <pre>from langgraph.types import interrupt, Command
+
+def approve_refund(state: State) -> dict:
+    decision = interrupt({"question": "Approve $500 refund?", "order": state["order_id"]})
+    return {"approved": decision}
+
+# caller side, after the graph pauses:
+graph.invoke(Command(resume=True), config)</pre>
+
+  <div class="mistake">⚠️ <strong>Common mistake:</strong> building human approval as a side-channel (Slack message + manual re-run of a script) instead of interrupt(). Without it, the paused state isn't durably checkpointed against the exact point of interruption, and resuming re-runs node logic that already ran.</div>
+
+  <h2>Time travel</h2>
+  <p>Because every super-step is checkpointed, you can list a thread's history and re-invoke from any past checkpoint — useful for debugging ("replay from right before the bad decision") and for letting a user edit a past turn and branch from there.</p>
+  `;
+}
+
+/* ========================= TAB 5: MULTI-AGENT ========================= */
+function renderMultiAgent(){
+  return `
+  <div class="lead">A single agent that does everything becomes an agent that does everything poorly. Composition is how LangGraph scales past that.</div>
+
+  <h2>Subgraphs</h2>
+  <p>A compiled graph is just a callable — add it as a node in a bigger graph, and it runs as its own isolated unit with its own state shape (mapped in/out at the boundary).</p>
+  <pre>research_subgraph = research_builder.compile()
+builder.add_node("research", research_subgraph)   # a whole graph, used as one node</pre>
+
+  <h2>Supervisor pattern</h2>
+  <p>One "supervisor" node reads the task, decides which specialist agent should act next, and routes with Command(goto=...). Each specialist returns control to the supervisor when done.</p>
+  <pre>def supervisor(state: State) -> Command:
+    next_agent = router_llm.invoke(state["messages"])   # e.g. "researcher" | "writer" | "done"
+    if next_agent == "done":
+        return Command(goto=END)
+    return Command(goto=next_agent)</pre>
+
+  <div class="analogy">🏫 <strong>School analogy:</strong> the supervisor is the principal's office routing a student to the right specialist teacher based on what they need, then getting them back for the next decision — rather than every teacher deciding on their own who to send the student to next.</div>
+
+  <h2>Hierarchical multi-agent</h2>
+  <p>Supervisors of supervisors: a top-level router sends work to team-level supervisors (each itself a subgraph), who route within their own team. This is how you scale past "one router choosing between 15 specialists" — it chooses between 3 teams, each team's own router picks the specialist.</p>
+
+  <h2>Swarm / handoff pattern</h2>
+  <p>Instead of one supervisor deciding everything, any agent can directly hand off to any other agent it names (peer-to-peer), using the same Command(goto=...) mechanism. Fits domains where the "right next agent" is obvious to whoever's currently acting (e.g. a billing agent that knows to hand off to a refunds agent) and a central router would just be a relay.</p>
+
+  <h2>Map-reduce with Send</h2>
+  <p>Combine subgraphs with Send (Tab ③) to fan out a batch of independent sub-tasks to the same subgraph in parallel, then merge results with a reducer — e.g. grading 50 essays in parallel, each as its own subgraph invocation, reduced into one report.</p>
+
+  <div class="mistake">⚠️ <strong>Common mistake:</strong> reaching for hierarchical multi-agent before a single well-structured graph with conditional routing is actually insufficient. Multi-agent adds real overhead (more LLM calls for routing decisions, more places for state to get lost at a handoff boundary) — justify it with an actual scaling or separation-of-concerns need, not "it sounds more sophisticated."</div>
+  `;
+}
+
+/* ========================= TAB 6: TAXONOMY ========================= */
+function renderTaxonomy(){
+  return `
+  <div class="lead">How the variants relate — pick the row that matches your actual constraint.</div>
+
+  <h2>Orchestration style</h2>
+  <table>
+    <tr><th>Style</th><th>Control flow</th><th>Best fit</th><th>Cost of choosing it</th></tr>
+    <tr><td>Linear chain (LangChain)</td><td>Fixed, one pass</td><td>No branching, no loops, no retry needed</td><td>Can't express decisions or cycles at all</td></tr>
+    <tr><td>Single StateGraph + conditional edges</td><td>Branches, loops within one graph</td><td>One agent, several tools, retries/routing</td><td>Grows unwieldy past ~10-15 nodes</td></tr>
+    <tr><td>Supervisor multi-agent</td><td>Central router between specialists</td><td>Clearly separable specialist roles</td><td>Router is a bottleneck + extra LLM call per hop</td></tr>
+    <tr><td>Swarm / handoff</td><td>Peer-to-peer handoff</td><td>Each agent knows who's next, naturally</td><td>Harder to trace "who decided what" globally</td></tr>
+    <tr><td>Hierarchical</td><td>Supervisors of supervisors</td><td>Large agent counts organized by team/domain</td><td>Most moving parts; most to monitor</td></tr>
+  </table>
+
+  <h2>Checkpointer backends (recap from Tab ④, compared)</h2>
+  <table>
+    <tr><th>Backend</th><th>Durability</th><th>Read latency</th><th>Ops burden</th></tr>
+    <tr><td>MemorySaver</td><td>None (in-process)</td><td>Lowest</td><td>None — but unusable in prod</td></tr>
+    <tr><td>SqliteSaver</td><td>Single file</td><td>Low</td><td>Low, but doesn't scale horizontally</td></tr>
+    <tr><td>PostgresSaver</td><td>High</td><td>Medium</td><td>Medium — you likely already run Postgres</td></tr>
+    <tr><td>Redis-backed</td><td>Configurable</td><td>Lowest at scale</td><td>Extra infra to run</td></tr>
+  </table>
+
+  <h2>Streaming modes</h2>
+  <table>
+    <tr><th>Mode</th><th>Emits</th><th>Use for</th></tr>
+    <tr><td>values</td><td>full state after each step</td><td>debugging, simple UIs that redraw everything</td></tr>
+    <tr><td>updates</td><td>only what each node changed</td><td>efficient incremental UI updates</td></tr>
+    <tr><td>messages</td><td>LLM tokens as they're generated</td><td>chat-style token-by-token display</td></tr>
+    <tr><td>debug</td><td>everything, including internal events</td><td>deep debugging only — noisy</td></tr>
+  </table>
+
+  <h2>Decision table: which orchestration style?</h2>
+  <ol>
+    <li>Does the task ever need to branch, retry, or loop? No → a plain chain is enough, stop here.</li>
+    <li>Is it one coherent task with a few tools? → single StateGraph.</li>
+    <li>Are there genuinely distinct specialist roles (research vs. write vs. review)? → supervisor.</li>
+    <li>Does each specialist already know who should act next, without asking a central router? → swarm.</li>
+    <li>Do you have enough specialists that one router becomes a bottleneck? → hierarchical.</li>
+  </ol>
+  `;
+}
+
+/* ========================= TAB 7: PRODUCTION ECOSYSTEM ========================= */
+function renderProduction(){
+  return `
+  <div class="lead">Everything a normal SDLC needs, plus the two things a web app doesn't: an eval gate that blocks on reasoning regressions, and runtime guardrails for failures no pre-deploy test catches.</div>
+
+  <div class="pipe">
+    <div class="pstep">Develop</div><div class="arrow">→</div>
+    <div class="pstep">Test / Eval</div><div class="arrow">→</div>
+    <div class="pstep">CI/CD</div><div class="arrow">→</div>
+    <div class="pstep">Prod Readiness</div><div class="arrow">→</div>
+    <div class="pstep">Deploy</div><div class="arrow">→</div>
+    <div class="pstep">Observability</div><div class="arrow">→</div>
+    <div class="pstep">Guardrails</div>
+  </div>
+  <p style="font-size:.85rem;color:var(--text-dim);">Guardrails and Observability feed signals (regressions, drift, incidents) back into Development — this loop, not the forward path alone, is what makes the pipeline production-grade.</p>
+
+  <h2>1 · Develop</h2>
+  <ul>
+    <li>Build nodes/graph against a sandboxed model/provider, never production keys.</li>
+    <li>Git-version prompts and graph topology as code — not strings in a notebook.</li>
+    <li>Wire LangSmith or OpenTelemetry tracing from the first commit.</li>
+    <li>Stub external tool calls (payments, emails, provisioning) in dev.</li>
+    <li>Keep nodes close to pure functions (state in, state out) so they're unit-testable alone.</li>
+  </ul>
+  <div class="mistake">⚠️ Wiring the agent to real tool APIs during development "just to see if it works" — the first infinite loop does real damage instead of failing safely.</div>
+
+  <h2>2 · Test & Eval</h2>
+  <ul>
+    <li>Unit tests on individual nodes/tools — fast, deterministic, every commit.</li>
+    <li>A golden-dataset regression eval (50-200 cases) every prompt/graph change must pass.</li>
+    <li>Deterministic checks first (schema match, exact values); LLM-as-judge only for genuinely subjective quality, validated against human agreement on a sample.</li>
+    <li>A separate adversarial/red-team suite: prompt injection, jailbreak attempts, known failure inputs.</li>
+    <li>A numeric gate threshold (e.g. ≥95% golden-set pass, zero critical red-team failures) that blocks merge — not a vibe check.</li>
+  </ul>
+
+  <h2>3 · CI/CD pipeline</h2>
+  <table>
+    <tr><th>Trigger</th><th>Runs</th><th>Blocks on</th></tr>
+    <tr><td>Every PR</td><td>Unit tests + fast golden-set subset</td><td>Any failure</td></tr>
+    <tr><td>Nightly</td><td>Full golden set + red-team suite + cost/latency check</td><td>Any threshold breach</td></tr>
+    <tr><td>Pre-deploy</td><td>Full eval suite, eval-gated promotion</td><td>Eval score below the production floor</td></tr>
+  </table>
+  <p>Prompt and graph versions are pinned exactly (never "latest"), so a regression is bisectable. Canary (serve new version to a traffic slice) or shadow (run it alongside, don't serve its output) deployment compares live metrics before full cutover.</p>
+
+  <h2>4 · Production readiness</h2>
+  <ul>
+    <li>SLOs beyond uptime: p95 latency, cost per request, and a quality floor.</li>
+    <li>Capacity planning against the model provider's own rate limits, with a fallback path for throttling.</li>
+    <li>Security/compliance review: PII in prompts/logs, data residency, what the agent can read/write.</li>
+    <li>Guardrail configuration verified against the red-team suite before go-live.</li>
+    <li>A tested rollback path (minutes, not hours) and an on-call runbook naming who's paged for a quality incident vs. an availability incident.</li>
+  </ul>
+
+  <h2>5 · Deploy</h2>
+  <ul>
+    <li>Managed (LangGraph Platform) trades ops burden for less runtime control; self-hosted containers give full control but you own scaling, checkpoint store, and secrets.</li>
+    <li>Scaling is scaling the checkpoint store, not just the process — state lives there, not in memory.</li>
+    <li>Blue-green/canary rollout for every agent version change, watching eval/quality metrics, not just error rate.</li>
+    <li>Secrets in a secrets manager, never deploy-config env vars; separate keys per environment.</li>
+  </ul>
+
+  <h2>6 · Observability</h2>
+  <ul>
+    <li>Trace every LLM call (prompt, completion, tokens, latency, cost) and every tool call — a standard APM trace stops exactly where the interesting failures start.</li>
+    <li>An ongoing quality signal on live traffic, not just at deploy time — a silent provider model update degrades quality with zero errors thrown.</li>
+    <li>Cost attributed per node/step, so a spike points at the responsible step.</li>
+    <li>Alert on quality degradation, not just latency/uptime — an instant wrong answer passes every uptime check.</li>
+  </ul>
+
+  <h2>7 · Guardrails</h2>
+  <ul>
+    <li>Input validation: prompt injection and jailbreak detection before the model sees it.</li>
+    <li>Output validation: PII leakage scanning, toxicity filtering, strict schema enforcement on tool calls (reject and retry, don't execute malformed calls).</li>
+    <li>Per-user/session rate and cost caps, independent of the provider's own limits.</li>
+    <li>Human-in-the-loop escalation (Tab ④'s interrupt()) for low-confidence or high-stakes actions.</li>
+    <li>A kill switch, tested like a game day — not proven to work for the first time during the incident it's meant to stop.</li>
+  </ul>
+
+  <h2>Maturity self-check</h2>
+  <table>
+    <tr><th>Level</th><th>What's true</th><th>Build next</th></tr>
+    <tr><td>Crawl</td><td>Runs in a notebook, no versioning, manual testing</td><td>Git-version everything; wire tracing; write a 20-case golden set</td></tr>
+    <tr><td>Walk</td><td>Eval exists but runs manually; single-instance deploy</td><td>Gate CI on eval score; add red-team suite; move to Postgres checkpointer</td></tr>
+    <tr><td>Run</td><td>Eval-gated CI/CD; canary deploys; cost dashboards</td><td>Live quality alerting; exercised kill switches; on-call runbook for quality incidents</td></tr>
+  </table>
+  `;
+}
+
+/* ========================= TAB 8: FAILURE MODES ========================= */
+function renderFailures(){
+  return `
+  <div class="lead">What breaks, why, and the first thing to check.</div>
+
+  <table>
+    <tr><th>Failure</th><th>Symptom</th><th>Root cause</th><th>First check</th></tr>
+    <tr><td>Infinite loop</td><td>GraphRecursionError</td><td>Router never returns END under some state</td><td>Trace the last 5 super-steps; what condition was the router actually checking?</td></tr>
+    <tr><td>State bloat</td><td>Latency/cost creep over a long conversation</td><td>Unbounded message list with no trimming</td><td>Is there a message-trimming or summarization node before the model call?</td></tr>
+    <tr><td>Concurrent-write error</td><td>InvalidUpdateError on a parallel branch</td><td>Two Send-fanned nodes write the same default-reducer key</td><td>Does every key touched by parallel nodes have a merge-safe reducer?</td></tr>
+    <tr><td>Checkpoint store bottleneck</td><td>Latency rises with traffic, not with model calls</td><td>SQLite / single-instance checkpointer under real concurrency</td><td>Is the checkpointer actually Postgres/Redis in this environment?</td></tr>
+    <tr><td>Silent quality regression</td><td>No error thrown, answers just get worse</td><td>No eval gate on the change, or the provider silently updated the model</td><td>Did the golden-set score move on the last deploy? Is live quality tracked at all?</td></tr>
+    <tr><td>Lost context across a handoff</td><td>Specialist agent acts on stale/wrong info</td><td>Subgraph state-mapping at the boundary dropped a field</td><td>Trace the exact dict passed into the subgraph call — does it have what the node expects?</td></tr>
+    <tr><td>Runaway cost</td><td>Spend spike with no matching traffic spike</td><td>No per-session cost cap; a retry loop re-calls the model repeatedly</td><td>Cost-by-step dashboard — which node is spending?</td></tr>
+  </table>
+
+  <h2>Debugging a stuck or wrong graph: the order of operations</h2>
+  <ol>
+    <li>Pull the trace (LangSmith or your OTel exporter) for the exact run — don't guess from logs alone.</li>
+    <li>Check which node last wrote to state, and what it wrote.</li>
+    <li>Check the router function's actual return for that state — most "wrong path" bugs are a router returning something that doesn't match any edge's expected value.</li>
+    <li>Re-run from the last good checkpoint (time travel, Tab ④) with one change at a time.</li>
+  </ol>
+
+  <div class="mistake">⚠️ <strong>Common mistake:</strong> debugging by adding print statements inside nodes instead of reading the trace that's already being captured. If tracing wasn't wired in dev (Tab ⑦, Stage 1), this is the moment that omission costs you.</div>
+  `;
+}
+
+/* ========================= TAB 9: CODE LAB ========================= */
+const CODE_EXAMPLES = [
+  {
+    title: "1 · Minimal graph: one node, no branching",
+    desc: "The smallest possible LangGraph program — proves the wiring works before adding any complexity.",
+    code:
+`# pip install langgraph langchain-openai
+
+from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+
+class State(TypedDict):
+    question: str
+    answer: str
+
+def answer_node(state: State) -> dict:
+    # Swap in any model: OpenRouter via langchain_openai with base_url,
+    # or a free local HuggingFace model.
+    answer = f"You asked: {state['question']}"
+    return {"answer": answer}
+
+builder = StateGraph(State)
+builder.add_node("answer", answer_node)
+builder.add_edge(START, "answer")
+builder.add_edge("answer", END)
+graph = builder.compile()
+
+print(graph.invoke({"question": "What is LangGraph?"}))`
+  },
+  {
+    title: "2 · Add a real LLM call (OpenRouter) + message state",
+    desc: "Same shape, now with Annotated reducer for message history and a real model call.",
+    code:
+`# pip install langgraph langchain-openai
+
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(
+    model="meta-llama/llama-3.1-8b-instruct:free",
+    base_url="https://openrouter.ai/api/v1",
+    api_key="YOUR_OPENROUTER_KEY",
+)
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
+
+def call_model(state: State) -> dict:
+    response = llm.invoke(state["messages"])
+    return {"messages": [response]}
+
+builder = StateGraph(State)
+builder.add_node("agent", call_model)
+builder.add_edge(START, "agent")
+builder.add_edge("agent", END)
+graph = builder.compile()
+
+result = graph.invoke({"messages": [("user", "Explain reducers in one sentence.")]})
+print(result["messages"][-1].content)`
+  },
+  {
+    title: "3 · Conditional routing + a tool node + a cycle",
+    desc: "Adds the loop from Tab ③: agent decides, tool runs, control returns to agent, until no more tool calls.",
+    code:
+`from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langchain_core.tools import tool
+from typing import Annotated, TypedDict
+
+@tool
+def search(query: str) -> str:
+    """Pretend web search."""
+    return f"Top result for '{query}': LangGraph docs."
+
+llm_with_tools = llm.bind_tools([search])
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
+
+def call_model(state: State) -> dict:
+    return {"messages": [llm_with_tools.invoke(state["messages"])]}
+
+def run_tools(state: State) -> dict:
+    last = state["messages"][-1]
+    outputs = []
+    for call in last.tool_calls:
+        result = search.invoke(call["args"])
+        outputs.append({"role": "tool", "content": result, "tool_call_id": call["id"]})
+    return {"messages": outputs}
+
+def route(state: State) -> str:
+    return "tools" if state["messages"][-1].tool_calls else END
+
+builder = StateGraph(State)
+builder.add_node("agent", call_model)
+builder.add_node("tools", run_tools)
+builder.add_edge(START, "agent")
+builder.add_conditional_edges("agent", route, {"tools": "tools", END: END})
+builder.add_edge("tools", "agent")   # the cycle
+graph = builder.compile()`
+  },
+  {
+    title: "4 · Checkpointing + thread-scoped memory",
+    desc: "Adds Tab ④: the same graph now remembers across invocations scoped by thread_id.",
+    code:
+`from langgraph.checkpoint.memory import MemorySaver
+
+graph = builder.compile(checkpointer=MemorySaver())
+config = {"configurable": {"thread_id": "demo-thread-1"}}
+
+graph.invoke({"messages": [("user", "My name is Nidhi.")]}, config)
+result = graph.invoke({"messages": [("user", "What's my name?")]}, config)
+print(result["messages"][-1].content)   # remembers, because same thread_id`
+  },
+  {
+    title: "5 · Human-in-the-loop approval with interrupt()",
+    desc: "Pauses before a high-stakes tool call and waits for an explicit resume — Tab ④'s HITL pattern.",
+    code:
+`from langgraph.types import interrupt, Command
+
+def risky_action(state: State) -> dict:
+    approved = interrupt({"action": "delete_account", "user": state["target_user"]})
+    if not approved:
+        return {"messages": [("assistant", "Action cancelled.")]}
+    return {"messages": [("assistant", "Account deleted.")]}
+
+# First call pauses at the interrupt:
+graph.invoke({"target_user": "u-42"}, config)
+
+# Human reviews, then resumes:
+graph.invoke(Command(resume=True), config)`
+  },
+  {
+    title: "6 · Supervisor multi-agent with Command routing",
+    desc: "Tab ⑤'s pattern: a supervisor node routes between two specialist subgraphs.",
+    code:
+`from langgraph.types import Command
+from typing import Literal
+
+def supervisor(state: State) -> Command[Literal["researcher", "writer", "__end__"]]:
+    decision = router_llm.invoke(state["messages"]).content.strip()
+    if decision not in ("researcher", "writer"):
+        return Command(goto="__end__")
+    return Command(goto=decision)
+
+builder = StateGraph(State)
+builder.add_node("supervisor", supervisor)
+builder.add_node("researcher", researcher_subgraph)   # compiled subgraph
+builder.add_node("writer", writer_subgraph)           # compiled subgraph
+builder.add_edge(START, "supervisor")
+builder.add_edge("researcher", "supervisor")
+builder.add_edge("writer", "supervisor")
+graph = builder.compile()`
+  },
+  {
+    title: "7 · End-to-end: a graded FAQ agent over a real file",
+    desc: "The capstone shape Assignment 1 builds on — reads a real CSV, not hardcoded strings, and runs retrieval + generation + a simple eval loop.",
+    code:
+`import csv
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+
+def load_faqs(path: str) -> list[dict]:
+    with open(path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))   # expects columns: question, answer
+
+FAQS = load_faqs("company_policies.csv")
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
+    retrieved: str
+
+def retrieve(state: State) -> dict:
+    query = state["messages"][-1].content.lower()
+    best = max(FAQS, key=lambda r: len(set(query.split()) & set(r["question"].lower().split())))
+    return {"retrieved": best["answer"]}
+
+def generate(state: State) -> dict:
+    prompt = f"Answer using only this context:\\n{state['retrieved']}\\n\\nQuestion: {state['messages'][-1].content}"
+    response = llm.invoke(prompt)
+    return {"messages": [response]}
+
+builder = StateGraph(State)
+builder.add_node("retrieve", retrieve)
+builder.add_node("generate", generate)
+builder.add_edge(START, "retrieve")
+builder.add_edge("retrieve", "generate")
+builder.add_edge("generate", END)
+graph = builder.compile()
+
+print(graph.invoke({"messages": [("user", "What is the refund window?")]})["messages"][-1].content)`
+  },
+];
+
+function renderCodeLab(){
+  const blocks = CODE_EXAMPLES.map(ex => `
+    <details>
+      <summary>${ex.title}</summary>
+      <p style="color:var(--text-dim);font-size:.88rem;">${ex.desc}</p>
+      <pre>${escapeHtml(ex.code)}</pre>
+    </details>
+  `).join("");
+  return `
+  <div class="lead">Seven programs, each adding exactly one concept on top of the last. Runnable in Google Colab.</div>
+  <div class="card">
+    <strong>Stack:</strong> Python · LangChain wrappers · HuggingFace (free local models as a no-cost swap for any llm above) · OpenRouter for hosted LLM access.<br>
+    <code>pip install langgraph langchain-openai langchain-huggingface</code>
+  </div>
+  ${blocks}
+  `;
+}
+function escapeHtml(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ========================= TAB 10: EVALUATION ========================= */
+function renderEval(){
+  return `
+  <div class="lead">How you verify what you built actually works — not just runs.</div>
+
+  <h2>Three layers of verification</h2>
+  <table>
+    <tr><th>Layer</th><th>Checks</th><th>Tool</th></tr>
+    <tr><td>Unit</td><td>Does this one node behave correctly on a fixed input?</td><td>pytest, plain assertions</td></tr>
+    <tr><td>Golden-set regression</td><td>Does the whole graph still produce acceptable output on a fixed benchmark?</td><td>Hand-built dataset + deterministic checks or LLM-as-judge</td></tr>
+    <tr><td>Live/production</td><td>Is quality holding up on real traffic, which the golden set can't fully represent?</td><td>Sampled judge review, user feedback signals, LangSmith</td></tr>
+  </table>
+
+  <h2>Building a golden set</h2>
+  <ol>
+    <li>Collect 50-200 realistic input/expected-output pairs — real user queries beat invented ones.</li>
+    <li>Prefer deterministic checks: exact match, schema validation, regex, "does the tool call have the right arguments."</li>
+    <li>Where output is genuinely open-ended, use LLM-as-judge — but validate the judge first: have a human score 20-30 of the same outputs and check the judge agrees most of the time.</li>
+    <li>Include a red-team subset: prompt injection attempts, jailbreak attempts, and past known failures — gated separately with zero-tolerance thresholds.</li>
+  </ol>
+
+  <div class="analogy">🎣 <strong>Fishing analogy:</strong> a golden set is a fixed pond you stock yourself and know exactly what's in it. Passing there tells you your technique works on known waters. Live-traffic eval is fishing the open ocean — the real test, and the one that finds the fish (failure modes) you didn't know existed.</div>
+
+  <h2>A minimal eval harness</h2>
+  <pre>def run_eval(graph, golden_set: list[dict]) -> float:
+    passed = 0
+    for case in golden_set:
+        result = graph.invoke({"messages": [("user", case["input"])]})
+        output = result["messages"][-1].content
+        if case["check"](output):   # a per-case deterministic assertion
+            passed += 1
+    return passed / len(golden_set)
+
+score = run_eval(graph, golden_set)
+assert score >= 0.95, f"Eval gate failed: {score:.0%}"   # this assertion is the CI gate</pre>
+
+  <div class="mistake">⚠️ <strong>Common mistake:</strong> running eval once before launch and calling it done. An eval that doesn't run on every prompt/graph change isn't a gate — it's a one-time certificate that expires the moment anyone edits a prompt.</div>
+
+  <h2>What "good" looks like</h2>
+  <ul>
+    <li>Golden-set score tracked over time, visible in CI, not buried in a log.</li>
+    <li>A documented threshold that actually blocks a merge/deploy when missed.</li>
+    <li>A red-team suite that runs on the same cadence as the golden set.</li>
+    <li>At least a sampled live-traffic check, because no golden set covers everything real users ask.</li>
+  </ul>
+  `;
+}
+
+/* ========================= TAB P: PRACTICE ========================= */
+function renderPractice(){
+  return `
+  <div class="lead">Three assignments, one evolving project. Together they exercise every tab in this guide.</div>
+
+  <div class="card">
+    <span class="assign-badge">Assignment 1 · Foundation Build</span>
+    <h3>Build a FAQ agent over a real policy file</h3>
+    <p><strong>Tests:</strong> Tab ② (state/nodes/reducers), Tab ③ (conditional routing), Tab ⑨ program 7.</p>
+    <p><strong>Scope:</strong> Using only Tabs ⓪-③, build a LangGraph agent that answers questions from a provided CSV of 20 company policies (question, answer columns) — retrieve the best-matching row, then generate an answer grounded in it. No hardcoded strings: it must read the actual file.</p>
+    <details><summary>Starter scaffold</summary>
+<pre>class State(TypedDict):
+    messages: Annotated[list, add_messages]
+    retrieved: str  # TODO
+
+def retrieve(state: State) -> dict:
+    # TODO: load the CSV, find the best-matching row for the last user message
+    ...
+
+def generate(state: State) -> dict:
+    # TODO: call the model with the retrieved context + the question
+    ...
+
+builder = StateGraph(State)
+# TODO: add_node, add_edge for retrieve -> generate -> END
+graph = builder.compile()</pre>
+    </details>
+    <p><strong>Verify your work:</strong></p>
+    <ul>
+      <li>☐ Does graph.invoke() return an answer grounded in the CSV, not an invented one?</li>
+      <li>☐ Does a question with no matching policy get a clear "not found" answer instead of a hallucinated one?</li>
+      <li>☐ Is the message history preserved correctly across a second question in the same thread?</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <span class="assign-badge">Assignment 2 · Integration Challenge</span>
+    <h3>Add tool use, a retry loop, and checkpointed memory</h3>
+    <p><strong>Tests:</strong> Tab ③ (cycles, Send), Tab ④ (checkpointing), Tab ⑨ programs 3-4.</p>
+    <p><strong>Scope:</strong> Extend Assignment 1 so the agent can call a real tool (e.g. a lookup function returning order status), retries up to 3 times if the tool call is malformed, and remembers conversation state across turns via a checkpointer.</p>
+    <p><strong>Requirements:</strong></p>
+    <ul>
+      <li>Must-have: tool-calling node + conditional routing back to the agent on malformed calls; a PostgresSaver or SqliteSaver checkpointer, not MemorySaver.</li>
+      <li>Nice-to-have: a recursion-limit-aware fallback message instead of letting GraphRecursionError surface to the user.</li>
+    </ul>
+    <details><summary>💡 Hints</summary>
+      <ul>
+        <li>Which reducer do you need on the message list so a retry doesn't duplicate history? (Tab ②)</li>
+        <li>Where does the retry counter live in state, and who increments it? (Tab ② reducers)</li>
+        <li>What does the router return when retries are exhausted, so the loop actually ends? (Tab ③)</li>
+      </ul>
+    </details>
+    <p><strong>Evaluation criteria:</strong> works on a clean tool call; recovers from one malformed call; gives up gracefully (not a stack trace) after 3; remembers a fact stated two turns earlier in the same thread.</p>
+  </div>
+
+  <div class="card">
+    <span class="assign-badge">Assignment 3 · Production Capstone</span>
+    <h3>Harden it into a production-grade pipeline</h3>
+    <p><strong>Tests:</strong> Tab ⑤ (multi-agent, optional), Tab ⑦ (production ecosystem), Tab ⑧ (failure modes), Tab ⑩ (evaluation).</p>
+    <p><strong>Scenario:</strong> you're handing this agent to a real team to run in production. Extend Assignment 2 into a pipeline with an eval gate, basic guardrails, and a supervisor routing between the FAQ agent and a second specialist (e.g. an escalation agent) for at least one advanced pattern from the guide.</p>
+    <p><strong>Full requirements:</strong></p>
+    <ul>
+      <li>A golden set of ≥20 test questions with deterministic checks, run through the eval harness from Tab ⑩, with a documented pass threshold.</li>
+      <li>At least one guardrail from Tab ⑦ (input validation against a basic prompt-injection test, or output schema enforcement on the tool call).</li>
+      <li>A supervisor (Tab ⑤) routing between the FAQ agent and an escalation agent for out-of-scope questions — one advanced pattern, applied for real.</li>
+      <li>A short report comparing the eval score before and after adding the guardrail/escalation logic.</li>
+    </ul>
+    <details><summary>Architecture hints</summary>
+      <p>Supervisor node → routes to faq_agent subgraph (Assignment 2's graph) or escalation_agent based on whether the retrieved policy confidence is high enough. Both report back to the supervisor; supervisor decides when to end.</p>
+    </details>
+    <p><strong>Grading rubric:</strong></p>
+    <ol>
+      <li>Eval gate actually blocks on a deliberately broken test case (not just reports a number)</li>
+      <li>Guardrail demonstrably catches the adversarial input it was built for</li>
+      <li>Supervisor routes correctly on at least 3 distinct test scenarios</li>
+      <li>Report includes a real before/after eval score, not an estimate</li>
+      <li>Code runs end-to-end in Colab without manual fixes</li>
+    </ol>
+    <p><strong>Stretch goals:</strong> add an interrupt()-based human approval step before escalation; swap the checkpointer to Postgres and show it surviving a process restart.</p>
+  </div>
+
+  <h3>Concept map: what you've now practiced</h3>
+  <ul>
+    <li>✅ State, nodes, reducers, conditional edges (Tabs ②-③)</li>
+    <li>✅ Checkpointing & thread-scoped memory (Tab ④)</li>
+    <li>✅ Multi-agent routing with Command (Tab ⑤)</li>
+    <li>✅ Eval gates and a working harness (Tab ⑩)</li>
+    <li>✅ At least one production guardrail (Tab ⑦)</li>
+    <li>✅ Reading failure signatures and fixing root causes (Tab ⑧)</li>
+  </ul>
+  `;
+}
+
+/* ========================= TAB I: INTERVIEW PREP ========================= */
+const INTERVIEW = [
+{n:1,type:"Conceptual",q:"What problem does LangGraph solve that a linear LangChain chain can’t?",
+ hints:["Explain WHY graphs are needed, not just what LangGraph is","Mention branching, cycles, and pausing/resuming specifically","Contrast with a chain’s fixed, one-pass execution","Note that control flow becomes visible/traceable instead of hand-rolled"],
+ answer:"A chain is a fixed, one-pass pipeline — step one always leads to step two, in that order, exactly once. The moment an agent needs to decide what to do next, retry a failed step, or loop until some condition holds, a chain can’t express that natively; you end up writing while-loops and if/else around chain calls in plain Python, which puts your actual control flow outside any framework’s visibility. LangGraph represents the computation as an explicit graph: nodes do the work, edges — including conditional edges — decide what runs next, and a shared state object flows through and gets checkpointed at every step. That makes branching, cycles, pausing, and resuming first-class, inspectable, and traceable, instead of ad hoc code wrapped around a chain.",
+ tested:"Tests whether the candidate understands that LangGraph's value is control-flow expressiveness and visibility, not just \"LangChain v2.\"",
+ flags:["Says LangGraph is just a newer version of LangChain with no structural difference","Can’t name cycles or pausing/resuming as the specific capability gap in chains","Describes LangGraph purely in terms of its API without explaining the underlying problem"],
+ ref:"Tab ⓪"},
+{n:2,type:"Conceptual",q:"Explain the difference between state, a node, and an edge in LangGraph.",
+ hints:["Define each term precisely, not just by example","Clarify that state is shared and mutated via reducers, not overwritten wholesale","Distinguish a fixed edge from a conditional edge","Note that a node returns a partial update, not the full state"],
+ answer:"State is the single shared object — typically a TypedDict — that flows through the whole graph; every node reads from it and returns a partial update to it. A node is just a function with the signature state-in, partial-update-out: usually \"call a model\" or \"call a tool.\" An edge defines what runs after a given node — a fixed edge always goes to the same next node, while a conditional edge is a router function that inspects state and returns the name of whichever node should run next, which is how branching and loops get expressed. The piece that ties state and nodes together correctly is the reducer: each state key has a merge rule, so a node returning a messages update doesn’t necessarily replace the whole list, it appends to it if the reducer is add_messages.",
+ tested:"Tests whether the candidate has the actual mental model, not just memorized vocabulary — specifically whether they understand that a node returns a partial update merged via a reducer, not the full state.",
+ flags:["Says a node returns the full new state, missing that it's a partial update merged by a reducer","Can’t explain what a conditional edge actually does beyond \"it branches\"","Confuses state with the message list specifically, as if state can only hold chat history"],
+ ref:"Tab ⓪, Tab ②"},
+{n:3,type:"Conceptual",q:"What is a reducer in LangGraph, and why does the default one cause a specific, named bug?",
+ hints:["Explain the reducer's job: merging old and new values for a state key","Name the default reducer's behavior (overwrite)","Describe the concrete bug: message history getting wiped","Mention add_messages as the fix and what it specifically does (append + dedupe by id)"],
+ answer:"A reducer is the merge function for one state channel — given the old value and a node’s new partial value, it decides what the combined value becomes. The default reducer just overwrites: new value replaces old. That’s fine for a scalar like a retry counter, but if you use the default reducer on a message list, every node’s return wipes the entire conversation history and replaces it with just that node’s own output — the agent effectively forgets everything before the current step. The fix is Annotated[list, add_messages], a reducer that appends new messages to the existing list instead of replacing it, and also deduplicates by message ID so a retried node doesn’t double-append the same message.",
+ tested:"Tests whether the candidate has actually hit this bug or understands it deeply enough to predict it, rather than just naming \"reducers\" as a term.",
+ flags:["Describes reducers only abstractly without naming the concrete message-wiping failure","Doesn’t know add_messages exists or what specifically it does beyond \"it's for messages\""],
+ ref:"Tab ②"},
+{n:4,type:"Conceptual",q:"What does checkpointing actually give you, beyond \"memory\"?",
+ hints:["Go past \"it remembers conversations\" to the mechanics","Mention thread_id scoping","Mention time travel / replay from a past checkpoint","Mention that it's what makes interrupt()-based human-in-the-loop possible at all"],
+ answer:"Checkpointing saves a snapshot of the full state after every super-step, keyed by a thread_id. The obvious benefit is that re-invoking with the same thread_id picks up exactly where the last call left off — that’s the \"memory\" people usually mean. But it enables two things beyond that: time travel, where you can replay execution from any past checkpoint in a thread’s history, which is invaluable for debugging (\"what did state look like right before the bad decision\") and for letting a user edit a past turn and branch from there; and human-in-the-loop via interrupt(), which pauses a node mid-execution and relies on the checkpoint to durably hold that exact paused state until a human resumes it with Command(resume=...). Without checkpointing, interrupt() would have nowhere persistent to pause to.",
+ tested:"Tests whether the candidate sees checkpointing as infrastructure that other features (HITL, time travel) depend on, not just a chat-memory feature.",
+ flags:["Only mentions conversation memory, with no connection to interrupt() or time travel","Doesn’t know what thread_id scoping actually does"],
+ ref:"Tab ④"},
+{n:5,type:"Conceptual",q:"What is the Send API for, and how is it different from a normal conditional edge?",
+ hints:["Explain the map half of map-reduce specifically","Contrast one-node-chosen (conditional edge) vs. many-parallel-invocations (Send)","Mention that each Send carries its own state slice","Give a concrete example use case"],
+ answer:"A normal conditional edge’s router returns the name of one next node to run. Send is for fan-out: a router returns a list of Send objects, each specifying a target node and its own slice of state, and LangGraph runs all of them in parallel as separate branches. It’s the map half of map-reduce — for example, grading 50 independently-submitted essays, where one node splits the batch and returns a Send per essay, each invocation gets just its own essay in state, and results are merged back via a reducer on the shared output key.",
+ tested:"Tests understanding of parallel fan-out as architecturally distinct from branching — one path chosen vs. many paths run concurrently.",
+ flags:["Describes Send as just \"a type of conditional edge\" without the parallel/multiple-invocations distinction","Can’t explain how results get merged back afterward"],
+ ref:"Tab ③"},
+{n:6,type:"Conceptual",q:"Compare the supervisor pattern and the swarm/handoff pattern for multi-agent orchestration.",
+ hints:["State what each pattern actually does structurally","Identify who makes the routing decision in each","Name a concrete fit for each (and a concrete cost)","At least one sentence on tracing/observability difference between them"],
+ answer:"In the supervisor pattern, one central node reads the task and decides, via an LLM call, which specialist should act next, routing with Command(goto=...); specialists return control to the supervisor after acting. In swarm/handoff, there’s no central router — any agent can directly hand off to whichever agent it determines is next, using the same Command mechanism, peer-to-peer. Supervisor fits when the \"right next agent\" genuinely needs judgment from a neutral party and you want one place to see every routing decision — but that router is an extra LLM call on every hop and becomes a bottleneck as specialist count grows. Swarm fits when each specialist, by the nature of its role, already knows who’s next (e.g. a billing agent handing straight to a refunds agent) — it’s cheaper per hop but harder to trace \"who decided the overall path\" because the decision is distributed.",
+ tested:"Tests whether the candidate can reason about a real architectural trade-off rather than reciting definitions — this is one of the compare/choose-between-alternatives questions.",
+ flags:["Can name both patterns but can’t say when you’d actually pick one over the other","Misses that supervisor adds an LLM call per hop as a real cost"],
+ ref:"Tab ⑤, Tab ⑥"},
+{n:7,type:"Conceptual",q:"What specifically makes an LLM agent pipeline's CI/CD different from a normal web app's CI/CD?",
+ hints:["Name the eval gate specifically, not just \"more testing\"","Explain why a green test suite isn't sufficient here","Mention version-pinning prompts/graphs","Mention canary/shadow deploy as agent-specific, and why"],
+ answer:"A web app’s CI/CD gates on deterministic tests — a function either returns the right value or it doesn’t. An agent pipeline needs that too, but a green unit-test suite says nothing about whether the agent still reasons correctly, because the thing that changes most often — a prompt — doesn’t have a single correct output to assert against. That’s why the pipeline adds an eval gate: a golden-dataset regression run with a numeric pass threshold that blocks promotion on a quality regression, not just a crash. Prompts and graph definitions also get version-pinned exactly, because a regression needs to be bisectable the same way a code regression does. And because quality can degrade in ways that pass every functional test, canary or shadow deployment — comparing the new version’s live quality metrics against the old one before full cutover — is standard for an agent version change in a way it usually isn’t for a routine web app deploy.",
+ tested:"Tests whether the candidate actually internalizes that \"passing tests\" and \"working correctly\" are different claims for a non-deterministic system.",
+ flags:["Says it's basically the same as normal CI/CD \"just with AI stuff\"","Doesn't mention an eval gate at all, treating unit tests as sufficient"],
+ ref:"Tab ⑦"},
+{n:8,type:"Conceptual",q:"Why does an agent pipeline need observability beyond standard APM (latency, error rate, uptime)?",
+ hints:["Explain what standard APM actually tells you and where it stops","Name the specific failure standard APM misses (quality degradation with no error)","Mention tracing LLM calls specifically (prompt, completion, tokens, cost)","Mention live quality signal, not just deploy-time eval"],
+ answer:"Standard APM tells you whether a request completed, how long it took, and whether anything threw an error — and an agent that responds instantly with a confidently wrong answer passes all three checks. The failure that matters most for an agent — quality degrading — doesn’t throw an error; it can happen silently from a model provider’s own update, or from a drift in what users are actually asking that the original eval never covered. So agent observability adds: tracing of every LLM call specifically (prompt, completion, token counts, cost, latency, not just \"a request happened\"); cost attribution by node/step, since a cost spike needs to point at the step responsible; and an ongoing quality signal on live traffic — sampled human or judge review, or a tracked eval-style score — because deploy-time eval alone can’t catch something that only shows up after launch.",
+ tested:"Tests whether the candidate distinguishes \"the system is up\" from \"the system is still right,\" which is the central observability gap for LLM agents.",
+ flags:["Treats uptime/latency dashboards as sufficient observability for an agent","Can’t explain how a quality regression would show up with zero errors thrown"],
+ ref:"Tab ⑦"},
+{n:9,type:"Scenario-Based",q:"You're building a customer-support agent that needs to look up order status, and sometimes issue refunds. How would you structure the graph, and what would you add before letting it issue a refund autonomously?",
+ hints:["Separate the lookup tool (low-stakes) from the refund action (high-stakes) in your design","Name interrupt() specifically for the refund path","Explain why a blanket \"always ask a human\" or \"never ask a human\" is the wrong framing","Mention guardrails: a cost/rate cap on refund amount or frequency"],
+ answer:"I'd build a single StateGraph with an agent node bound to two tools: order_lookup and issue_refund. The lookup path can run fully autonomously — it's read-only and low-stakes, so the agent calls it and loops back to decide next steps without interruption. For the refund path, I'd wrap the actual refund execution in a node that calls interrupt() with the proposed refund amount and order details before it executes, pausing the graph and surfacing that to a human approver; the graph resumes via Command(resume=True/False) once approved or denied. On top of that I'd add a guardrail independent of the human gate: a cap on refund amount or frequency per user/session, so even an approved-looking request can't compound into something clearly wrong, and I'd log every refund decision (auto or human) to the trace for later audit. The reasoning for routing only the refund through HITL rather than everything is that blanket human review on every tool call defeats the purpose of automating support, while blanket autonomy on money-moving actions is the kind of thing that turns into an incident.",
+ tested:"Tests whether the candidate can apply risk-based design — matching the control (full autonomy vs. interrupt vs. hard cap) to the actual stakes of the action, not applying one policy everywhere.",
+ flags:["Proposes human review on every tool call, including the harmless lookup","Proposes full autonomy on refunds with no cap or audit trail, missing the guardrail layer entirely","Doesn't mention interrupt() or describes HITL as \"just add a confirmation step\" with no actual pause/resume mechanism"],
+ ref:"Tab ④, Tab ⑦"},
+{n:10,type:"Scenario-Based",q:"Your agent occasionally gets stuck calling the same tool repeatedly without making progress, and eventually hits GraphRecursionError. Walk through how you'd diagnose and fix this.",
+ hints:["Start with the trace, not a guess","Identify what specifically causes a loop to never terminate (router logic)","Distinguish \"raise the recursion limit\" from \"fix the router\" as the real fix","Mention how you'd prevent regressions once fixed (a test case for this exact input)"],
+ answer:"First I'd pull the actual trace for a failing run from LangSmith or whatever OTel exporter is wired in, rather than guessing from logs — I want to see the sequence of nodes visited and what state looked like going into the router each time. Then I'd look specifically at the conditional edge that decides whether to loop back to the tool node or proceed: the recursion error almost always means that router's condition for \"stop looping\" is never true under some state shape, often because it's checking something like \"did the last tool call succeed\" when the actual failure is the model repeatedly generating a malformed tool call that never succeeds, or re-requesting the same tool because it never updates a counter it should be checking. Once I find the specific condition, the fix is correcting the router's logic — adding an explicit retry counter to state with a reducer, and having the router route to END or an error-handling node once that counter passes a threshold — not raising the recursion_limit, which just delays the same failure and burns more tokens getting there. Finally I'd add the exact failing input as a regression case in the golden/red-team set so this specific loop can't silently reappear after a future prompt change.",
+ tested:"Tests systematic debugging method on a named failure mode, and whether the candidate distinguishes a real fix (router logic) from a cosmetic one (raising the limit).",
+ flags:["Says \"just increase the recursion limit\" as the fix with no further investigation","Debugs by adding print statements instead of using the trace that's already captured","Doesn't propose adding a regression test for the specific failure once found"],
+ ref:"Tab ③, Tab ⑧"},
+{n:11,type:"Scenario-Based",q:"You need two parallel branches to each update a running total in shared state. What goes wrong with the default setup, and how do you fix it?",
+ hints:["Name the specific error (InvalidUpdateError) and when it fires","Explain why the default reducer can't handle concurrent writes","Describe the actual fix: a custom reducer that knows how to combine two values","Note this applies to any Send-fanned parallel write, not just totals"],
+ answer:"If both parallel branches write to the same state key and that key uses the default reducer, LangGraph raises InvalidUpdateError, because the default reducer's job is \"take the new value, overwrite the old\" — it has no way to combine two concurrent writes from the same super-step; it doesn't know if the second write should replace the first or add to it. The fix is a custom reducer function that knows how to merge two numbers by adding them, applied via Annotated[int, add_totals] on that state key, so LangGraph knows exactly how to merge two simultaneous writes into one combined value instead of refusing. This isn't specific to totals — any time Send fans a key out to parallel branches that each write to a shared key, that key needs a reducer that's actually commutative/associative enough to handle concurrent merges, not the default overwrite.",
+ tested:"Tests concrete knowledge of the concurrent-write failure mode and the actual mechanism (custom reducer) that resolves it, not just \"it's a race condition, be careful.\"",
+ flags:["Says the fix is \"add a lock\" or otherwise impose sequential execution, missing that the fix is a reducer, not serialization","Doesn't know InvalidUpdateError by name or when it fires"],
+ ref:"Tab ②, Tab ⑧"},
+{n:12,type:"Scenario-Based",q:"Your team is debating a single StateGraph with a lot of conditional routing versus a supervisor multi-agent setup for a task with three distinct specialist roles. What questions would you ask to decide?",
+ hints:["This is a compare/choose question — name the actual decision criteria, not just \"it depends\"","Ask about genuine separation of concerns vs. artificial splitting","Ask about node count / graph complexity as it stands today","Ask about observability/tracing needs specifically"],
+ answer:"I'd ask: first, are these three roles genuinely separable — different tools, different prompts, different failure modes — or is this one task that's being split for the sake of it? If the \"specialists\" mostly share state and logic, a single graph with conditional routing is simpler and has fewer places for context to get lost at a handoff boundary. Second, how many nodes does the single-graph version already have, or would have — past roughly 10-15 nodes with meaningfully different concerns, a single graph gets hard to reason about and a supervisor splitting it into focused subgraphs usually pays for itself. Third, do we need to trace or evaluate each specialist's behavior independently — a supervisor architecture makes \"how did the research step do, separately from the writing step\" a natural question; a monolithic graph makes that harder to isolate. Fourth, can we afford the extra LLM call the supervisor's routing decision costs on every hop, in both latency and spend. If the answers favor real separation, growing complexity, and independent evaluability, I'd go supervisor; if it's one task being over-architected, I'd keep the single graph.",
+ tested:"Tests judgment on an architecture decision with real trade-offs on both sides — one of the compare/choose-between-alternatives questions.",
+ flags:["Picks a side immediately without naming the actual decision criteria","Treats \"multi-agent\" as inherently more sophisticated/better without weighing its real costs"],
+ ref:"Tab ⑤, Tab ⑥"},
+{n:13,type:"Scenario-Based",q:"You can add an LLM-as-judge quality check to every production response, but it adds real latency and cost per request. How do you decide whether to do this synchronously on the critical path?",
+ hints:["This is a genuine trade-off question — there is no single right answer, say what it depends on","Name latency/cost numbers as the kind of concrete input you'd want","Propose an alternative to synchronous-on-every-request (sampling, async post-hoc)","State a concrete decision rule, not just \"it depends\""],
+ answer:"This is a real trade-off, not a free win. I'd want to know the judge call's actual added latency and cost per request, and the acceptable latency budget for this endpoint — if we're at 800ms p95 today and a budget of 1.2s, and the judge adds 400ms, synchronous judging might fit; if it would blow the budget, it can't run on the critical path regardless of how much we want the signal. Rather than treating it as all-or-nothing, I'd default to sampling: run the judge asynchronously, off the critical path, on some percentage of live traffic (say 5-10%, or 100% during a canary rollout of a new version) rather than every request synchronously — that gets the quality signal needed for live-traffic eval without paying the cost on every single response. I'd reserve synchronous, on-the-critical-path judging for cases where the action is high-stakes enough that blocking on a quality check before responding is worth the latency — a refund amount or a legal/medical claim, for instance — and use sampling everywhere else.",
+ tested:"Tests whether the candidate can reason about a genuine cost/benefit trade-off with concrete numbers instead of defaulting to \"always add more checks\" or \"never add checks.\"",
+ flags:["Says to just always add the judge check with no acknowledgment of the latency/cost trade-off","Gives no concrete alternative (sampling, async) and treats it as strictly synchronous-or-nothing"],
+ ref:"Tab ⑩"},
+{n:14,type:"Scenario-Based",q:"A model provider silently updates the underlying model your agent calls. What in your production setup would actually catch this, and what would you build if nothing does?",
+ hints:["Be honest about what a deploy-time golden set does and doesn't catch here","Name the specific signal that would catch this: live quality tracking","Mention that error rate and latency stay flat in this scenario — explain why","Propose a concrete addition: scheduled golden-set re-runs, or sampled live judging"],
+ answer:"A deploy-time golden set wouldn't catch this at all, because nothing was deployed on our side — the regression happens silently on the provider's end, after our last eval run passed. Error rate and latency also stay flat, because the model still responds successfully and quickly, just with different (possibly worse) answers, so standard APM gives no signal either. What would actually catch it is live quality tracking: either a scheduled re-run of the golden set against production on a cadence (daily/weekly) independent of our own deploys, which would show the score drop even though we changed nothing, or sampled LLM-as-judge/human review of live traffic that would show drift over time. If neither exists, I'd build the scheduled golden-set re-run first since it's cheaper and reuses infrastructure we already have for CI, then add sampled live judging for the gaps the fixed golden set doesn't cover.",
+ tested:"Tests understanding that production LLM risk includes changes outside your own deploy pipeline entirely — a class of regression that only live monitoring, not CI, can catch.",
+ flags:["Assumes the existing CI eval gate would catch this, missing that no deploy happened on our side","Proposes no concrete live-monitoring addition when asked what to build"],
+ ref:"Tab ⑦, Tab ⑩"},
+{n:15,type:"Scenario-Based",q:"Design the state schema and node structure for an agent that processes a batch of 100 support tickets, triages each by urgency, and routes high-urgency ones to a human queue.",
+ hints:["Decide whether this is a Send fan-out or a simple loop, and justify it","Define what state looks like per-ticket vs. shared across the batch","Specify where interrupt() or a queue hand-off happens for high-urgency tickets","Mention how you'd evaluate the triage step's accuracy"],
+ answer:"Since the 100 tickets are independent of each other, I'd use Send to fan out: a split node reads the batch and returns one Send per ticket, each carrying just that ticket's own state slice (ticket_id, text) rather than the whole batch, so they process in parallel instead of a slow sequential loop. Each fanned invocation runs a triage node that classifies urgency, then a conditional edge: low/medium urgency returns a handled result merged back via a reducer on a results list; high urgency routes to a flag_for_human node that writes the ticket to a human queue (a real queue or ticketing system call, not interrupt(), since there's no single thread waiting synchronously on a response — interrupt() fits a single conversation pausing for one approval, not fire-and-forget routing of many independent items). I'd track triage accuracy by maintaining a small golden set of pre-labeled tickets with known correct urgency, run through the same triage node, as the eval gate for this specific node — since a misrouted high-urgency ticket sitting in the wrong queue is exactly the kind of regression an eval gate here is meant to catch before it ships.",
+ tested:"Tests whether the candidate picks the right concurrency primitive (Send vs. sequential loop vs. interrupt) for the actual shape of the problem, rather than defaulting to one pattern regardless of fit.",
+ flags:["Proposes interrupt() for routing to a human queue, confusing a synchronous pause-and-resume with an asynchronous queue hand-off","Processes the 100 tickets sequentially with no mention of Send/parallelism for clearly independent items"],
+ ref:"Tab ③, Tab ⑩"},
+{n:16,type:"Scenario-Based",q:"Your team is debating Postgres-backed checkpointing versus Redis-backed checkpointing for a production deployment. What questions would you ask to make the decision?",
+ hints:["This is a compare/choose question — name the actual axes that differ","Ask about durability requirements specifically","Ask about expected checkpoint read/write volume and latency sensitivity","Ask about existing operational familiarity/infra, since that's a real cost too"],
+ answer:"I'd ask: how latency-sensitive is checkpoint read/write actually — if we're resuming a thread on every user message in a chat-style product, checkpoint read latency is on the critical path and Redis's lower read latency matters; if checkpoints are read rarely (e.g. mostly for recovery or audit), Postgres's latency profile is fine. Second, what durability do we actually need — Postgres gives strong durability by default, Redis needs explicit configuration (persistence settings) to not risk losing recent checkpoints on a restart, so if this state is business-critical (not easily reconstructable), that configuration burden and risk matters. Third, what do we already run operationally — if the team runs Postgres at scale already and has no Redis expertise or infra, that's a real cost to introducing a new system versus extending something we already operate. I'd only pick Redis if the latency requirement is genuinely tight and we're willing to own its persistence configuration carefully; otherwise Postgres is the safer default for most production cases.",
+ tested:"Tests whether the candidate treats a tooling choice as a real engineering trade-off (latency vs. durability vs. operational cost) rather than picking based on which is newer or faster-sounding.",
+ flags:["Picks Redis by default for \"performance\" without addressing durability configuration risk","Doesn't mention operational familiarity/existing infra as a real factor in the decision"],
+ ref:"Tab ④, Tab ⑥"},
+{n:17,type:"Debugging/Failure",q:"Your agent's cost per session suddenly spiked 5x with no corresponding traffic increase. What would you check, in order?",
+ hints:["Start with what tells you WHERE the cost is coming from, not guessing at causes","Mention cost-by-step/node attribution specifically","Consider a retry loop re-calling the model as a leading suspect","Mention checking for a recent prompt/graph change as a correlated cause"],
+ answer:"First I'd pull the cost-by-step dashboard (Tab ⑦'s observability requirement) to see which node is responsible for the spend increase — without that attribution I'm guessing. If no such dashboard exists, that's itself the first thing to build. Given a likely culprit node, I'd check whether it's being invoked more times per session than before — a retry loop that's stopped terminating correctly (the recursion/loop failure from Tab ⑧) will multiply model calls per session without any corresponding traffic increase, which matches this symptom exactly. I'd also check whether a prompt or graph change shipped recently that could have lengthened the average context sent per call (e.g. a message-trimming step that got removed or broke) — longer prompts cost more per call even at the same call count. Finally I'd check whether a per-session cost cap exists at all; if it doesn't, that's the guardrail gap that let this spike reach production spend instead of being capped automatically.",
+ tested:"Tests systematic failure diagnosis for a cost anomaly specifically, and whether the candidate connects it to the loop/retry failure mode and the missing-guardrail gap rather than treating it as a mystery.",
+ flags:["Jumps straight to \"the model provider raised prices\" without checking internal attribution first","Doesn't mention a per-session cost cap as a guardrail that should have limited the blast radius"],
+ ref:"Tab ⑦, Tab ⑧"},
+{n:18,type:"Debugging/Failure",q:"A user reports the agent \"forgot\" something they said two messages ago in the same conversation. What would you check?",
+ hints:["Check the reducer on the message state key first","Check whether the same thread_id was actually used across both calls","Consider whether a summarization/trimming step is dropping content too aggressively","Distinguish a reducer bug from a thread-scoping bug — they look similar but aren't"],
+ answer:"First I'd check the reducer on the messages key in state — if it's not Annotated[list, add_messages] (or an equivalent appending reducer), every node's return overwrites the whole history instead of appending to it, which would produce exactly this symptom and is the single most common cause. If the reducer is correct, I'd check whether the same thread_id was actually passed in config on both calls — a mismatched or regenerated thread_id (e.g. a new session ID per request instead of per conversation) means the checkpointer genuinely has no prior history to resume from; this looks identical to a reducer bug from the user's side but has a completely different fix. If both of those check out, I'd look at whether a message-trimming or summarization node exists and is being too aggressive — some pipelines deliberately truncate history to control cost/context length, and an overly short window would drop the specific fact being asked about even with correct reducers and threading.",
+ tested:"Tests whether the candidate can distinguish between several failure modes that produce the same user-visible symptom — a reducer bug, a thread-scoping bug, and a trimming/summarization issue — rather than guessing at just one.",
+ flags:["Jumps to \"the model has a short context window\" without checking the application-level causes first","Doesn't distinguish a reducer problem from a thread_id/scoping problem, treating them as the same bug"],
+ ref:"Tab ②, Tab ④, Tab ⑧"},
+{n:19,type:"Debugging/Failure",q:"Two nodes running in parallel via Send both need to update a shared \"errors\" list in state, and the graph throws InvalidUpdateError. Walk through the fix.",
+ hints:["Name the error and explain precisely why the default reducer can't handle this","Propose the specific fix: a reducer that concatenates lists","Note any ordering implications of a concatenating reducer under concurrency","Mention this is a general pattern, not a one-off fix for \"errors\" specifically"],
+ answer:"InvalidUpdateError fires because the errors key is using the default reducer, which only knows how to overwrite — when two parallel branches each return a value for the same key in the same super-step, the default reducer has no rule for combining two concurrent writes, so it refuses rather than silently dropping one. The fix is a reducer that knows how to merge two lists, for example a simple concatenation function (or operator.add, which does the same thing for lists), applied via Annotated[list, merge_lists] on that state key — then both parallel writes get concatenated into one combined list instead of conflicting. One thing worth flagging: if the exact order of entries across parallel branches matters, a plain concatenation reducer doesn't guarantee a specific deterministic order between concurrently-finishing branches, so if order matters, each error should probably carry its own timestamp or source ID and get sorted downstream rather than relying on merge order. This is a general pattern — any shared key touched by Send-fanned parallel nodes needs a reducer like this, not just the specific \"errors\" list in this example.",
+ tested:"Tests whether the candidate can go from a specific error message to the correct general fix (an appropriate reducer), and understands the ordering caveat that comes with it.",
+ flags:["Proposes removing the parallelism (running sequentially) instead of fixing the reducer","Doesn't mention the ordering caveat when merging concurrent writes, if asked to go deeper"],
+ ref:"Tab ②, Tab ③, Tab ⑧"},
+{n:20,type:"Debugging/Failure",q:"Your red-team suite passes, but a real user found a prompt-injection bypass in production within a week of launch. What does this tell you, and what would you change?",
+ hints:["Don't just say \"add more red-team cases\" — explain the structural gap that let this happen","Distinguish a static red-team suite from live adversarial monitoring","Mention that this specific bypass should now become a red-team case going forward","Consider whether guardrails were layered or single-point-of-failure"],
+ answer:"This tells me the red-team suite, while useful, is necessarily incomplete — it's a fixed, static set of known attack patterns, and real users (or real attackers) will eventually find a pattern the suite never anticipated, because adversarial creativity doesn't stop at what we thought to test. The fact that it got through to production also suggests the guardrail layer may have been a single point of failure rather than defense-in-depth — if only prompt-level input validation was checking for injection, with no independent output-side check (e.g. verifying the final response doesn't leak the system prompt or take an unintended action), one bypass at the input layer had nothing to catch it afterward. Concretely I'd: add this exact bypass as a new red-team case immediately, so it can never regress silently; audit whether output-side validation exists as a second layer, and add it if not; and treat this as a signal to invest in live adversarial monitoring (flagging unusual tool-call patterns or suspicious output shapes in production) rather than relying solely on a pre-deploy static suite, since that's the only thing that would catch the next novel bypass before a user reports it.",
+ tested:"Tests whether the candidate understands that a red-team suite is necessarily incomplete by nature, and reaches for defense-in-depth and live monitoring rather than just \"test more.\"",
+ flags:["Says the fix is simply adding more test cases to the suite with no mention of layered defenses or live monitoring","Treats this as an isolated one-off bug rather than a signal about the guardrail architecture itself"],
+ ref:"Tab ⑦, Tab ⑧"},
+{n:21,type:"Debugging/Failure",q:"After a deploy, your canary (5% of traffic) shows the new agent version is slightly faster but the golden-set-equivalent live quality score has dropped. What do you do?",
+ hints:["State the decision clearly: does faster-but-worse ship to 100%?","Explain why speed and quality are separate axes that don't trade off automatically in your favor","Describe the rollback mechanism concretely","Mention what you'd investigate before trying again"],
+ answer:"I would not promote this version to 100% — a quality drop on live traffic is exactly the signal canary deployment exists to catch before full exposure, and \"faster\" doesn't offset it; latency and quality are independent SLOs, and passing one doesn't excuse failing the other. I'd roll back the canary to the previous version using the tested rollback path from Stage 4 readiness review, routing the 5% back to the known-good version, and treat this exactly like a quality incident even though nothing crashed and no error was thrown. Before attempting the change again, I'd investigate what specifically changed between versions that could explain both the speed gain and the quality drop — a common cause is a prompt simplification or a smaller/cheaper model swap that's genuinely faster but reasons less well, which the golden set and live canary metric together are what caught; I'd want to see the actual diff and re-run the full eval suite against it, not just assume the canary result alone told the whole story.",
+ tested:"Tests whether the candidate treats a canary quality regression as a hard stop regardless of a tempting speed improvement, and follows the rollback process rather than improvising.",
+ flags:["Suggests shipping anyway because \"it's faster, users will probably be fine\" without weighing the quality signal the canary was built to catch","Doesn't mention using the actual rollback mechanism, implying an ad hoc fix instead"],
+ ref:"Tab ⑦"},
+{n:22,type:"System Design",q:"Design a production LangGraph deployment for a multi-tenant SaaS support agent serving 10,000 daily active users, each with their own conversation history. Cover architecture, state/memory, deployment, and what you'd monitor.",
+ hints:["This is a mini-capstone — touch state design, checkpointing, deployment, and observability, not just one layer","Address multi-tenancy specifically: how threads/checkpoints are scoped per tenant/user","Name a concrete checkpointer choice and justify it at this scale","Describe what you'd monitor and what would page someone"],
+ answer:"At this scale I'd structure thread_id as a composite of tenant_id and user_id (or session), so checkpoints are naturally scoped and a query can never accidentally cross tenants — that scoping decision has to be correct from day one since it's a data-isolation requirement, not just a convenience. For the graph itself: a single StateGraph per conversation turn with conditional routing between a retrieval node (grounding answers in that tenant's own knowledge base, not a shared one) and an escalation path, kept relatively flat rather than multi-agent, since the task per tenant is fairly uniform and multi-agent overhead isn't justified by role diversity here. For checkpointing, Postgres, partitioned or indexed by tenant_id, since 10k DAU generates meaningful checkpoint volume that needs to be durable, queryable for support/audit purposes, and is well within what Postgres handles at that scale — Redis would only make sense if checkpoint read latency specifically became the bottleneck, which I'd verify with real numbers before switching. For deployment, I'd run the graph behind an API layer on autoscaled containers (or LangGraph Platform if the ops trade-off favors managed), with model API keys isolated per environment and tenant-level rate/cost caps so one noisy tenant can't exhaust shared quota or budget for everyone else. For observability: per-tenant cost and latency dashboards (not just global aggregates, since one tenant's problem can hide in a global average), live quality sampling per tenant where volume allows, and alerting that pages on-call specifically for a quality-score drop or a tenant-level cost-cap breach, separately from a standard uptime/error-rate page, since those are different incidents needing different responses.",
+ tested:"Tests end-to-end system design synthesis: whether the candidate can reason about multi-tenancy, state architecture, checkpoint scaling, and monitoring together as one coherent system rather than listing components in isolation.",
+ flags:["Treats all tenants' data in one shared checkpoint/thread space with no isolation strategy","Picks a checkpointer or deployment architecture with no justification tied to the actual scale (10k DAU) or multi-tenancy requirement","Proposes only global dashboards with no per-tenant breakdown, missing the \"one tenant's problem hides in the average\" risk"],
+ ref:"Tab ④, Tab ⑥, Tab ⑦"},
+{n:23,type:"System Design",q:"Design the eval and guardrail layer for an agent that drafts outbound emails on a user's behalf, which get sent automatically unless flagged. Cover the eval gate, guardrails, and the human-in-the-loop boundary.",
+ hints:["This is a mini-capstone — cover eval, input/output guardrails, AND the HITL decision boundary together","Specify what the golden set actually tests for this specific task","Name concrete guardrails: output validation, a confidence threshold for auto-send","Define the HITL trigger condition concretely, not just \"sometimes ask a human\""],
+ answer:"For the eval gate, I'd build a golden set of real email scenarios (confirmations, follow-ups, apologies, escalations) with deterministic checks where possible — correct recipient field populated, no placeholder text left in, tone/length within bounds — and LLM-as-judge, validated against human agreement, for subjective tone-appropriateness; this runs gated in CI on every prompt change exactly as Tab ⑦ specifies, with a pass threshold that blocks promotion on a drop. For guardrails: output validation checks for PII that shouldn't be in an outbound email (e.g. another customer's data leaking through a bad retrieval), a schema check that required fields are actually populated, and a toxicity/tone filter given this is customer-facing content sent automatically. The human-in-the-loop boundary is the most important design decision here: I wouldn't gate on \"sometimes ask a human\" vaguely — I'd define a concrete confidence/risk threshold, e.g. the agent model emits a self-reported confidence score or the output trips any guardrail check, and anything below that threshold or that trips a check routes through interrupt() for human review before sending, while higher-confidence, guardrail-clean drafts auto-send. I'd also add a per-user rate cap on auto-sent emails (Tab ⑦'s rate-limiting guardrail) so a prompt bug can't result in dozens of automated emails going out before anyone notices, and I'd monitor the auto-send/HITL-review ratio over time as an observability signal — a sudden shift toward more auto-sends on a model/prompt change is worth investigating even if nothing else alarms.",
+ tested:"Tests whether the candidate can design a coherent risk-tiered system — not treating eval, guardrails, and HITL as three separate unconnected checklist items, but as one layered defense with a concrete decision boundary.",
+ flags:["Proposes either \"always send automatically\" or \"always require human review\" with no risk-based middle ground","Defines the HITL trigger vaguely (\"when it seems risky\") instead of a concrete, checkable condition","Omits a rate/volume cap on automated sends, missing the blast-radius guardrail"],
+ ref:"Tab ④, Tab ⑦, Tab ⑩"},
+{n:24,type:"System Design",q:"Your company wants to migrate an existing single-agent LangGraph pipeline to a hierarchical multi-agent system because \"it's growing.\" Design the migration, including how you'd validate it's actually an improvement.",
+ hints:["Push back implicitly on the premise first: what would justify this migration at all","Design the team/supervisor structure concretely, not just \"add a supervisor\"","Specify how you'd measure \"improvement\" — what metrics, compared how","Address migration risk: how do you avoid a regression during the transition"],
+ answer:"Before designing the migration, I'd want evidence the single graph has actually hit the limits that justify this — node count past the point of being reasoned about clearly, or genuinely distinct specialist roles now colliding in one graph's logic — rather than migrating because \"multi-agent\" sounds like the natural next step; Tab ⑥'s decision table exists exactly for this call. Assuming the evidence is real, I'd design it as: group the existing graph's nodes into 2-4 coherent teams by actual function (e.g. research, drafting, QA), convert each team into its own compiled subgraph, and add one top-level supervisor routing between teams via Command — only adding a second tier of team-level supervisors if a single team itself grows unwieldy, not preemptively. To validate it's actually an improvement, not just different, I'd run the full golden-set eval against both the old single graph and the new hierarchical version on the same test cases, and compare: quality score (should be equal or better, not worse — multi-agent adds LLM calls, which is a real regression risk if routing decisions introduce their own errors), latency and cost per request (expect these to get worse, and quantify by how much — this is the known cost of the migration), and a maintainability/trace-clarity assessment (can each team's behavior now be inspected independently). For the migration itself, I'd run the new architecture in shadow mode against production traffic first, comparing its outputs to the current single graph's real outputs without serving the new one, specifically to catch any routing or state-mapping regression at subgraph boundaries before any user sees it.",
+ tested:"Tests whether the candidate treats \"add multi-agent\" as an engineering decision requiring justification and measurement, not a default upgrade, and designs a migration that validates the claim rather than assuming it.",
+ flags:["Designs the migration without questioning whether it's actually warranted, treating multi-agent as self-evidently better","Has no concrete before/after comparison plan, just asserts the new system will be better","Skips shadow-mode or any safety net during migration, risking a production regression with no detection"],
+ ref:"Tab ⑤, Tab ⑥, Tab ⑦"},
+{n:25,type:"System Design",q:"Design the full dev-to-production lifecycle (this guide's Tab ⑦) for a team building their first LangGraph agent, who currently have no evals, no tracing, and deploy by SSH-ing a prompt change directly onto a server. What's the sequence you'd actually build, and why that order?",
+ hints:["This is a mini-capstone — don't just list the 7 stages, sequence them by what unblocks what","Justify why tracing/versioning comes before eval, not after","Explain why the eval gate comes before CI/CD automation, not simultaneously","Name what's deliberately deferred to later, and why that's safe to defer"],
+ answer:"I wouldn't build all seven stages of Tab ⑦ at once — I'd sequence by what each stage unblocks next. First: Git-version the prompts and graph code that currently live only on the server, and wire basic tracing (LangSmith or OTel) — this costs little and immediately makes every later stage possible, since you can't build an eval gate against changes you can't diff, and you can't debug a failure you can't trace. Second: build a 20-50 case golden set and a manual eval run — deliberately manual at first, not yet CI-gated, because writing good test cases needs a few iterations before they're trustworthy enough to block anything; gating on a bad golden set is worse than no gate. Third, once the golden set is stable: wire it into CI as an actual gate on PRs, and replace the SSH deploy with a real deploy pipeline that at minimum deploys from a tagged, version-pinned commit rather than an ad hoc server edit — this is where \"no eval, no tracing, SSH deploys\" stops being true. Fourth: add a basic production-readiness pass — an SLO, a tested rollback, at minimum one guardrail (even just output schema validation) — before this agent handles anything consequential. I'd deliberately defer canary/shadow deployment, multi-tenant cost caps, and live quality monitoring to a later round, not because they don't matter, but because they assume the earlier stages (versioning, a real eval, a real deploy pipeline) already exist — building them first would mean automating and monitoring a process that's still fundamentally manual and unversioned underneath.",
+ tested:"Tests end-to-end lifecycle synthesis and, specifically, sequencing judgment — recognizing that the stages have real dependencies and building them out of order wastes effort or creates false confidence.",
+ flags:["Proposes building all seven stages simultaneously or in the order listed in the guide without justifying why that's also the right build order for this team","Jumps straight to CI/CD automation or canary deployment before versioning or a validated eval set exist to automate around","Doesn't name what's deliberately deferred, implying everything must be built immediately"],
+ ref:"Tab ⑦"},
+];
+
+function renderInterview(){
+  const groups = [
+    {label:"Conceptual (1-8)", items: INTERVIEW.filter(q=>q.type==="Conceptual")},
+    {label:"Scenario-Based (9-16)", items: INTERVIEW.filter(q=>q.type==="Scenario-Based")},
+    {label:"Debugging / Failure (17-21)", items: INTERVIEW.filter(q=>q.type==="Debugging/Failure")},
+    {label:"System Design (22-25)", items: INTERVIEW.filter(q=>q.type==="System Design")},
+  ];
+  let html = `<div class="lead">25 questions a real interviewer would ask to tell whether you understood this, not whether you memorized it.</div>`;
+  groups.forEach(g => {
+    html += `<h2>${g.label}</h2>`;
+    g.items.forEach(q => {
+      html += `
+      <div class="q-block">
+        <div class="q-type">${q.type} · Question ${q.n}</div>
+        <div class="q-text"><span class="q-num">Q${q.n}.</span> ${q.q}</div>
+        <details><summary>\u{1F4A1} Hint: What to cover in your answer</summary>
+          <ul>${q.hints.map(h=>`<li>${h}</li>`).join("")}</ul>
+        </details>
+        <details><summary>✅ Model Answer</summary><p>${q.answer}</p></details>
+        <details><summary>\u{1F3AF} What's being tested</summary><p>${q.tested}</p></details>
+        <details><summary>\u{1F6A9} Red flags in a bad answer</summary>
+          <ul>${q.flags.map(f=>`<li>${f}</li>`).join("")}</ul>
+        </details>
+        <div class="q-ref">\u{1F4D6} See ${q.ref}</div>
+      </div>`;
+    });
+  });
+  return html;
+}
+
+/* ========================= INIT ========================= */
+showTab(0);
+</script>
+</body>
+</html>
